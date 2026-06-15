@@ -18,10 +18,14 @@ import { RolePermission } from '@models/RolePermission.model';
 import { UserPermission } from '@models/UserPermission.model';
 import { Session } from '@models/Session.model';
 import { OTPVerification } from '@models/OTPVerification.model';
+import { TwoFactorAuth } from '@models/TwoFactorAuth.model';
+import { DeviceLog } from '@models/DeviceLog.model';
+import { PasswordReset } from '@models/PasswordReset.model';
 import { Department } from '@models/Department.model';
 import { Designation } from '@models/Designation.model';
 import { Location } from '@models/Location.model';
 import { Staff } from '@models/Staff.model';
+import { StaffDepartment } from '@models/StaffDepartment.model';
 import { StaffQualification } from '@models/StaffQualification.model';
 import { StaffSkill } from '@models/StaffSkill.model';
 import { StaffDocument } from '@models/StaffDocument.model';
@@ -159,7 +163,7 @@ class AppBootstrapper {
 
     // CORS
     const allowedOrigins = (
-      process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:3000'
+      process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174,http://localhost:3000'
     ).split(',');
     this.app.use(
       cors({
@@ -210,12 +214,16 @@ class AppBootstrapper {
     UserPermission.initModel(this.sequelize);
     Session.initModel(this.sequelize);
     OTPVerification.initModel(this.sequelize);
+    TwoFactorAuth.initModel(this.sequelize);
+    DeviceLog.initModel(this.sequelize);
+    PasswordReset.initModel(this.sequelize);
 
     // Organizational models
     Department.initModel(this.sequelize);
     Designation.initModel(this.sequelize);
     Location.initModel(this.sequelize);
     Staff.initModel(this.sequelize);
+    StaffDepartment.initModel(this.sequelize);
     StaffQualification.initModel(this.sequelize);
     StaffSkill.initModel(this.sequelize);
     StaffDocument.initModel(this.sequelize);

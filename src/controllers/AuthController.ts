@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import AuthenticationService from '@services/AuthenticationService';
-import ResponseFormatter from '@utils/ResponseFormatter';
-import ErrorHandler from '@utils/ErrorHandler';
+import { ResponseFormatter } from '@utils/ResponseFormatter';
+import { ErrorHandler } from '@utils/ErrorHandler';
 
 export class AuthController {
   /**

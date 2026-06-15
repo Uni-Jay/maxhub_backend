@@ -90,7 +90,7 @@ function setupRoutes(app: any): void {
   // RBAC & Administration routes
   apiRouter.use('/admin/roles', require('./role.routes').default);
   apiRouter.use('/admin/permissions', require('./permission.routes').default);
-  apiRouter.use('/admin/settings', require('./settingsRoutes').default);
+  // apiRouter.use('/admin/settings', require('./settingsRoutes').default); // PHASE-25: requires Redis + refactored models
 
   // Staff Query / Ticket system
   apiRouter.use('/queries', require('./query.routes').default);

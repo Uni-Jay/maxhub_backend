@@ -6,7 +6,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
-import { PermissionCode } from '@constants/permissions';
+import { PermissionCode } from '@config/PermissionCodes';
 
 interface AuthenticatedRequest extends Request {
   user?: {

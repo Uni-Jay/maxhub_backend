@@ -31,6 +31,7 @@ import { Department } from '../models/Department.model';
 import { Designation } from '../models/Designation.model';
 import { Location } from '../models/Location.model';
 import { Staff } from '../models/Staff.model';
+import { StaffDepartment } from '../models/StaffDepartment.model';
 import { StaffQualification } from '../models/StaffQualification.model';
 import { StaffSkill } from '../models/StaffSkill.model';
 import { StaffDocument } from '../models/StaffDocument.model';
@@ -113,14 +114,16 @@ import { AssociationManager } from '../models/Associations';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+type PermissionScope = 'all' | 'own' | 'own_department' | 'own_warehouse';
+
 function parsePermissionCode(code: string): {
   module: string;
   resource: string;
   action: string;
-  scope: 'all' | 'own' | 'own_department';
+  scope: PermissionScope;
 } {
   const parts = code.split('.');
-  const scope = parts[parts.length - 1] as 'all' | 'own' | 'own_department';
+  const scope = parts[parts.length - 1] as PermissionScope;
   const action = parts[parts.length - 2];
   const module = parts[0];
   const resource = parts.slice(1, parts.length - 2).join('.');
@@ -135,8 +138,32 @@ function toTitleCase(str: string): string {
 
 function makePermissionName(code: string): string {
   const { module, resource, action, scope } = parsePermissionCode(code);
-  const scopeLabel = scope === 'own_department' ? 'Own Dept' : scope === 'own' ? 'Own' : 'All';
+  const scopeLabel =
+    scope === 'own_department' ? 'Own Dept' :
+    scope === 'own_warehouse' ? 'Own Warehouse' :
+    scope === 'own' ? 'Own' : 'All';
   return `${toTitleCase(module)} › ${toTitleCase(resource)} › ${toTitleCase(action)} [${scopeLabel}]`;
+}
+
+async function retryFindOrCreate<T>(
+  fn: () => Promise<[T, boolean]>,
+  maxAttempts = 3,
+  delayMs = 2000
+): Promise<[T, boolean]> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      const isTransactionErr = err?.message?.includes('transaction') ||
+        err?.parent?.errno === 1213 || err?.original?.errno === 1213;
+      if (isTransactionErr && attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, delayMs));
+      } else {
+        throw err;
+      }
+    }
+  }
+  throw new Error('retryFindOrCreate: max attempts exceeded');
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -156,7 +183,7 @@ async function main() {
     database: process.env.DB_NAME!,
     dialect: 'mysql',
     logging: false,
-    pool: { max: 5, min: 1, idle: 10000 },
+    pool: { max: 1, min: 0, idle: 10000 },
     dialectOptions: {
       ssl: false,
     },
@@ -185,6 +212,7 @@ async function main() {
   Designation.initModel(sequelize);
   Location.initModel(sequelize);
   Staff.initModel(sequelize);
+  StaffDepartment.initModel(sequelize);
   StaffQualification.initModel(sequelize);
   StaffSkill.initModel(sequelize);
   StaffDocument.initModel(sequelize);
@@ -270,38 +298,45 @@ async function main() {
   // ── 3. Sync Tables ──────────────────────────────────────────────────────────
   console.log('🔄  Syncing database tables (alter: true)...');
   console.log('    This may take a moment — creating/updating all tables...');
-  try {
-    await sequelize.sync({ alter: true });
-    console.log('✅  All tables synced\n');
-  } catch (err) {
-    console.error('❌  Table sync failed:', err);
-    process.exit(1);
+  let syncAttempt = 0;
+  while (true) {
+    try {
+      // Use plain sync() to create missing tables without ALTER (avoids deadlocks on shared DBs).
+      // Schema column changes require a manual migration or a one-time force run.
+      await sequelize.sync();
+      console.log('✅  All tables synced\n');
+      break;
+    } catch (err: any) {
+      const isDeadlock = err?.parent?.errno === 1213 || err?.original?.errno === 1213;
+      if (isDeadlock && syncAttempt < 5) {
+        syncAttempt++;
+        console.warn(`   ⚠️  Deadlock on attempt ${syncAttempt}, retrying in 5s...`);
+        await new Promise((r) => setTimeout(r, 5000));
+      } else {
+        console.error('❌  Table sync failed:', err);
+        process.exit(1);
+      }
+    }
   }
 
   // ── 4. Seed Permissions ─────────────────────────────────────────────────────
   console.log('🔐  Seeding permissions...');
   const allCodes = Object.values(PermissionCode);
-  let permCreated = 0;
-  let permSkipped = 0;
-
-  for (const code of allCodes) {
+  const permRows = allCodes.map((code) => {
     const { module, resource, action, scope } = parsePermissionCode(code);
-    const [, created] = await Permission.findOrCreate({
-      where: { code },
-      defaults: {
-        code,
-        name: makePermissionName(code),
-        description: `${toTitleCase(action)} ${toTitleCase(resource)} (${scope})`,
-        module,
-        resource,
-        action,
-        scope,
-        isActive: true,
-      },
-    });
-    created ? permCreated++ : permSkipped++;
-  }
-  console.log(`✅  Permissions: ${permCreated} created, ${permSkipped} already existed (${allCodes.length} total)\n`);
+    return {
+      code,
+      name: makePermissionName(code),
+      description: `${toTitleCase(action)} ${toTitleCase(resource)} (${scope})`,
+      module,
+      resource,
+      action,
+      scope,
+      isActive: true,
+    };
+  });
+  await Permission.bulkCreate(permRows as any, { ignoreDuplicates: true });
+  console.log(`✅  Permissions: ${allCodes.length} total (new ones inserted, duplicates ignored)\n`);
 
   // ── 5. Seed Roles ───────────────────────────────────────────────────────────
   console.log('👥  Seeding roles...');
@@ -320,16 +355,18 @@ async function main() {
   const roleMap = new Map<RoleCode, bigint>();
 
   for (const roleCode of Object.values(RoleCode)) {
-    const [role, created] = await Role.findOrCreate({
-      where: { code: roleCode },
-      defaults: {
-        code: roleCode,
-        name: ROLE_NAMES[roleCode],
-        description: ROLE_DESCRIPTIONS[roleCode],
-        isSystemRole: true,
-        isActive: true,
-      },
-    });
+    const [role, created] = await retryFindOrCreate(() =>
+      Role.findOrCreate({
+        where: { code: roleCode },
+        defaults: {
+          code: roleCode,
+          name: ROLE_NAMES[roleCode],
+          description: ROLE_DESCRIPTIONS[roleCode],
+          isSystemRole: true,
+          isActive: true,
+        },
+      })
+    );
     roleMap.set(roleCode, role.id);
     console.log(`   ${created ? '✨ Created' : '⏭️  Exists '} → ${ROLE_NAMES[roleCode]} (${roleCode})`);
   }
@@ -345,57 +382,64 @@ async function main() {
     permMap.set(p.code, p.id);
   }
 
-  let rpCreated = 0;
-  let rpSkipped = 0;
-
+  const rpRows: { roleId: bigint; permissionId: bigint }[] = [];
   for (const [roleCode, permCodes] of Object.entries(ROLE_PERMISSIONS) as [RoleCode, PermissionCode[]][]) {
     const roleId = roleMap.get(roleCode);
     if (!roleId) continue;
-
     for (const permCode of permCodes) {
       const permId = permMap.get(permCode);
       if (!permId) {
         console.warn(`   ⚠️  Permission not found in DB: ${permCode}`);
         continue;
       }
-      const [, created] = await RolePermission.findOrCreate({
-        where: { roleId, permissionId: permId },
-        defaults: { roleId, permissionId: permId },
-      });
-      created ? rpCreated++ : rpSkipped++;
+      rpRows.push({ roleId, permissionId: permId });
     }
   }
-  console.log(`✅  Role-permissions: ${rpCreated} created, ${rpSkipped} already existed\n`);
+
+  // Batch upsert — INSERT IGNORE — single round trip per chunk
+  const CHUNK = 100;
+  let rpCreated = 0;
+  for (let i = 0; i < rpRows.length; i += CHUNK) {
+    const chunk = rpRows.slice(i, i + CHUNK);
+    const result = await RolePermission.bulkCreate(chunk as any, { ignoreDuplicates: true });
+    rpCreated += result.length;
+  }
+  console.log(`✅  Role-permissions: ${rpRows.length} total pairs processed (${rpCreated} inserted)\n`);
 
   // ── 7. Seed Default Super Admin User ────────────────────────────────────────
   console.log('👤  Seeding default Super Admin user...');
 
-  const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || 'admin@maxhub.com';
+  const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || 'superadmin@maxhub.com';
   const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD || 'MaxHub@Admin2024!';
 
-  const [superAdmin, userCreated] = await User.findOrCreate({
-    where: { email: SUPER_ADMIN_EMAIL },
-    defaults: {
-      uuid: uuidv4(),
-      firstName: 'Super',
-      lastName: 'Admin',
-      email: SUPER_ADMIN_EMAIL,
-      passwordHash: await bcrypt.hash(SUPER_ADMIN_PASSWORD, 12),
-      status: 'Active',
-      emailVerified: true,
-      emailVerifiedAt: new Date(),
-      loginAttempts: 0,
-    },
-  });
+  const superAdminHash = await bcrypt.hash(SUPER_ADMIN_PASSWORD, 12);
+  const [superAdmin, userCreated] = await retryFindOrCreate(() =>
+    User.findOrCreate({
+      where: { email: SUPER_ADMIN_EMAIL },
+      defaults: {
+        uuid: uuidv4(),
+        firstName: 'Super',
+        lastName: 'Admin',
+        email: SUPER_ADMIN_EMAIL,
+        passwordHash: superAdminHash,
+        status: 'Active',
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+        loginAttempts: 0,
+      },
+    })
+  );
 
   if (userCreated) {
     // Assign SUPER_ADMIN role
     const superAdminRoleId = roleMap.get(RoleCode.SUPER_ADMIN);
     if (superAdminRoleId) {
-      await UserRole.findOrCreate({
-        where: { userId: superAdmin.id, roleId: superAdminRoleId },
-        defaults: { userId: superAdmin.id, roleId: superAdminRoleId, assignedAt: new Date() },
-      });
+      await retryFindOrCreate(() =>
+        UserRole.findOrCreate({
+          where: { userId: superAdmin.id, roleId: superAdminRoleId },
+          defaults: { userId: superAdmin.id, roleId: superAdminRoleId, assignedAt: new Date() },
+        })
+      );
     }
     console.log(`✅  Super Admin created`);
     console.log(`    Email   : ${SUPER_ADMIN_EMAIL}`);
@@ -404,25 +448,95 @@ async function main() {
     console.log(`⏭️  Super Admin already exists (${SUPER_ADMIN_EMAIL})`);
   }
 
-  // ── 8. Seed Default Leave Types ─────────────────────────────────────────────
+  // ── 8. Seed Role Demo Users ─────────────────────────────────────────────────
+  console.log('\n👥  Seeding role demo users...');
+
+  const DEMO_PASSWORD = 'Demo@12345!';
+  const demoPasswordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
+
+  const demoUsers: Array<{ email: string; firstName: string; lastName: string; role: RoleCode }> = [
+    { email: 'admin@maxhub.com',        firstName: 'Admin',       lastName: 'User',       role: RoleCode.ADMIN },
+    { email: 'depthead@maxhub.com',    firstName: 'Dept',        lastName: 'Head',       role: RoleCode.DEPARTMENT_HEAD },
+    { email: 'manager@maxhub.com',     firstName: 'Project',     lastName: 'Manager',    role: RoleCode.MANAGER },
+    { email: 'supervisor@maxhub.com',  firstName: 'Team',        lastName: 'Supervisor', role: RoleCode.SUPERVISOR },
+    { email: 'teamlead@maxhub.com',    firstName: 'Team',        lastName: 'Lead',       role: RoleCode.TEAM_LEAD },
+    { email: 'staff@maxhub.com',       firstName: 'Regular',     lastName: 'Staff',      role: RoleCode.STAFF },
+    { email: 'consultant@maxhub.com',  firstName: 'External',    lastName: 'Consultant', role: RoleCode.CONSULTANT },
+    { email: 'intern@maxhub.com',      firstName: 'New',         lastName: 'Intern',     role: RoleCode.INTERN },
+  ];
+
+  let demoCreated = 0;
+  for (const demo of demoUsers) {
+    const [demoUser, created] = await retryFindOrCreate(() =>
+      User.findOrCreate({
+        where: { email: demo.email },
+        defaults: {
+          uuid: uuidv4(),
+          firstName: demo.firstName,
+          lastName: demo.lastName,
+          email: demo.email,
+          passwordHash: demoPasswordHash,
+          status: 'Active',
+          emailVerified: true,
+          emailVerifiedAt: new Date(),
+          loginAttempts: 0,
+        },
+      })
+    );
+
+    if (!created) {
+      // Ensure password is always Demo@12345! even if the account already existed
+      await demoUser.update({ passwordHash: demoPasswordHash, loginAttempts: 0, lockedUntil: null });
+    }
+    const roleId = roleMap.get(demo.role);
+    if (roleId) {
+      await retryFindOrCreate(() =>
+        UserRole.findOrCreate({
+          where: { userId: demoUser.id, roleId },
+          defaults: { userId: demoUser.id, roleId, assignedAt: new Date() },
+        })
+      );
+    }
+    if (created) {
+      demoCreated++;
+      console.log(`   ✨ Created → ${demo.email} [${demo.role}]`);
+    } else {
+      console.log(`   ✅ Updated → ${demo.email} [${demo.role}] (password reset to Demo@12345!)`);
+    }
+  }
+
+  console.log(`\n✅  Demo users: ${demoCreated} created\n`);
+  console.log('   All demo accounts use password: Demo@12345!');
+  console.log('   ┌─────────────────────────────────┬──────────────────────┐');
+  console.log('   │ Email                           │ Role                 │');
+  console.log('   ├─────────────────────────────────┼──────────────────────┤');
+  console.log(`   │ ${'superadmin@maxhub.com'.padEnd(31)} │ SUPER_ADMIN          │`);
+  for (const d of demoUsers) {
+    console.log(`   │ ${d.email.padEnd(31)} │ ${d.role.padEnd(20)} │`);
+  }
+  console.log('   └─────────────────────────────────┴──────────────────────┘');
+
+  // ── 9. Seed Default Leave Types ─────────────────────────────────────────────
   console.log('\n🏖️   Seeding default leave types...');
   const leaveTypes = [
-    { name: 'Annual Leave',      code: 'ANNUAL',    defaultDays: 21, isPaid: true,  description: 'Annual paid leave entitlement' },
-    { name: 'Sick Leave',        code: 'SICK',      defaultDays: 10, isPaid: true,  description: 'Medical/health-related absence' },
-    { name: 'Maternity Leave',   code: 'MATERNITY', defaultDays: 90, isPaid: true,  description: 'Leave for childbirth/adoption' },
-    { name: 'Paternity Leave',   code: 'PATERNITY', defaultDays: 5,  isPaid: true,  description: 'Leave for new fathers' },
-    { name: 'Unpaid Leave',      code: 'UNPAID',    defaultDays: 30, isPaid: false, description: 'Approved unpaid absence' },
-    { name: 'Study Leave',       code: 'STUDY',     defaultDays: 5,  isPaid: true,  description: 'Leave for exams or study' },
-    { name: 'Emergency Leave',   code: 'EMERGENCY', defaultDays: 3,  isPaid: true,  description: 'Unplanned emergency absence' },
-    { name: 'Compassionate Leave', code: 'COMPASSIONATE', defaultDays: 3, isPaid: true, description: 'Bereavement / family emergency' },
+    { name: 'Annual Leave',       code: 'ANNUAL',       categoryType: 'Paid',   maxDaysPerYear: 21, description: 'Annual paid leave entitlement' },
+    { name: 'Sick Leave',         code: 'SICK',         categoryType: 'Paid',   maxDaysPerYear: 10, description: 'Medical/health-related absence' },
+    { name: 'Maternity Leave',    code: 'MATERNITY',    categoryType: 'Paid',   maxDaysPerYear: 90, description: 'Leave for childbirth/adoption' },
+    { name: 'Paternity Leave',    code: 'PATERNITY',    categoryType: 'Paid',   maxDaysPerYear: 5,  description: 'Leave for new fathers' },
+    { name: 'Unpaid Leave',       code: 'UNPAID',       categoryType: 'Unpaid', maxDaysPerYear: 30, description: 'Approved unpaid absence' },
+    { name: 'Study Leave',        code: 'STUDY',        categoryType: 'Paid',   maxDaysPerYear: 5,  description: 'Leave for exams or study' },
+    { name: 'Emergency Leave',    code: 'EMERGENCY',    categoryType: 'Paid',   maxDaysPerYear: 3,  description: 'Unplanned emergency absence' },
+    { name: 'Compassionate Leave',code: 'COMPASSIONATE',categoryType: 'Paid',   maxDaysPerYear: 3,  description: 'Bereavement / family emergency' },
   ];
 
   let ltCreated = 0;
   for (const lt of leaveTypes) {
-    const [, created] = await LeaveType.findOrCreate({
-      where: { code: lt.code },
-      defaults: { ...lt, isActive: true } as any,
-    });
+    const [, created] = await retryFindOrCreate(() =>
+      LeaveType.findOrCreate({
+        where: { code: lt.code },
+        defaults: { ...lt, isActive: true } as any,
+      })
+    );
     if (created) ltCreated++;
   }
   console.log(`✅  Leave types: ${ltCreated} created, ${leaveTypes.length - ltCreated} already existed`);
