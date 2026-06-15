@@ -1,0 +1,37 @@
+export declare enum PHASE_25_PERMISSION_CODES {
+    SETTINGS_SYSTEM_READ_ALL = "settings.system.read.all",
+    SETTINGS_SYSTEM_UPDATE_ALL = "settings.system.update.all",
+    SETTINGS_DEPARTMENT_READ_OWN = "settings.department.read.own",
+    SETTINGS_DEPARTMENT_READ_DEPARTMENT = "settings.department.read.department",
+    SETTINGS_DEPARTMENT_READ_ALL = "settings.department.read.all",
+    SETTINGS_DEPARTMENT_UPDATE_OWN = "settings.department.update.own",
+    SETTINGS_DEPARTMENT_UPDATE_DEPARTMENT = "settings.department.update.department",
+    SETTINGS_DEPARTMENT_UPDATE_ALL = "settings.department.update.all",
+    SETTINGS_EMAIL_READ_ALL = "settings.email.read.all",
+    SETTINGS_EMAIL_CREATE_ALL = "settings.email.create.all",
+    SETTINGS_EMAIL_UPDATE_ALL = "settings.email.update.all",
+    SETTINGS_EMAIL_DELETE_ALL = "settings.email.delete.all",
+    SETTINGS_EMAIL_TEST_ALL = "settings.email.test.all",
+    SETTINGS_BRANDING_READ_ALL = "settings.branding.read.all",
+    SETTINGS_BRANDING_UPDATE_ALL = "settings.branding.update.all",
+    SETTINGS_THEME_READ_ALL = "settings.theme.read.all",
+    SETTINGS_THEME_CREATE_ALL = "settings.theme.create.all",
+    SETTINGS_THEME_UPDATE_ALL = "settings.theme.update.all",
+    SETTINGS_THEME_DELETE_ALL = "settings.theme.delete.all",
+    SETTINGS_INTEGRATION_READ_ALL = "settings.integration.read.all",
+    SETTINGS_INTEGRATION_CREATE_ALL = "settings.integration.create.all",
+    SETTINGS_INTEGRATION_UPDATE_ALL = "settings.integration.update.all",
+    SETTINGS_INTEGRATION_DELETE_ALL = "settings.integration.delete.all",
+    SETTINGS_INTEGRATION_TEST_ALL = "settings.integration.test.all",
+    SETTINGS_FEATURE_READ_ALL = "settings.feature.read.all",
+    SETTINGS_FEATURE_CREATE_ALL = "settings.feature.create.all",
+    SETTINGS_FEATURE_UPDATE_ALL = "settings.feature.update.all",
+    SETTINGS_FEATURE_DELETE_ALL = "settings.feature.delete.all",
+    SETTINGS_VERSION_READ_ALL = "settings.version.read.all",
+    SETTINGS_VERSION_ROLLBACK_ALL = "settings.version.rollback.all",
+    SETTINGS_AUDIT_READ_ALL = "settings.audit.read.all",
+    SETTINGS_AUDIT_EXPORT = "settings.audit.export.all"
+}
+export declare const PHASE_25_ROLE_PERMISSIONS: Record<string, string[]>;
+export default PHASE_25_PERMISSION_CODES;
+//# sourceMappingURL=PHASE-25-PermissionCodes.d.ts.map

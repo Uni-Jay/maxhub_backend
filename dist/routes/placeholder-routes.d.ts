@@ -1,0 +1,22 @@
+declare const router: import("express-serve-static-core").Router;
+export declare const departmentRoutes: import("express-serve-static-core").Router;
+export declare const designationRoutes: import("express-serve-static-core").Router;
+export declare const contactRoutes: import("express-serve-static-core").Router;
+export declare const opportunityRoutes: import("express-serve-static-core").Router;
+export declare const courseRoutes: import("express-serve-static-core").Router;
+export declare const enrollmentRoutes: import("express-serve-static-core").Router;
+export declare const jobPostingRoutes: import("express-serve-static-core").Router;
+export declare const jobApplicationRoutes: import("express-serve-static-core").Router;
+export declare const payrollRoutes: import("express-serve-static-core").Router;
+export declare const invoiceRoutes: import("express-serve-static-core").Router;
+export declare const inventoryRoutes: import("express-serve-static-core").Router;
+export declare const warehouseRoutes: import("express-serve-static-core").Router;
+export declare const appraisalRoutes: import("express-serve-static-core").Router;
+export declare const trainingRoutes: import("express-serve-static-core").Router;
+export declare const messageRoutes: import("express-serve-static-core").Router;
+export declare const notificationRoutes: import("express-serve-static-core").Router;
+export declare const roleRoutes: import("express-serve-static-core").Router;
+export declare const permissionRoutes: import("express-serve-static-core").Router;
+export declare const settingsRoutes: import("express-serve-static-core").Router;
+export default router;
+//# sourceMappingURL=placeholder-routes.d.ts.map

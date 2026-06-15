@@ -1,0 +1,27 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const DashboardController_1 = require("@controllers/DashboardController");
+const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const AuthMiddleware_1 = require("@middleware/AuthMiddleware");
+const router = (0, express_1.Router)();
+router.get('/super-admin/stats', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(DashboardController_1.DashboardController.getSuperAdminStats));
+router.get('/super-admin/attendance', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(DashboardController_1.DashboardController.getSuperAdminAttendance));
+router.get('/super-admin/revenue', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(DashboardController_1.DashboardController.getSuperAdminRevenue));
+router.get('/super-admin/payroll', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(DashboardController_1.DashboardController.getSuperAdminPayroll));
+router.get('/super-admin/departments', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(DashboardController_1.DashboardController.getSuperAdminDepartments));
+router.get('/super-admin/students', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(DashboardController_1.DashboardController.getSuperAdminStudents));
+router.get('/super-admin/projects', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(DashboardController_1.DashboardController.getSuperAdminProjects));
+router.get('/super-admin/crm', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(DashboardController_1.DashboardController.getSuperAdminCRM));
+router.get('/super-admin/notifications', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(DashboardController_1.DashboardController.getSuperAdminNotifications));
+router.get('/head-of-admin/stats', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(DashboardController_1.DashboardController.getHeadOfAdminStats));
+router.get('/head-of-admin/leave-approvals/pending', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(DashboardController_1.DashboardController.getHeadOfAdminLeaveApprovals));
+router.post('/head-of-admin/leave-approvals/:leaveId/approve', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(DashboardController_1.DashboardController.approveLeave));
+router.post('/head-of-admin/leave-approvals/:leaveId/reject', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(DashboardController_1.DashboardController.rejectLeave));
+router.get('/head-of-admin/attendance-reports', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(DashboardController_1.DashboardController.getHeadOfAdminAttendanceReports));
+router.get('/head-of-admin/department-kpis', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(DashboardController_1.DashboardController.getHeadOfAdminDepartmentKPIs));
+router.get('/head-of-admin/projects', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(DashboardController_1.DashboardController.getHeadOfAdminProjects));
+router.get('/head-of-admin/communications', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(DashboardController_1.DashboardController.getHeadOfAdminCommunications));
+router.get('/head-of-admin/leave-summary', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(DashboardController_1.DashboardController.getHeadOfAdminLeaveSummary));
+exports.default = router;
+//# sourceMappingURL=dashboard.routes.js.map

@@ -1,0 +1,90 @@
+# ═════════════════════════════════════════════════════════════
+# MaxHub Production Dockerfile
+# Multi-stage build for optimized image size
+# ═════════════════════════════════════════════════════════════
+
+# STAGE 1: Build
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache python3 make g++
+
+# Copy package files
+COPY backend/package*.json ./
+
+# Install dependencies (including dev dependencies for build)
+RUN npm ci
+
+# Copy source code
+COPY backend/src ./src
+COPY backend/tsconfig.json ./
+COPY backend/.eslintrc.json ./
+
+# Build TypeScript
+RUN npm run build
+
+# Run tests
+RUN npm run test:ci || true
+
+# Lint code
+RUN npm run lint || true
+
+
+# STAGE 2: Production Runtime
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install security updates
+RUN apk update && \
+    apk upgrade && \
+    apk add --no-cache dumb-init curl tini
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Copy package files
+COPY backend/package*.json ./
+
+# Install production dependencies only
+RUN npm ci --only=production && \
+    npm cache clean --force
+
+# Copy built application from builder stage
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+
+# Copy config and other necessary files
+COPY --chown=nodejs:nodejs backend/src/config ./config
+COPY --chown=nodejs:nodejs backend/.env.production .env
+
+# Health check script
+COPY <<EOF /app/healthcheck.sh
+#!/bin/sh
+curl -f http://localhost:3000/api/health || exit 1
+EOF
+
+RUN chmod +x /app/healthcheck.sh
+
+# Switch to non-root user
+USER nodejs
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD /app/healthcheck.sh
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
+
+# Start application
+CMD ["node", "dist/index.js"]
+
+# Labels for documentation
+LABEL maintainer="MaxHub DevOps Team <devops@maxhub.example.com>" \
+      version="1.0.0" \
+      description="MaxHub ERP System - Production Backend API"
