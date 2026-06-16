@@ -26,4 +26,14 @@ router.get('/head-of-admin/projects', AuthMiddleware.verifyToken, DashboardContr
 router.get('/head-of-admin/communications', AuthMiddleware.verifyToken, DashboardController.getHeadOfAdminCommunications);
 router.get('/head-of-admin/leave-summary', AuthMiddleware.verifyToken, DashboardController.getHeadOfAdminLeaveSummary);
 
+// HR Dashboard
+router.get('/hr/stats', AuthMiddleware.verifyToken, DashboardController.getSuperAdminStats);
+router.get('/hr/recruitment', AuthMiddleware.verifyToken, DashboardController.getSuperAdminStats);
+
+// HOD Dashboard
+router.get('/hod/stats', AuthMiddleware.verifyToken, DashboardController.getHeadOfAdminStats);
+
+// Staff Dashboard
+router.get('/staff/stats', AuthMiddleware.verifyToken, DashboardController.getHeadOfAdminStats);
+
 export default router;

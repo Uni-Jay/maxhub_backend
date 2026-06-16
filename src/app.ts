@@ -1,3 +1,4 @@
+import http from 'http';
 import express, { Express, Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -119,6 +120,17 @@ import { ClientDocument } from '@models/ClientDocument.model';
 import { ClientNote } from '@models/ClientNote.model';
 import { MessageTemplate } from '@models/MessageTemplate.model';
 import { CommunicationLog } from '@models/CommunicationLog.model';
+import { Company } from '@models/Company.model';
+import { Program } from '@models/Program.model';
+import { StudentProfile } from '@models/StudentProfile.model';
+import { StudentEnrollment } from '@models/StudentEnrollment.model';
+import { StudentResult } from '@models/StudentResult.model';
+import { StudentAttendance } from '@models/StudentAttendance.model';
+import { ClassSchedule } from '@models/ClassSchedule.model';
+// Video call models
+import { Meeting } from '@models/Meeting.model';
+import { MeetingParticipant } from '@models/MeetingParticipant.model';
+import { Call } from '@models/Call.model';
 
 // Import middleware
 import { AuthMiddleware } from '@middleware/AuthMiddleware';
@@ -129,6 +141,12 @@ import { ResponseFormatter } from '@utils/ResponseFormatter';
 
 // Import routes
 import setupRoutes from './routes/index';
+
+// Import AI module models
+import { AIConversation } from './modules/ai/models/AIConversation.model';
+import { AIMessage } from './modules/ai/models/AIMessage.model';
+import { AIMeetingSummary } from './modules/ai/models/AIMeetingSummary.model';
+import { AIReminder } from './modules/ai/models/AIReminder.model';
 
 // Import scheduler
 import { startScheduler } from './services/SchedulerService';
@@ -165,18 +183,20 @@ class AppBootstrapper {
     const allowedOrigins = (
       process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174,http://localhost:3000'
     ).split(',');
-    this.app.use(
-      cors({
-        origin: (origin, callback) => {
-          if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-          } else {
-            callback(new Error(`CORS: Origin ${origin} not allowed`));
-          }
-        },
-        credentials: true,
-      })
-    );
+    const corsOptions: cors.CorsOptions = {
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error(`CORS: Origin ${origin} not allowed`));
+        }
+      },
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    };
+    this.app.options('*', cors(corsOptions));
+    this.app.use(cors(corsOptions));
 
     // Request body parsing
     this.app.use(express.json({ limit: '10mb' }));
@@ -332,6 +352,12 @@ class AppBootstrapper {
     SystemSetting.initModel(this.sequelize);
     AuditLog.initModel(this.sequelize);
 
+    // AI module models (Ollama-powered)
+    AIConversation.initModel(this.sequelize);
+    AIMessage.initModel(this.sequelize);
+    AIMeetingSummary.initModel(this.sequelize);
+    AIReminder.initModel(this.sequelize);
+
     // New feature models
     StaffQuery.initModel(this.sequelize);
     StaffQueryReply.initModel(this.sequelize);
@@ -341,7 +367,21 @@ class AppBootstrapper {
     MessageTemplate.initModel(this.sequelize);
     CommunicationLog.initModel(this.sequelize);
 
-    console.log('✅ 90+ models initialized');
+    // Multi-company and student management models
+    Company.initModel(this.sequelize);
+    Program.initModel(this.sequelize);
+    StudentProfile.initModel(this.sequelize);
+    StudentEnrollment.initModel(this.sequelize);
+    StudentResult.initModel(this.sequelize);
+    StudentAttendance.initModel(this.sequelize);
+    ClassSchedule.initModel(this.sequelize);
+
+    // Video call models
+    Meeting.initModel(this.sequelize);
+    MeetingParticipant.initModel(this.sequelize);
+    Call.initModel(this.sequelize);
+
+    console.log('✅ 100+ models initialized');
   }
 
   /**
@@ -395,9 +435,11 @@ class AppBootstrapper {
       // Start scheduler (cron jobs)
       startScheduler();
 
-      // Start server
+      // Start server — use http.createServer with increased maxHeaderSize
+      // to handle large JWT tokens containing roles/permissions arrays
       const port = process.env.PORT || 3000;
-      this.app.listen(port, () => {
+      const server = http.createServer({ maxHeaderSize: 65536 }, this.app);
+      server.listen(port, () => {
         console.log(`
 ╔════════════════════════════════════════╗
 ║   MaxHub ERP Backend - Server Started  ║

@@ -5,6 +5,10 @@ import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import { Staff } from '@models/Staff.model';
 import { Department } from '@models/Department.model';
 import { Designation } from '@models/Designation.model';
+import { User } from '@models/User.model';
+import { Role } from '@models/Role.model';
+import PasswordService from '@services/PasswordService';
+import { sendWelcomeEmail } from '@services/CommunicationService';
 
 const router = Router();
 
@@ -65,11 +69,53 @@ router.post(
       firstName, lastName, email, phone, employeeId,
       departmentId, designationId, locationId,
       joiningDate, dateOfBirth, gender, alternatePhone,
+      position, customPosition, businessUnit, additionalUnits,
     } = req.body;
 
-    const existing = await Staff.findOne({ where: { email } });
-    if (existing) return ResponseFormatter.conflict(res, 'A staff member with this email already exists');
+    // Check for duplicate email across both staff and users tables
+    const [existingStaff, existingUser] = await Promise.all([
+      Staff.findOne({ where: { email } }),
+      User.findOne({ where: { email } }),
+    ]);
+    if (existingStaff || existingUser) {
+      return ResponseFormatter.conflict(res, 'A staff member with this email already exists');
+    }
 
+    // Resolve position: custom text takes priority
+    const resolvedPosition: string | undefined = customPosition?.trim() || position?.trim() || undefined;
+
+    // Build deduplicated businessUnits array
+    const allUnits: string[] = [];
+    if (businessUnit) allUnits.push(businessUnit);
+    if (Array.isArray(additionalUnits)) {
+      for (const u of additionalUnits) {
+        if (u && !allUnits.includes(u)) allUnits.push(u);
+      }
+    }
+
+    // Generate temporary password and hash it
+    const temporaryPassword = PasswordService.generateRandomPassword(12);
+    const passwordHash = await PasswordService.hashPassword(temporaryPassword);
+
+    // Create the user account
+    const user = await User.create({
+      firstName,
+      lastName,
+      email,
+      phone,
+      passwordHash,
+      status: 'Active',
+      emailVerified: true,
+    } as any);
+
+    // Assign staff role
+    const staffRole = await Role.findOne({ where: { code: 'staff' } });
+    if (staffRole) {
+      await user.addRole(staffRole);
+    }
+
+    // Create staff record linked to the new user
+    const resolvedEmployeeId = employeeId || `EMP${Date.now()}`;
     const staff = await Staff.create({
       firstName,
       lastName,
@@ -77,15 +123,33 @@ router.post(
       phone,
       alternatePhone,
       gender,
-      employeeId: employeeId || `EMP${Date.now()}`,
+      employeeId: resolvedEmployeeId,
       departmentId: BigInt(departmentId),
-      designationId: BigInt(designationId),
+      designationId: BigInt(designationId || 1),
       locationId: BigInt(locationId || 1),
-      userId: BigInt((req as unknown as { user?: { id: number } }).user?.id || 1),
+      userId: user.id,
       joiningDate: new Date(joiningDate),
       dateOfBirth: new Date(dateOfBirth),
       status: 'Active',
-    });
+      position: resolvedPosition,
+      businessUnit: businessUnit || undefined,
+      businessUnits: allUnits.length ? allUnits : undefined,
+    } as any);
+
+    // Fetch department name for the welcome email (non-blocking)
+    const dept = departmentId ? await Department.findByPk(departmentId, { attributes: ['name'] }) : null;
+
+    // Send welcome email — fire-and-forget, don't block the response
+    sendWelcomeEmail({
+      to: email,
+      firstName,
+      lastName,
+      employeeId: resolvedEmployeeId,
+      temporaryPassword,
+      position: resolvedPosition,
+      businessUnit: businessUnit || undefined,
+      department: (dept as any)?.name || undefined,
+    }).catch(err => console.error('[Staff] Welcome email failed:', err));
 
     ResponseFormatter.success(res, staff.toJSON(), 'Staff member created successfully', 201);
   })
@@ -101,7 +165,17 @@ router.patch(
       firstName, lastName, phone, status,
       departmentId, designationId, alternatePhone,
       emergencyContactName, emergencyContactPhone,
+      position, customPosition, businessUnit, additionalUnits,
     } = req.body;
+
+    const resolvedPosition: string | undefined = customPosition?.trim() || position?.trim() || undefined;
+    const allUnits: string[] = [];
+    if (businessUnit) allUnits.push(businessUnit);
+    if (Array.isArray(additionalUnits)) {
+      for (const u of additionalUnits) {
+        if (u && !allUnits.includes(u)) allUnits.push(u);
+      }
+    }
 
     await staff.update({
       ...(firstName !== undefined && { firstName }),
@@ -113,7 +187,10 @@ router.patch(
       ...(emergencyContactPhone !== undefined && { emergencyContactPhone }),
       ...(departmentId !== undefined && { departmentId: BigInt(departmentId) }),
       ...(designationId !== undefined && { designationId: BigInt(designationId) }),
-    });
+      ...(resolvedPosition !== undefined && { position: resolvedPosition }),
+      ...(businessUnit !== undefined && { businessUnit }),
+      ...(allUnits.length > 0 && { businessUnits: allUnits }),
+    } as any);
 
     ResponseFormatter.success(res, staff.toJSON(), 'Staff member updated successfully');
   })

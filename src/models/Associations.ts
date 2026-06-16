@@ -31,7 +31,17 @@ import { PayrollPeriod } from './PayrollPeriod.model';
 import { EmployeeSalary } from './EmployeeSalary.model';
 import { Course } from './Course.model';
 import { StaffDepartment } from './StaffDepartment.model';
+import { Meeting } from './Meeting.model';
+import { MeetingParticipant } from './MeetingParticipant.model';
+import { Call } from './Call.model';
 import { JobPosting } from './JobPosting.model';
+import { Company } from './Company.model';
+import { Program } from './Program.model';
+import { StudentProfile } from './StudentProfile.model';
+import { StudentEnrollment } from './StudentEnrollment.model';
+import { StudentResult } from './StudentResult.model';
+import { StudentAttendance } from './StudentAttendance.model';
+import { ClassSchedule } from './ClassSchedule.model';
 
 /**
  * Initialize all Sequelize model associations
@@ -213,5 +223,60 @@ export class AssociationManager {
     JobPosting.belongsTo(Department, { foreignKey: 'departmentId' });
     JobPosting.belongsTo(Designation, { foreignKey: 'designationId' });
     JobPosting.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+
+    // ======== STUDENT MANAGEMENT SYSTEM ========
+
+    // Company associations
+    Company.hasMany(Program, { foreignKey: 'companyId', as: 'programs' });
+    Company.hasMany(StudentProfile, { foreignKey: 'companyId', as: 'students' });
+
+    // Program associations
+    Program.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
+    Program.hasMany(StudentProfile, { foreignKey: 'programId', as: 'students' });
+
+    // User → StudentProfile (one-to-one)
+    User.hasOne(StudentProfile, { foreignKey: 'userId', as: 'studentProfile' });
+    StudentProfile.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+    StudentProfile.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
+    StudentProfile.belongsTo(Program, { foreignKey: 'programId', as: 'program' });
+
+    // StudentProfile → Enrollments
+    StudentProfile.hasMany(StudentEnrollment, { foreignKey: 'studentId', as: 'enrollments' });
+    StudentEnrollment.belongsTo(StudentProfile, { foreignKey: 'studentId', as: 'student' });
+    StudentEnrollment.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
+    StudentEnrollment.belongsTo(User, { foreignKey: 'enrolledById', as: 'enrolledBy' });
+    Course.hasMany(StudentEnrollment, { foreignKey: 'courseId', as: 'studentEnrollments' });
+
+    // StudentProfile → Results
+    StudentProfile.hasMany(StudentResult, { foreignKey: 'studentId', as: 'results' });
+    StudentResult.belongsTo(StudentProfile, { foreignKey: 'studentId', as: 'student' });
+    StudentResult.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
+    StudentResult.belongsTo(User, { foreignKey: 'gradedById', as: 'gradedBy' });
+    Course.hasMany(StudentResult, { foreignKey: 'courseId', as: 'studentResults' });
+
+    // StudentProfile → Attendance
+    StudentProfile.hasMany(StudentAttendance, { foreignKey: 'studentId', as: 'attendanceRecords' });
+    StudentAttendance.belongsTo(StudentProfile, { foreignKey: 'studentId', as: 'student' });
+    StudentAttendance.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
+    StudentAttendance.belongsTo(User, { foreignKey: 'markedById', as: 'markedBy' });
+    Course.hasMany(StudentAttendance, { foreignKey: 'courseId', as: 'studentAttendance' });
+
+    // ClassSchedule associations
+    ClassSchedule.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
+    ClassSchedule.belongsTo(Staff, { foreignKey: 'instructorStaffId', as: 'instructor' });
+    Course.hasMany(ClassSchedule, { foreignKey: 'courseId', as: 'schedules' });
+
+    // ======== MEETINGS & CALLS ========
+    Meeting.belongsTo(User, { foreignKey: 'hostUserId', as: 'host' });
+    User.hasMany(Meeting, { foreignKey: 'hostUserId', as: 'hostedMeetings' });
+    Meeting.hasMany(MeetingParticipant, { foreignKey: 'meetingId', as: 'participants' });
+    MeetingParticipant.belongsTo(Meeting, { foreignKey: 'meetingId' });
+    MeetingParticipant.belongsTo(User, { foreignKey: 'userId' });
+    User.hasMany(MeetingParticipant, { foreignKey: 'userId', as: 'meetingParticipations' });
+
+    Call.belongsTo(User, { foreignKey: 'callerUserId', as: 'caller' });
+    Call.belongsTo(User, { foreignKey: 'calleeUserId', as: 'callee' });
+    User.hasMany(Call, { foreignKey: 'callerUserId', as: 'outgoingCalls' });
+    User.hasMany(Call, { foreignKey: 'calleeUserId', as: 'incomingCalls' });
   }
 }

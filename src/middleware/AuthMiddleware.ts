@@ -95,7 +95,39 @@ export class AuthMiddleware {
         ResponseFormatter.unauthorized(res, 'User not authenticated', req.path);
         return;
       }
-      const hasPermission = permissions.some((p) => req.user?.permissions.includes(p));
+
+      // superadmin bypasses all permission checks
+      if ((req.user.roles || []).includes('superadmin')) {
+        return next();
+      }
+
+      // Normalise a permission string to lowercase dotted format and generate variants.
+      // Handles: UPPERCASE, underscores as separators, and known prefix aliases.
+      const PREFIX_ALIASES: Record<string, string> = {
+        'finance.': 'fin.',
+        'account.': 'acc.',
+        'human-resources.': 'hr.',
+        'notify.': 'comm.',
+      };
+
+      const normalise = (p: string): string[] => {
+        // Convert DOMAIN_RESOURCE_ACTION_SCOPE → domain.resource.action.scope
+        const lower = p.toLowerCase().replace(/_/g, '.');
+        const variants: string[] = [lower];
+        for (const [alias, real] of Object.entries(PREFIX_ALIASES)) {
+          if (lower.startsWith(alias)) {
+            variants.push(lower.replace(alias, real));
+          }
+        }
+        return variants;
+      };
+
+      const userPerms = new Set((req.user.permissions || []).map((p: string) => p.toLowerCase()));
+
+      const hasPermission = permissions.some((reqPerm) =>
+        normalise(reqPerm).some((variant) => userPerms.has(variant)),
+      );
+
       if (!hasPermission) {
         ResponseFormatter.forbidden(res, `Required permissions: ${permissions.join(', ')}`, req.path);
         return;

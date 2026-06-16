@@ -25,6 +25,10 @@ interface StaffAttributes {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   status: 'Active' | 'Inactive' | 'OnLeave' | 'Suspended' | 'Resigned' | 'Retired';
+  // Position & business unit (position = job title, separate from org designation)
+  position?: string;
+  businessUnit?: string;
+  businessUnits?: string[];
   deletedAt?: Date;
 }
 
@@ -54,6 +58,9 @@ export class Staff extends Model<StaffAttributes, StaffCreationAttributes> imple
   public emergencyContactName?: string;
   public emergencyContactPhone?: string;
   public status!: 'Active' | 'Inactive' | 'OnLeave' | 'Suspended' | 'Resigned' | 'Retired';
+  public position?: string;
+  public businessUnit?: string;
+  public businessUnits?: string[];
   public deletedAt?: Date;
 
   // Timestamps
@@ -177,6 +184,21 @@ export class Staff extends Model<StaffAttributes, StaffCreationAttributes> imple
           type: DataTypes.STRING(20),
           allowNull: true,
           comment: 'Emergency contact phone',
+        },
+        position: {
+          type: DataTypes.STRING(200),
+          allowNull: true,
+          comment: 'Job title / position (e.g. Accountant, Instructor, Travel Consultant)',
+        },
+        businessUnit: {
+          type: DataTypes.STRING(100),
+          allowNull: true,
+          comment: 'Primary business unit (Kurios SAT, VisaMax Travels Ltd, Beadmax Design, Beadmax Vocational School)',
+        },
+        businessUnits: {
+          type: DataTypes.JSON,
+          allowNull: true,
+          comment: 'All assigned business units as a JSON array — staff may belong to multiple units',
         },
         status: {
           type: DataTypes.ENUM('Active', 'Inactive', 'OnLeave', 'Suspended', 'Resigned', 'Retired'),

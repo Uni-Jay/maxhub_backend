@@ -688,4 +688,131 @@ export enum PermissionCode {
 
   MSG_NOTIFICATION_READ_OWN = 'msg.notification.read.own',
   MSG_NOTIFICATION_DELETE_OWN = 'msg.notification.delete.own',
+
+  // ==================== COMPANY MANAGEMENT ====================
+  ORG_COMPANY_CREATE_ALL = 'org.company.create.all',
+  ORG_COMPANY_READ_ALL = 'org.company.read.all',
+  ORG_COMPANY_UPDATE_ALL = 'org.company.update.all',
+  ORG_COMPANY_DELETE_ALL = 'org.company.delete.all',
+  ORG_COMPANY_SETTINGS_ALL = 'org.company.settings.all',
+
+  // ==================== STUDENT SELF-SERVICE ====================
+  STU_PORTAL_ACCESS = 'stu.portal.access',
+  STU_PROFILE_READ_OWN = 'stu.profile.read.own',
+  STU_PROFILE_UPDATE_OWN = 'stu.profile.update.own',
+  STU_PROFILE_AVATAR_UPLOAD_OWN = 'stu.profile.avatar.upload.own',
+
+  STU_COURSE_VIEW_ENROLLED = 'stu.course.view.enrolled',
+  STU_LESSON_VIEW_OWN = 'stu.lesson.view.own',
+  STU_VIDEO_WATCH_OWN = 'stu.video.watch.own',
+  STU_MATERIAL_DOWNLOAD_OWN = 'stu.material.download.own',
+  STU_PROGRESS_READ_OWN = 'stu.progress.read.own',
+
+  STU_ASSIGNMENT_VIEW_OWN = 'stu.assignment.view.own',
+  STU_ASSIGNMENT_SUBMIT_OWN = 'stu.assignment.submit.own',
+  STU_ASSIGNMENT_GRADE_READ_OWN = 'stu.assignment.grade.read.own',
+
+  STU_EXAM_TAKE_OWN = 'stu.exam.take.own',
+  STU_RESULT_READ_OWN = 'stu.result.read.own',
+  STU_RANKING_VIEW_OWN = 'stu.ranking.view.own',
+
+  STU_ATTENDANCE_READ_OWN = 'stu.attendance.read.own',
+  STU_SCHEDULE_READ_OWN = 'stu.schedule.read.own',
+
+  STU_CERTIFICATE_READ_OWN = 'stu.certificate.read.own',
+  STU_CERTIFICATE_DOWNLOAD_OWN = 'stu.certificate.download.own',
+
+  STU_ANNOUNCEMENT_READ_ALL = 'stu.announcement.read.all',
+  STU_CHAT_READ_OWN = 'stu.chat.read.own',
+  STU_CHAT_SEND_OWN = 'stu.chat.send.own',
+
+  // ==================== STUDENT MANAGEMENT (ADMIN / INSTRUCTOR) ====================
+  STM_STUDENT_CREATE_ALL = 'stm.student.create.all',
+  STM_STUDENT_READ_ALL = 'stm.student.read.all',
+  STM_STUDENT_UPDATE_ALL = 'stm.student.update.all',
+  STM_STUDENT_DELETE_ALL = 'stm.student.delete.all',
+  STM_STUDENT_SUSPEND_ALL = 'stm.student.suspend.all',
+
+  STM_PROGRAM_CREATE_ALL = 'stm.program.create.all',
+  STM_PROGRAM_READ_ALL = 'stm.program.read.all',
+  STM_PROGRAM_UPDATE_ALL = 'stm.program.update.all',
+  STM_PROGRAM_DELETE_ALL = 'stm.program.delete.all',
+
+  STM_ENROLLMENT_CREATE_ALL = 'stm.enrollment.create.all',
+  STM_ENROLLMENT_READ_ALL = 'stm.enrollment.read.all',
+  STM_ENROLLMENT_UPDATE_ALL = 'stm.enrollment.update.all',
+  STM_ENROLLMENT_DELETE_ALL = 'stm.enrollment.delete.all',
+
+  STM_ATTENDANCE_MARK_ALL = 'stm.attendance.mark.all',
+  STM_ATTENDANCE_READ_ALL = 'stm.attendance.read.all',
+  STM_ATTENDANCE_UPDATE_ALL = 'stm.attendance.update.all',
+
+  STM_RESULT_CREATE_ALL = 'stm.result.create.all',
+  STM_RESULT_READ_ALL = 'stm.result.read.all',
+  STM_RESULT_UPDATE_ALL = 'stm.result.update.all',
+  STM_RESULT_DELETE_ALL = 'stm.result.delete.all',
+
+  STM_SCHEDULE_CREATE_ALL = 'stm.schedule.create.all',
+  STM_SCHEDULE_READ_ALL = 'stm.schedule.read.all',
+  STM_SCHEDULE_UPDATE_ALL = 'stm.schedule.update.all',
+
+  STM_CERTIFICATE_ISSUE_ALL = 'stm.certificate.issue.all',
+  STM_CERTIFICATE_READ_ALL = 'stm.certificate.read.all',
+  STM_CERTIFICATE_REVOKE_ALL = 'stm.certificate.revoke.all',
+
+  STM_ANALYTICS_VIEW_ALL = 'stm.analytics.view.all',
+  STM_REPORT_GENERATE_ALL = 'stm.report.generate.all',
+
+  // ==================== INSTRUCTOR PERMISSIONS ====================
+  INST_COURSE_CREATE_OWN = 'inst.course.create.own',
+  INST_COURSE_READ_OWN = 'inst.course.read.own',
+  INST_COURSE_UPDATE_OWN = 'inst.course.update.own',
+  INST_COURSE_PUBLISH_OWN = 'inst.course.publish.own',
+
+  INST_LESSON_CREATE_OWN = 'inst.lesson.create.own',
+  INST_LESSON_READ_OWN = 'inst.lesson.read.own',
+  INST_LESSON_UPDATE_OWN = 'inst.lesson.update.own',
+  INST_LESSON_DELETE_OWN = 'inst.lesson.delete.own',
+
+  INST_VIDEO_UPLOAD_OWN = 'inst.video.upload.own',
+  INST_VIDEO_READ_OWN = 'inst.video.read.own',
+  INST_VIDEO_DELETE_OWN = 'inst.video.delete.own',
+
+  INST_ASSIGNMENT_CREATE_OWN = 'inst.assignment.create.own',
+  INST_ASSIGNMENT_GRADE_OWN = 'inst.assignment.grade.own',
+  INST_ASSIGNMENT_READ_ALL_IN_COURSE = 'inst.assignment.read.course',
+
+  INST_EXAM_CREATE_OWN = 'inst.exam.create.own',
+  INST_EXAM_UPDATE_OWN = 'inst.exam.update.own',
+  INST_EXAM_PUBLISH_OWN = 'inst.exam.publish.own',
+  INST_EXAM_RESULT_READ_OWN_COURSE = 'inst.exam.result.read.course',
+
+  INST_STUDENT_READ_OWN_COURSE = 'inst.student.read.course',
+  INST_ATTENDANCE_MARK_OWN_CLASS = 'inst.attendance.mark.class',
+  INST_ATTENDANCE_READ_OWN_CLASS = 'inst.attendance.read.class',
+
+  INST_ANALYTICS_VIEW_OWN = 'inst.analytics.view.own',
+
+  // ==================== HR ROLE ====================
+  HR_STAFF_CREATE_ALL = 'hr.staff.create.all',
+  HR_STAFF_READ_ALL = 'hr.staff.read.all',
+  HR_STAFF_UPDATE_ALL = 'hr.staff.update.all',
+  HR_STAFF_OFFBOARD_ALL = 'hr.staff.offboard.all',
+
+  HR_LEAVE_MANAGE_ALL = 'hr.leave.manage.all',
+  HR_PAYROLL_VIEW_ALL = 'hr.payroll.view.all',
+  HR_DOCUMENT_MANAGE_ALL = 'hr.document.manage.all',
+
+  // ==================== ACCOUNTANT ROLE ====================
+  ACC_FULL_FINANCE_READ = 'acc.finance.read.all',
+  ACC_FULL_FINANCE_WRITE = 'acc.finance.write.all',
+  ACC_PAYROLL_PROCESS = 'acc.payroll.process.all',
+  ACC_REPORT_GENERATE = 'acc.report.generate.all',
+
+  // ==================== RECEPTIONIST ROLE ====================
+  RECEP_VISITOR_LOG_ALL = 'recep.visitor.log.all',
+  RECEP_APPOINTMENT_MANAGE_ALL = 'recep.appointment.manage.all',
+  RECEP_ENQUIRY_CREATE_ALL = 'recep.enquiry.create.all',
+  RECEP_ENQUIRY_READ_ALL = 'recep.enquiry.read.all',
+  RECEP_STUDENT_REGISTER = 'recep.student.register',
 }

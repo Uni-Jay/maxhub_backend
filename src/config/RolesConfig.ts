@@ -1,67 +1,47 @@
 import { PermissionCode } from './PermissionCodes';
 
-/**
- * RBAC System Roles and Permission Mappings
- */
-
 export enum RoleCode {
-  SUPER_ADMIN = 'SUPER_ADMIN',
-  ADMIN = 'ADMIN',
-  DEPARTMENT_HEAD = 'DEPARTMENT_HEAD',
-  MANAGER = 'MANAGER',
-  SUPERVISOR = 'SUPERVISOR',
-  TEAM_LEAD = 'TEAM_LEAD',
-  STAFF = 'STAFF',
-  CONSULTANT = 'CONSULTANT',
-  INTERN = 'INTERN',
+  SUPERADMIN = 'superadmin',
+  ADMIN      = 'admin',
+  HR         = 'hr',
+  HOD        = 'hod',
+  STAFF      = 'staff',
+  // Portal-only — not an ERP staff role
+  STUDENT    = 'student',
 }
 
 export const ROLE_DESCRIPTIONS: Record<RoleCode, string> = {
-  [RoleCode.SUPER_ADMIN]: 'Full system access - All permissions granted',
-  [RoleCode.ADMIN]: 'Administrative access - System configuration and user management',
-  [RoleCode.DEPARTMENT_HEAD]: 'Department leadership - Department-wide oversight',
-  [RoleCode.MANAGER]: 'Team management - Team oversight and approvals',
-  [RoleCode.SUPERVISOR]: 'Supervision - Direct team member supervision',
-  [RoleCode.TEAM_LEAD]: 'Team coordination - Task coordination and guidance',
-  [RoleCode.STAFF]: 'Regular employee - Standard operational access',
-  [RoleCode.CONSULTANT]: 'External consultant - Limited operational access',
-  [RoleCode.INTERN]: 'Intern - Minimal operational access',
+  [RoleCode.SUPERADMIN]: 'Full unrestricted system access across all companies and business units',
+  [RoleCode.ADMIN]:      'Administrative oversight — staff, operations, HR, payroll, reports',
+  [RoleCode.HR]:         'Human resources — recruitment, staff lifecycle, leave, training, appraisals',
+  [RoleCode.HOD]:        'Head of Department — department oversight, team tasks, approvals',
+  [RoleCode.STAFF]:      'Staff member — personal dashboard, tasks, attendance, payslips, chat',
+  [RoleCode.STUDENT]:    'Beadmax Vocational School learner — student portal only',
 };
 
 export const ROLE_HIERARCHY: Record<RoleCode, number> = {
-  [RoleCode.SUPER_ADMIN]: 9,
-  [RoleCode.ADMIN]: 8,
-  [RoleCode.DEPARTMENT_HEAD]: 7,
-  [RoleCode.MANAGER]: 6,
-  [RoleCode.SUPERVISOR]: 5,
-  [RoleCode.TEAM_LEAD]: 4,
-  [RoleCode.STAFF]: 3,
-  [RoleCode.CONSULTANT]: 2,
-  [RoleCode.INTERN]: 1,
+  [RoleCode.SUPERADMIN]: 10,
+  [RoleCode.ADMIN]:       8,
+  [RoleCode.HR]:          6,
+  [RoleCode.HOD]:         5,
+  [RoleCode.STAFF]:       3,
+  [RoleCode.STUDENT]:     1,
 };
 
-/**
- * Role-Permission Mappings
- * Each role has explicit permission assignments
- */
 export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
-  [RoleCode.SUPER_ADMIN]: [
-    // Full access - all permissions granted
-    ...Object.values(PermissionCode),
-  ],
+  // ─────────────────────────────────────────────────────────────
+  // SUPERADMIN — unrestricted
+  // ─────────────────────────────────────────────────────────────
+  [RoleCode.SUPERADMIN]: [...Object.values(PermissionCode)],
 
+  // ─────────────────────────────────────────────────────────────
+  // ADMIN (Head of Administration) — operational management
+  // ─────────────────────────────────────────────────────────────
   [RoleCode.ADMIN]: [
-    // Authentication
-    PermissionCode.AUTH_USER_CREATE_ALL,
-    PermissionCode.AUTH_USER_READ_ALL,
-    PermissionCode.AUTH_USER_UPDATE_ALL,
-    PermissionCode.AUTH_USER_DELETE_ALL,
-    PermissionCode.AUTH_ROLE_READ_ALL,
-    PermissionCode.AUTH_ROLE_UPDATE_ALL,
-    PermissionCode.AUTH_PERMISSION_READ_ALL,
-    PermissionCode.AUTH_PERMISSION_ASSIGN_ALL,
-
-    // Organizational
+    // Company & org
+    PermissionCode.ORG_COMPANY_READ_ALL,
+    PermissionCode.ORG_COMPANY_UPDATE_ALL,
+    PermissionCode.ORG_COMPANY_SETTINGS_ALL,
     PermissionCode.ORG_DEPARTMENT_CREATE_ALL,
     PermissionCode.ORG_DEPARTMENT_READ_ALL,
     PermissionCode.ORG_DEPARTMENT_UPDATE_ALL,
@@ -69,6 +49,7 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.ORG_DESIGNATION_CREATE_ALL,
     PermissionCode.ORG_DESIGNATION_READ_ALL,
     PermissionCode.ORG_DESIGNATION_UPDATE_ALL,
+    PermissionCode.ORG_DESIGNATION_DELETE_ALL,
     PermissionCode.ORG_LOCATION_CREATE_ALL,
     PermissionCode.ORG_LOCATION_READ_ALL,
     PermissionCode.ORG_LOCATION_UPDATE_ALL,
@@ -76,59 +57,266 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.ORG_STAFF_READ_ALL,
     PermissionCode.ORG_STAFF_UPDATE_ALL,
     PermissionCode.ORG_STAFF_DELETE_ALL,
-
+    // Users / roles
+    PermissionCode.AUTH_USER_CREATE_ALL,
+    PermissionCode.AUTH_USER_READ_ALL,
+    PermissionCode.AUTH_USER_UPDATE_ALL,
+    PermissionCode.AUTH_USER_DELETE_ALL,
+    PermissionCode.AUTH_ROLE_READ_ALL,
+    PermissionCode.AUTH_PERMISSION_READ_ALL,
+    PermissionCode.AUTH_PERMISSION_ASSIGN_ALL,
+    // HR
+    PermissionCode.HR_STAFF_CREATE_ALL,
+    PermissionCode.HR_STAFF_READ_ALL,
+    PermissionCode.HR_STAFF_UPDATE_ALL,
+    PermissionCode.HR_DOCUMENT_MANAGE_ALL,
+    PermissionCode.HR_RECRUITMENT_CREATE_ALL,
+    PermissionCode.HR_RECRUITMENT_READ_ALL,
+    PermissionCode.HR_RECRUITMENT_UPDATE_ALL,
+    PermissionCode.HR_ONBOARDING_CREATE_ALL,
+    PermissionCode.HR_ONBOARDING_READ_ALL,
+    PermissionCode.HR_ONBOARDING_UPDATE_ALL,
+    PermissionCode.HR_RECORDS_READ_ALL,
+    PermissionCode.HR_RECORDS_UPDATE_ALL,
+    PermissionCode.HR_PROMOTION_CREATE_ALL,
+    PermissionCode.HR_PROMOTION_READ_ALL,
+    PermissionCode.HR_PROMOTION_APPROVE_ALL,
+    PermissionCode.HR_WARNING_CREATE_ALL,
+    PermissionCode.HR_WARNING_READ_ALL,
+    PermissionCode.HR_RESIGNATION_READ_ALL,
+    PermissionCode.HR_RESIGNATION_APPROVE_ALL,
+    // Attendance
+    PermissionCode.ATT_ATTENDANCE_READ_ALL,
+    PermissionCode.ATT_ATTENDANCE_UPDATE_ALL,
+    PermissionCode.ATT_TIMESHEET_READ_ALL,
+    PermissionCode.ATT_TIMESHEET_APPROVE_ALL,
+    PermissionCode.ATT_QR_GENERATE_ALL,
+    PermissionCode.ATT_OVERTIME_READ_ALL,
+    PermissionCode.ATT_OVERTIME_APPROVE_ALL,
+    // Leave
+    PermissionCode.LEAVE_TYPE_CREATE_ALL,
+    PermissionCode.LEAVE_TYPE_READ_ALL,
+    PermissionCode.LEAVE_TYPE_UPDATE_ALL,
+    PermissionCode.LEAVE_REQUEST_READ_ALL,
+    PermissionCode.LEAVE_REQUEST_APPROVE_ALL,
+    PermissionCode.LEAVE_REQUEST_REJECT_ALL,
+    // Projects
+    PermissionCode.PROJECT_CREATE_ALL,
+    PermissionCode.PROJECT_READ_ALL,
+    PermissionCode.PROJECT_UPDATE_ALL,
+    PermissionCode.PROJECT_DELETE_ALL,
+    PermissionCode.TASK_CREATE_ALL,
+    PermissionCode.TASK_READ_ALL,
+    PermissionCode.TASK_UPDATE_ALL,
+    PermissionCode.TASK_DELETE_ALL,
+    PermissionCode.MILESTONE_CREATE_ALL,
+    PermissionCode.MILESTONE_READ_ALL,
+    PermissionCode.MILESTONE_UPDATE_ALL,
+    // CRM
+    PermissionCode.CRM_CONTACT_CREATE_ALL,
+    PermissionCode.CRM_CONTACT_READ_ALL,
+    PermissionCode.CRM_OPPORTUNITY_CREATE_ALL,
+    PermissionCode.CRM_OPPORTUNITY_READ_ALL,
+    PermissionCode.CRM_ACTIVITY_CREATE_ALL,
+    PermissionCode.CRM_ACTIVITY_READ_ALL,
+    PermissionCode.CRM_VISA_APPLICANT_CREATE_ALL,
+    PermissionCode.CRM_VISA_APPLICANT_READ_ALL,
+    PermissionCode.CRM_VISA_APPLICANT_UPDATE_ALL,
+    PermissionCode.CRM_CONSULTATION_CREATE_ALL,
+    PermissionCode.CRM_CONSULTATION_READ_ALL,
+    PermissionCode.CRM_SOFTWARE_CLIENT_CREATE_ALL,
+    PermissionCode.CRM_SOFTWARE_CLIENT_READ_ALL,
+    PermissionCode.CRM_CUSTOMER_CREATE_ALL,
+    PermissionCode.CRM_CUSTOMER_READ_ALL,
+    // Student management
+    PermissionCode.STM_STUDENT_CREATE_ALL,
+    PermissionCode.STM_STUDENT_READ_ALL,
+    PermissionCode.STM_STUDENT_UPDATE_ALL,
+    PermissionCode.STM_STUDENT_SUSPEND_ALL,
+    PermissionCode.STM_PROGRAM_CREATE_ALL,
+    PermissionCode.STM_PROGRAM_READ_ALL,
+    PermissionCode.STM_PROGRAM_UPDATE_ALL,
+    PermissionCode.STM_ENROLLMENT_CREATE_ALL,
+    PermissionCode.STM_ENROLLMENT_READ_ALL,
+    PermissionCode.STM_ENROLLMENT_UPDATE_ALL,
+    PermissionCode.STM_ATTENDANCE_READ_ALL,
+    PermissionCode.STM_RESULT_READ_ALL,
+    PermissionCode.STM_CERTIFICATE_ISSUE_ALL,
+    PermissionCode.STM_CERTIFICATE_READ_ALL,
+    PermissionCode.STM_ANALYTICS_VIEW_ALL,
+    PermissionCode.STM_REPORT_GENERATE_ALL,
+    PermissionCode.STM_SCHEDULE_CREATE_ALL,
+    PermissionCode.STM_SCHEDULE_READ_ALL,
+    PermissionCode.STM_SCHEDULE_UPDATE_ALL,
+    // LMS
+    PermissionCode.LMS_COURSE_CREATE_ALL,
+    PermissionCode.LMS_COURSE_READ_ALL,
+    PermissionCode.LMS_COURSE_UPDATE_ALL,
+    PermissionCode.LMS_COURSE_DELETE_ALL,
+    PermissionCode.LMS_ENROLLMENT_MANAGE_ALL,
+    PermissionCode.LMS_ENROLLMENT_READ_ALL,
+    PermissionCode.LMS_CERTIFICATE_AWARD_ALL,
+    PermissionCode.LMS_CERTIFICATE_READ_ALL,
+    // CBT
+    PermissionCode.CBT_EXAM_CREATE_ALL,
+    PermissionCode.CBT_EXAM_READ_ALL,
+    PermissionCode.CBT_EXAM_UPDATE_ALL,
+    PermissionCode.CBT_EXAM_PUBLISH_ALL,
+    PermissionCode.CBT_RESULT_READ_ALL,
+    PermissionCode.CBT_RANKING_VIEW_ALL,
+    // Finance (read-only for Admin)
+    PermissionCode.ACC_FULL_FINANCE_READ,
+    PermissionCode.FIN_PAYROLL_READ_ALL,
+    PermissionCode.FIN_INVOICE_READ_ALL,
+    PermissionCode.FIN_BUDGET_READ_ALL,
+    // Inventory
+    PermissionCode.INV_INVENTORY_READ_ALL,
+    PermissionCode.INV_ITEM_READ_ALL,
+    PermissionCode.INV_STOCK_READ_ALL,
+    // Messaging
+    PermissionCode.MSG_DIRECT_MESSAGE_CREATE_OWN,
+    PermissionCode.MSG_DIRECT_MESSAGE_READ_OWN,
+    PermissionCode.MSG_DEPARTMENT_CHAT_CREATE_ALL,
+    PermissionCode.MSG_DEPARTMENT_CHAT_READ_ALL,
+    PermissionCode.MSG_CHAT_MESSAGE_CREATE_OWN,
+    PermissionCode.MSG_CHAT_MESSAGE_READ_ALL,
     // System
     PermissionCode.SYS_SETTING_READ_ALL,
     PermissionCode.SYS_SETTING_UPDATE_ALL,
     PermissionCode.SYS_AUDIT_READ_ALL,
-  ],
-
-  [RoleCode.DEPARTMENT_HEAD]: [
-    // Own department and staff management
-    PermissionCode.ORG_STAFF_READ_OWN_DEPARTMENT,
-    PermissionCode.ORG_STAFF_UPDATE_OWN_DEPARTMENT,
-    PermissionCode.ORG_QUALIFICATION_READ_ALL,
-    PermissionCode.ORG_SKILL_READ_ALL,
-
-    // Attendance and leave approval
-    PermissionCode.ATT_ATTENDANCE_READ_OWN_DEPARTMENT,
-    PermissionCode.ATT_ATTENDANCE_UPDATE_OWN_DEPARTMENT,
-    PermissionCode.ATT_TIMESHEET_READ_OWN_DEPARTMENT,
-    PermissionCode.ATT_TIMESHEET_APPROVE_OWN_DEPARTMENT,
-    PermissionCode.LEAVE_REQUEST_READ_OWN_DEPARTMENT,
-    PermissionCode.LEAVE_REQUEST_APPROVE_OWN_DEPARTMENT,
-    PermissionCode.LEAVE_REQUEST_REJECT_OWN_DEPARTMENT,
-
-    // Project oversight
-    PermissionCode.PROJECT_READ_ALL,
-    PermissionCode.PROJECT_UPDATE_ALL,
-    PermissionCode.MILESTONE_READ_ALL,
-    PermissionCode.TASK_READ_ALL,
-
-    // Team reports
     PermissionCode.SYS_REPORT_GENERATE_ALL,
     PermissionCode.SYS_ANALYTICS_VIEW_ALL,
-
-    // Expense approval
-    PermissionCode.EMP_EXPENSE_APPROVE_OWN_DEPARTMENT,
-    PermissionCode.EMP_COMPLAINT_ASSIGN_ALL,
+    // Notifications
+    PermissionCode.COMM_NOTIFICATION_READ_OWN,
+    PermissionCode.COMM_NOTIFICATION_DELETE_OWN,
+    // Reception functions
+    PermissionCode.RECEP_STUDENT_REGISTER,
   ],
 
-  [RoleCode.MANAGER]: [
-    // Read own department staff
-    PermissionCode.ORG_STAFF_READ_OWN_DEPARTMENT,
+  // ─────────────────────────────────────────────────────────────
+  // HR — staff lifecycle, recruitment, leave, documents
+  // ─────────────────────────────────────────────────────────────
+  [RoleCode.HR]: [
+    PermissionCode.AUTH_USER_READ_ALL,
+    PermissionCode.AUTH_USER_UPDATE_ALL,
+    PermissionCode.ORG_STAFF_CREATE_ALL,
+    PermissionCode.ORG_STAFF_READ_ALL,
+    PermissionCode.ORG_STAFF_UPDATE_ALL,
+    PermissionCode.ORG_DEPARTMENT_READ_ALL,
+    PermissionCode.ORG_DESIGNATION_READ_ALL,
+    // HR core
+    PermissionCode.HR_STAFF_CREATE_ALL,
+    PermissionCode.HR_STAFF_READ_ALL,
+    PermissionCode.HR_STAFF_UPDATE_ALL,
+    PermissionCode.HR_STAFF_OFFBOARD_ALL,
+    PermissionCode.HR_DOCUMENT_MANAGE_ALL,
+    PermissionCode.HR_RECRUITMENT_CREATE_ALL,
+    PermissionCode.HR_RECRUITMENT_READ_ALL,
+    PermissionCode.HR_RECRUITMENT_UPDATE_ALL,
+    PermissionCode.HR_RECRUITMENT_DELETE_ALL,
+    PermissionCode.HR_ONBOARDING_CREATE_ALL,
+    PermissionCode.HR_ONBOARDING_READ_ALL,
+    PermissionCode.HR_ONBOARDING_UPDATE_ALL,
+    PermissionCode.HR_RECORDS_READ_ALL,
+    PermissionCode.HR_RECORDS_UPDATE_ALL,
+    PermissionCode.HR_PROMOTION_CREATE_ALL,
+    PermissionCode.HR_PROMOTION_READ_ALL,
+    PermissionCode.HR_WARNING_CREATE_ALL,
+    PermissionCode.HR_WARNING_READ_ALL,
+    PermissionCode.HR_WARNING_UPDATE_ALL,
+    PermissionCode.HR_RESIGNATION_READ_ALL,
+    PermissionCode.HR_RESIGNATION_APPROVE_ALL,
+    PermissionCode.HR_APPRAISAL_CREATE_ALL,
+    PermissionCode.HR_APPRAISAL_READ_ALL,
+    PermissionCode.HR_GOAL_CREATE_ALL,
+    PermissionCode.HR_GOAL_READ_ALL,
+    PermissionCode.HR_BENEFIT_CREATE_ALL,
+    PermissionCode.HR_BENEFIT_READ_ALL,
+    PermissionCode.HR_BENEFIT_UPDATE_ALL,
+    PermissionCode.HR_HOLIDAY_CREATE_ALL,
+    PermissionCode.HR_HOLIDAY_READ_ALL,
+    PermissionCode.HR_HOLIDAY_UPDATE_ALL,
+    PermissionCode.HR_LEAVE_MANAGE_ALL,
+    // Leave
+    PermissionCode.LEAVE_TYPE_CREATE_ALL,
+    PermissionCode.LEAVE_TYPE_READ_ALL,
+    PermissionCode.LEAVE_TYPE_UPDATE_ALL,
+    PermissionCode.LEAVE_REQUEST_READ_ALL,
+    PermissionCode.LEAVE_REQUEST_APPROVE_ALL,
+    PermissionCode.LEAVE_REQUEST_REJECT_ALL,
+    // Attendance
+    PermissionCode.ATT_ATTENDANCE_READ_ALL,
+    PermissionCode.ATT_ATTENDANCE_UPDATE_ALL,
+    PermissionCode.ATT_TIMESHEET_READ_ALL,
+    // Payroll view
+    PermissionCode.HR_PAYROLL_VIEW_ALL,
+    PermissionCode.PAY_SALARY_READ_ALL,
+    PermissionCode.FIN_PAYSLIP_READ_ALL,
+    PermissionCode.FIN_PAYSLIP_GENERATE_ALL,
+    // Recruitment
+    PermissionCode.REC_POSTING_CREATE_ALL,
+    PermissionCode.REC_POSTING_READ_ALL,
+    PermissionCode.REC_POSTING_UPDATE_ALL,
+    PermissionCode.REC_POSTING_PUBLISH_ALL,
+    PermissionCode.REC_APPLICATION_CREATE_ALL,
+    PermissionCode.REC_APPLICATION_READ_ALL,
+    PermissionCode.REC_APPLICATION_UPDATE_ALL,
+    PermissionCode.REC_INTERVIEW_CREATE_ALL,
+    PermissionCode.REC_INTERVIEW_READ_ALL,
+    PermissionCode.REC_INTERVIEW_UPDATE_ALL,
+    PermissionCode.REC_OFFER_CREATE_ALL,
+    PermissionCode.REC_OFFER_READ_ALL,
+    PermissionCode.REC_OFFER_APPROVE_ALL,
+    PermissionCode.REC_ONBOARDING_READ_ALL,
+    PermissionCode.REC_ONBOARDING_UPDATE_ALL,
+    // Training
+    PermissionCode.TRAIN_PROGRAM_CREATE_ALL,
+    PermissionCode.TRAIN_PROGRAM_READ_ALL,
+    PermissionCode.TRAIN_PROGRAM_UPDATE_ALL,
+    PermissionCode.TRAIN_ATTENDANCE_READ_ALL,
+    PermissionCode.TRAIN_ATTENDANCE_MARK_ALL,
+    // System
+    PermissionCode.SYS_AUDIT_READ_ALL,
+    PermissionCode.SYS_REPORT_GENERATE_ALL,
+    // Messaging
+    PermissionCode.MSG_DIRECT_MESSAGE_CREATE_OWN,
+    PermissionCode.MSG_DIRECT_MESSAGE_READ_OWN,
+    PermissionCode.MSG_DEPARTMENT_CHAT_READ_OWN_DEPARTMENT,
+    PermissionCode.MSG_CHAT_MESSAGE_CREATE_OWN,
+    PermissionCode.COMM_NOTIFICATION_READ_OWN,
+    // Own profile
+    PermissionCode.AUTH_USER_READ_OWN,
+    PermissionCode.AUTH_USER_UPDATE_OWN,
+    PermissionCode.ATT_ATTENDANCE_READ_OWN,
+    PermissionCode.LEAVE_REQUEST_CREATE_OWN,
+    PermissionCode.LEAVE_REQUEST_READ_OWN,
+  ],
 
-    // Attendance and timesheet approval
+  // ─────────────────────────────────────────────────────────────
+  // HOD — Head of Department
+  // ─────────────────────────────────────────────────────────────
+  [RoleCode.HOD]: [
+    PermissionCode.AUTH_USER_READ_OWN,
+    PermissionCode.AUTH_USER_UPDATE_OWN,
+    PermissionCode.ORG_STAFF_READ_OWN_DEPARTMENT,
+    PermissionCode.ORG_STAFF_UPDATE_OWN_DEPARTMENT,
+    PermissionCode.ORG_DEPARTMENT_READ_OWN_DEPARTMENT,
+    PermissionCode.ORG_QUALIFICATION_READ_ALL,
+    PermissionCode.ORG_SKILL_READ_ALL,
+    // Attendance & leave
     PermissionCode.ATT_ATTENDANCE_READ_OWN_DEPARTMENT,
+    PermissionCode.ATT_ATTENDANCE_UPDATE_OWN_DEPARTMENT,
+    PermissionCode.ATT_ATTENDANCE_READ_OWN,
+    PermissionCode.ATT_ATTENDANCE_CREATE_OWN,
     PermissionCode.ATT_TIMESHEET_READ_OWN_DEPARTMENT,
     PermissionCode.ATT_TIMESHEET_APPROVE_OWN_DEPARTMENT,
-
-    // Leave approval
     PermissionCode.LEAVE_REQUEST_READ_OWN_DEPARTMENT,
     PermissionCode.LEAVE_REQUEST_APPROVE_OWN_DEPARTMENT,
     PermissionCode.LEAVE_REQUEST_REJECT_OWN_DEPARTMENT,
-
-    // Project management
+    PermissionCode.LEAVE_REQUEST_CREATE_OWN,
+    PermissionCode.LEAVE_REQUEST_READ_OWN,
+    PermissionCode.LEAVE_TYPE_READ_ALL,
+    // Projects
     PermissionCode.PROJECT_CREATE_ALL,
     PermissionCode.PROJECT_READ_ALL,
     PermissionCode.PROJECT_UPDATE_ALL,
@@ -138,184 +326,150 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.TASK_CREATE_ALL,
     PermissionCode.TASK_READ_ALL,
     PermissionCode.TASK_UPDATE_ALL,
-
+    // Budget (read own dept)
+    PermissionCode.FIN_BUDGET_READ_OWN_DEPARTMENT,
     // CRM
-    PermissionCode.CRM_OPPORTUNITY_READ_ALL,
-    PermissionCode.CRM_QUOTE_CREATE_ALL,
-    PermissionCode.CRM_QUOTE_READ_ALL,
-    PermissionCode.CRM_QUOTE_APPROVE_ALL,
-    PermissionCode.CRM_ORDER_CREATE_ALL,
-    PermissionCode.CRM_ORDER_READ_ALL,
-
+    PermissionCode.CRM_CONTACT_READ_ALL,
+    PermissionCode.CRM_OPPORTUNITY_READ_OWN,
+    PermissionCode.CRM_ACTIVITY_READ_OWN,
+    // Student management
+    PermissionCode.STM_STUDENT_READ_ALL,
+    PermissionCode.STM_ENROLLMENT_READ_ALL,
+    PermissionCode.STM_ATTENDANCE_READ_ALL,
+    PermissionCode.STM_RESULT_READ_ALL,
+    PermissionCode.STM_ANALYTICS_VIEW_ALL,
+    // LMS (view)
+    PermissionCode.LMS_COURSE_READ_ALL,
+    PermissionCode.LMS_ENROLLMENT_READ_ALL,
+    // CBT
+    PermissionCode.CBT_EXAM_READ_ALL,
+    PermissionCode.CBT_RESULT_READ_ALL,
+    PermissionCode.CBT_RANKING_VIEW_ALL,
     // Appraisal
     PermissionCode.HR_APPRAISAL_CREATE_ALL,
     PermissionCode.HR_APPRAISAL_READ_ALL,
     PermissionCode.HR_APPRAISAL_APPROVE_ALL,
-
-    // Expense approval
-    PermissionCode.EMP_EXPENSE_APPROVE_OWN_DEPARTMENT,
-
-    // Team reports
+    PermissionCode.HR_GOAL_READ_ALL,
+    // Reports
     PermissionCode.SYS_REPORT_GENERATE_ALL,
+    PermissionCode.SYS_ANALYTICS_VIEW_ALL,
+    // Expense
+    PermissionCode.EMP_EXPENSE_APPROVE_OWN_DEPARTMENT,
+    PermissionCode.EMP_EXPENSE_CREATE_OWN,
+    PermissionCode.EMP_EXPENSE_READ_OWN,
+    // Messaging
+    PermissionCode.MSG_DIRECT_MESSAGE_CREATE_OWN,
+    PermissionCode.MSG_DIRECT_MESSAGE_READ_OWN,
+    PermissionCode.MSG_DEPARTMENT_CHAT_READ_OWN_DEPARTMENT,
+    PermissionCode.MSG_CHAT_MESSAGE_CREATE_OWN,
+    PermissionCode.COMM_NOTIFICATION_READ_OWN,
+    // Payroll (read own)
+    PermissionCode.PAY_SALARY_READ_OWN,
   ],
 
-  [RoleCode.SUPERVISOR]: [
-    // Read own department staff
-    PermissionCode.ORG_STAFF_READ_OWN_DEPARTMENT,
-
-    // Attendance
-    PermissionCode.ATT_ATTENDANCE_READ_OWN_DEPARTMENT,
-    PermissionCode.ATT_ATTENDANCE_UPDATE_OWN_DEPARTMENT,
-    PermissionCode.ATT_TIMESHEET_READ_OWN_DEPARTMENT,
-
-    // Leave
-    PermissionCode.LEAVE_REQUEST_READ_OWN_DEPARTMENT,
-
-    // Task assignment
-    PermissionCode.TASK_CREATE_ALL,
-    PermissionCode.TASK_READ_ALL,
-    PermissionCode.TASK_UPDATE_ALL,
-
-    // CRM
-    PermissionCode.CRM_ACTIVITY_CREATE_ALL,
-    PermissionCode.CRM_ACTIVITY_READ_ALL,
-    PermissionCode.CRM_ACTIVITY_UPDATE_ALL,
-
-    // Training
-    PermissionCode.TRAIN_ATTENDANCE_MARK_ALL,
-  ],
-
-  [RoleCode.TEAM_LEAD]: [
-    // Read own info and team
-    PermissionCode.ORG_STAFF_READ_OWN_DEPARTMENT,
-    PermissionCode.ATT_ATTENDANCE_READ_OWN_DEPARTMENT,
-
-    // Task coordination
-    PermissionCode.TASK_READ_ALL,
-    PermissionCode.TASK_UPDATE_OWN,
-
-    // Communication
-    PermissionCode.COMM_CONVERSATION_CREATE_ALL,
-    PermissionCode.COMM_CONVERSATION_READ_ALL,
-    PermissionCode.COMM_MESSAGE_CREATE_ALL,
-    PermissionCode.COMM_MESSAGE_READ_ALL,
-
-    // Own info
-    PermissionCode.AUTH_USER_READ_OWN,
-    PermissionCode.AUTH_USER_UPDATE_OWN,
-    PermissionCode.ORG_STAFF_READ_OWN,
-    PermissionCode.ORG_QUALIFICATION_READ_OWN,
-    PermissionCode.ORG_SKILL_READ_OWN,
-
-    // Leave
-    PermissionCode.LEAVE_REQUEST_CREATE_OWN,
-    PermissionCode.LEAVE_REQUEST_READ_OWN,
-
-    // Feedback
-    PermissionCode.HR_FEEDBACK_CREATE_ALL,
-    PermissionCode.HR_FEEDBACK_READ_OWN,
-  ],
-
+  // ─────────────────────────────────────────────────────────────
+  // STAFF — standard operational access
+  // Position-specific permissions (Accountant, Instructor, etc.)
+  // are assigned at the user level via UserPermissions.
+  // ─────────────────────────────────────────────────────────────
   [RoleCode.STAFF]: [
-    // Own information
     PermissionCode.AUTH_USER_READ_OWN,
     PermissionCode.AUTH_USER_UPDATE_OWN,
     PermissionCode.ORG_STAFF_READ_OWN,
     PermissionCode.ORG_QUALIFICATION_READ_OWN,
     PermissionCode.ORG_SKILL_READ_OWN,
-
-    // Attendance and timesheet
     PermissionCode.ATT_ATTENDANCE_CREATE_OWN,
-    PermissionCode.ATT_TIMESHEET_CREATE_OWN,
     PermissionCode.ATT_ATTENDANCE_READ_OWN,
+    PermissionCode.ATT_CLOCKIN_CREATE_OWN,
+    PermissionCode.ATT_CLOCKOUT_CREATE_OWN,
+    PermissionCode.ATT_GPS_READ_OWN,
+    PermissionCode.ATT_QR_USE_OWN,
+    PermissionCode.ATT_TIMESHEET_CREATE_OWN,
     PermissionCode.ATT_TIMESHEET_READ_OWN,
-
-    // Leave
+    PermissionCode.ATT_OVERTIME_READ_OWN,
     PermissionCode.LEAVE_REQUEST_CREATE_OWN,
     PermissionCode.LEAVE_REQUEST_READ_OWN,
     PermissionCode.LEAVE_TYPE_READ_ALL,
-
-    // Task
     PermissionCode.TASK_READ_OWN,
-
-    // Project
+    PermissionCode.TASK_UPDATE_OWN,
     PermissionCode.PROJECT_READ_OWN,
-
-    // CRM - read only
     PermissionCode.CRM_CONTACT_READ_ALL,
-    PermissionCode.CRM_OPPORTUNITY_READ_OWN,
     PermissionCode.CRM_ACTIVITY_READ_OWN,
-
-    // Learning
     PermissionCode.LMS_COURSE_READ_ALL,
-    PermissionCode.LMS_ENROLLMENT_READ_OWN,
+    PermissionCode.LMS_ENROLLMENT_VIEW_OWN,
+    PermissionCode.LMS_LESSON_READ_OWN,
+    PermissionCode.LMS_VIDEO_READ_OWN,
+    PermissionCode.LMS_ASSIGNMENT_READ_OWN,
+    PermissionCode.LMS_ASSIGNMENT_SUBMIT_OWN,
     PermissionCode.LMS_EXAM_READ_OWN,
     PermissionCode.LMS_EXAM_ATTEMPT_OWN,
     PermissionCode.LMS_CERTIFICATE_READ_OWN,
-
-    // Communication
-    PermissionCode.COMM_CONVERSATION_CREATE_ALL,
-    PermissionCode.COMM_CONVERSATION_READ_OWN,
-    PermissionCode.COMM_MESSAGE_CREATE_ALL,
-    PermissionCode.COMM_MESSAGE_READ_OWN,
+    PermissionCode.LMS_CERTIFICATE_DOWNLOAD_OWN,
+    PermissionCode.LMS_PROGRESS_READ_OWN,
+    PermissionCode.MSG_DIRECT_MESSAGE_CREATE_OWN,
+    PermissionCode.MSG_DIRECT_MESSAGE_READ_OWN,
+    PermissionCode.MSG_DEPARTMENT_CHAT_READ_OWN_DEPARTMENT,
+    PermissionCode.MSG_CHAT_MESSAGE_CREATE_OWN,
+    PermissionCode.MSG_FILE_UPLOAD_OWN,
+    PermissionCode.MSG_FILE_READ_OWN,
+    PermissionCode.MSG_READ_RECEIPT_MARK_OWN,
     PermissionCode.COMM_NOTIFICATION_READ_OWN,
     PermissionCode.COMM_NOTIFICATION_DELETE_OWN,
-
-    // Payroll
     PermissionCode.PAY_SALARY_READ_OWN,
-
-    // Expenses
+    PermissionCode.FIN_PAYSLIP_READ_OWN,
+    PermissionCode.FIN_PAYSLIP_DOWNLOAD_OWN,
     PermissionCode.EMP_EXPENSE_CREATE_OWN,
     PermissionCode.EMP_EXPENSE_READ_OWN,
-
-    // Goals and appraisal
+    PermissionCode.EMP_COMPLAINT_CREATE_OWN,
+    PermissionCode.EMP_COMPLAINT_READ_OWN,
     PermissionCode.HR_GOAL_READ_OWN,
     PermissionCode.HR_GOAL_UPDATE_OWN,
     PermissionCode.HR_APPRAISAL_READ_OWN,
     PermissionCode.HR_APPRAISAL_SUBMIT_OWN,
     PermissionCode.HR_FEEDBACK_READ_OWN,
     PermissionCode.HR_FEEDBACK_ACKNOWLEDGE_OWN,
-
-    // Training
+    PermissionCode.HR_RESIGNATION_CREATE_OWN,
+    PermissionCode.HR_RESIGNATION_READ_OWN,
     PermissionCode.TRAIN_ATTENDANCE_READ_OWN,
-
-    // Complaints
-    PermissionCode.EMP_COMPLAINT_CREATE_OWN,
-    PermissionCode.EMP_COMPLAINT_READ_OWN,
-
-    // Surveys
     PermissionCode.SURVEY_RESPOND_ALL,
-
-    // Audit
     PermissionCode.SYS_AUDIT_READ_OWN,
+    PermissionCode.DASHBOARD_STAFF_READ_OWN,
+    PermissionCode.DASHBOARD_STAFF_TASK_READ_OWN,
+    PermissionCode.DASHBOARD_STAFF_ATTENDANCE_READ_OWN,
+    PermissionCode.DASHBOARD_STAFF_MESSAGE_READ_OWN,
+    PermissionCode.DASHBOARD_STAFF_CALENDAR_READ_OWN,
+    PermissionCode.DASHBOARD_STAFF_PAYSLIP_READ_OWN,
+    PermissionCode.DASHBOARD_STAFF_LEAVE_READ_OWN,
   ],
 
-  [RoleCode.CONSULTANT]: [
-    // Limited access
+  // ─────────────────────────────────────────────────────────────
+  // STUDENT — Beadmax Vocational School portal ONLY
+  // ─────────────────────────────────────────────────────────────
+  [RoleCode.STUDENT]: [
     PermissionCode.AUTH_USER_READ_OWN,
-    PermissionCode.ORG_STAFF_READ_OWN,
-    PermissionCode.PROJECT_READ_OWN,
-    PermissionCode.TASK_READ_OWN,
-    PermissionCode.COMM_CONVERSATION_READ_OWN,
-    PermissionCode.COMM_MESSAGE_CREATE_ALL,
-    PermissionCode.COMM_MESSAGE_READ_OWN,
-    PermissionCode.CRM_CONTACT_READ_ALL,
-    PermissionCode.CRM_OPPORTUNITY_READ_OWN,
-    PermissionCode.CRM_ACTIVITY_READ_OWN,
-    PermissionCode.SURVEY_RESPOND_ALL,
-  ],
-
-  [RoleCode.INTERN]: [
-    // Minimal access
-    PermissionCode.AUTH_USER_READ_OWN,
-    PermissionCode.ORG_STAFF_READ_OWN,
-    PermissionCode.PROJECT_READ_OWN,
-    PermissionCode.TASK_READ_OWN,
-    PermissionCode.LMS_COURSE_READ_ALL,
-    PermissionCode.LMS_ENROLLMENT_READ_OWN,
-    PermissionCode.COMM_CONVERSATION_READ_OWN,
-    PermissionCode.COMM_MESSAGE_CREATE_ALL,
-    PermissionCode.COMM_MESSAGE_READ_OWN,
-    PermissionCode.SURVEY_RESPOND_ALL,
+    PermissionCode.AUTH_USER_UPDATE_OWN,
+    PermissionCode.STU_PORTAL_ACCESS,
+    PermissionCode.STU_PROFILE_READ_OWN,
+    PermissionCode.STU_PROFILE_UPDATE_OWN,
+    PermissionCode.STU_PROFILE_AVATAR_UPLOAD_OWN,
+    PermissionCode.STU_COURSE_VIEW_ENROLLED,
+    PermissionCode.STU_LESSON_VIEW_OWN,
+    PermissionCode.STU_VIDEO_WATCH_OWN,
+    PermissionCode.STU_MATERIAL_DOWNLOAD_OWN,
+    PermissionCode.STU_PROGRESS_READ_OWN,
+    PermissionCode.STU_ASSIGNMENT_VIEW_OWN,
+    PermissionCode.STU_ASSIGNMENT_SUBMIT_OWN,
+    PermissionCode.STU_ASSIGNMENT_GRADE_READ_OWN,
+    PermissionCode.STU_EXAM_TAKE_OWN,
+    PermissionCode.STU_RESULT_READ_OWN,
+    PermissionCode.STU_RANKING_VIEW_OWN,
+    PermissionCode.STU_ATTENDANCE_READ_OWN,
+    PermissionCode.STU_SCHEDULE_READ_OWN,
+    PermissionCode.STU_CERTIFICATE_READ_OWN,
+    PermissionCode.STU_CERTIFICATE_DOWNLOAD_OWN,
+    PermissionCode.STU_ANNOUNCEMENT_READ_ALL,
+    PermissionCode.STU_CHAT_READ_OWN,
+    PermissionCode.STU_CHAT_SEND_OWN,
+    PermissionCode.COMM_NOTIFICATION_READ_OWN,
   ],
 };

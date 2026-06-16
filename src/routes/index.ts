@@ -101,6 +101,28 @@ function setupRoutes(app: any): void {
   // Communication
   apiRouter.use('/communication', require('./communication.routes').default);
 
+  // Student Management (Beadmax Vocational School)
+  apiRouter.use('/students', require('./student-management.routes').default);
+
+  // Video Calls & Meetings
+  apiRouter.use('/meetings', require('./meeting.routes').default);
+  apiRouter.use('/calls', require('./call.routes').default);
+
+  // Calendar & Events
+  apiRouter.use('/calendar', require('./calendar.routes').default);
+
+  // File Manager
+  apiRouter.use('/files', require('./file.routes').default);
+
+  // AI Assistant
+  apiRouter.use('/ai', require('./ai.routes').default);
+
+  // Audit Logs
+  apiRouter.use('/audit-logs', require('./audit-log.routes').default);
+
+  // System Settings
+  apiRouter.use('/settings', require('./settings.routes').default);
+
   // Register API router
   app.use('/api', apiRouter);
 

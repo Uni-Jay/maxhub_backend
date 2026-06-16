@@ -110,6 +110,13 @@ import { ClientDocument } from '../models/ClientDocument.model';
 import { ClientNote } from '../models/ClientNote.model';
 import { MessageTemplate } from '../models/MessageTemplate.model';
 import { CommunicationLog } from '../models/CommunicationLog.model';
+import { Company } from '../models/Company.model';
+import { Program } from '../models/Program.model';
+import { StudentProfile } from '../models/StudentProfile.model';
+import { StudentEnrollment } from '../models/StudentEnrollment.model';
+import { StudentResult } from '../models/StudentResult.model';
+import { StudentAttendance } from '../models/StudentAttendance.model';
+import { ClassSchedule } from '../models/ClassSchedule.model';
 import { AssociationManager } from '../models/Associations';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -291,6 +298,13 @@ async function main() {
   ClientNote.initModel(sequelize);
   MessageTemplate.initModel(sequelize);
   CommunicationLog.initModel(sequelize);
+  Company.initModel(sequelize);
+  Program.initModel(sequelize);
+  StudentProfile.initModel(sequelize);
+  StudentEnrollment.initModel(sequelize);
+  StudentResult.initModel(sequelize);
+  StudentAttendance.initModel(sequelize);
+  ClassSchedule.initModel(sequelize);
 
   AssociationManager.initializeAssociations(sequelize);
   console.log('✅  Models initialized\n');
@@ -341,15 +355,12 @@ async function main() {
   // ── 5. Seed Roles ───────────────────────────────────────────────────────────
   console.log('👥  Seeding roles...');
   const ROLE_NAMES: Record<RoleCode, string> = {
-    [RoleCode.SUPER_ADMIN]: 'Super Administrator',
-    [RoleCode.ADMIN]: 'Administrator',
-    [RoleCode.DEPARTMENT_HEAD]: 'Department Head',
-    [RoleCode.MANAGER]: 'Manager',
-    [RoleCode.SUPERVISOR]: 'Supervisor',
-    [RoleCode.TEAM_LEAD]: 'Team Lead',
-    [RoleCode.STAFF]: 'Staff',
-    [RoleCode.CONSULTANT]: 'Consultant',
-    [RoleCode.INTERN]: 'Intern',
+    [RoleCode.SUPERADMIN]: 'Super Administrator',
+    [RoleCode.ADMIN]:      'Administrator',
+    [RoleCode.HR]:         'Human Resources',
+    [RoleCode.HOD]:        'Head of Department',
+    [RoleCode.STAFF]:      'Staff',
+    [RoleCode.STUDENT]:    'Student',
   };
 
   const roleMap = new Map<RoleCode, bigint>();
@@ -431,8 +442,8 @@ async function main() {
   );
 
   if (userCreated) {
-    // Assign SUPER_ADMIN role
-    const superAdminRoleId = roleMap.get(RoleCode.SUPER_ADMIN);
+    // Assign superadmin role
+    const superAdminRoleId = roleMap.get(RoleCode.SUPERADMIN);
     if (superAdminRoleId) {
       await retryFindOrCreate(() =>
         UserRole.findOrCreate({
@@ -455,14 +466,14 @@ async function main() {
   const demoPasswordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
 
   const demoUsers: Array<{ email: string; firstName: string; lastName: string; role: RoleCode }> = [
-    { email: 'admin@maxhub.com',        firstName: 'Admin',       lastName: 'User',       role: RoleCode.ADMIN },
-    { email: 'depthead@maxhub.com',    firstName: 'Dept',        lastName: 'Head',       role: RoleCode.DEPARTMENT_HEAD },
-    { email: 'manager@maxhub.com',     firstName: 'Project',     lastName: 'Manager',    role: RoleCode.MANAGER },
-    { email: 'supervisor@maxhub.com',  firstName: 'Team',        lastName: 'Supervisor', role: RoleCode.SUPERVISOR },
-    { email: 'teamlead@maxhub.com',    firstName: 'Team',        lastName: 'Lead',       role: RoleCode.TEAM_LEAD },
-    { email: 'staff@maxhub.com',       firstName: 'Regular',     lastName: 'Staff',      role: RoleCode.STAFF },
-    { email: 'consultant@maxhub.com',  firstName: 'External',    lastName: 'Consultant', role: RoleCode.CONSULTANT },
-    { email: 'intern@maxhub.com',      firstName: 'New',         lastName: 'Intern',     role: RoleCode.INTERN },
+    { email: 'admin@maxhub.com',        firstName: 'Admin',      lastName: 'Head',        role: RoleCode.ADMIN },
+    { email: 'hr@maxhub.com',           firstName: 'Human',      lastName: 'Resources',   role: RoleCode.HR },
+    { email: 'hod@maxhub.com',          firstName: 'Department', lastName: 'Head',        role: RoleCode.HOD },
+    { email: 'staff@maxhub.com',        firstName: 'Regular',    lastName: 'Staff',       role: RoleCode.STAFF },
+    // Staff with different positions — all use staff role
+    { email: 'accountant@maxhub.com',   firstName: 'Finance',    lastName: 'Accountant',  role: RoleCode.STAFF },
+    { email: 'instructor@maxhub.com',   firstName: 'Course',     lastName: 'Instructor',  role: RoleCode.STAFF },
+    { email: 'receptionist@maxhub.com', firstName: 'Front',      lastName: 'Desk',        role: RoleCode.STAFF },
   ];
 
   let demoCreated = 0;
@@ -507,16 +518,21 @@ async function main() {
 
   console.log(`\n✅  Demo users: ${demoCreated} created\n`);
   console.log('   All demo accounts use password: Demo@12345!');
-  console.log('   ┌─────────────────────────────────┬──────────────────────┐');
-  console.log('   │ Email                           │ Role                 │');
-  console.log('   ├─────────────────────────────────┼──────────────────────┤');
-  console.log(`   │ ${'superadmin@maxhub.com'.padEnd(31)} │ SUPER_ADMIN          │`);
-  for (const d of demoUsers) {
-    console.log(`   │ ${d.email.padEnd(31)} │ ${d.role.padEnd(20)} │`);
-  }
-  console.log('   └─────────────────────────────────┴──────────────────────┘');
+  console.log('   ┌─────────────────────────────────────────┬────────────────┬─────────────────────┐');
+  console.log('   │ Email                                   │ Role           │ Position            │');
+  console.log('   ├─────────────────────────────────────────┼────────────────┼─────────────────────┤');
+  console.log(`   │ ${'superadmin@maxhub.com'.padEnd(39)} │ ${'superadmin'.padEnd(14)} │ CEO                 │`);
+  console.log(`   │ ${'admin@maxhub.com'.padEnd(39)} │ ${'admin'.padEnd(14)} │ Head of Admin       │`);
+  console.log(`   │ ${'hr@maxhub.com'.padEnd(39)} │ ${'hr'.padEnd(14)} │ HR Manager          │`);
+  console.log(`   │ ${'hod@maxhub.com'.padEnd(39)} │ ${'hod'.padEnd(14)} │ Head of Department  │`);
+  console.log(`   │ ${'staff@maxhub.com'.padEnd(39)} │ ${'staff'.padEnd(14)} │ General Staff       │`);
+  console.log(`   │ ${'accountant@maxhub.com'.padEnd(39)} │ ${'staff'.padEnd(14)} │ Accountant          │`);
+  console.log(`   │ ${'instructor@maxhub.com'.padEnd(39)} │ ${'staff'.padEnd(14)} │ Instructor          │`);
+  console.log(`   │ ${'receptionist@maxhub.com'.padEnd(39)} │ ${'staff'.padEnd(14)} │ Receptionist        │`);
+  console.log('   └─────────────────────────────────────────┴────────────────┴─────────────────────┘');
 
   // ── 9. Seed Default Leave Types ─────────────────────────────────────────────
+  // NOTE: Steps 10-12 follow (Companies, Demo Student, Done)
   console.log('\n🏖️   Seeding default leave types...');
   const leaveTypes = [
     { name: 'Annual Leave',       code: 'ANNUAL',       categoryType: 'Paid',   maxDaysPerYear: 21, description: 'Annual paid leave entitlement' },
@@ -541,7 +557,96 @@ async function main() {
   }
   console.log(`✅  Leave types: ${ltCreated} created, ${leaveTypes.length - ltCreated} already existed`);
 
-  // ── 9. Done ─────────────────────────────────────────────────────────────────
+  // ── 10. Seed Companies ──────────────────────────────────────────────────────
+  console.log('\n🏢  Seeding companies...');
+  const companies = [
+    { code: 'KURIOS_SAT', name: 'Kurios Sat',               type: 'Technology',    currency: 'NGN', status: 'Active' },
+    { code: 'VISA_MAX',   name: 'Visa Max',                  type: 'Immigration',   currency: 'NGN', status: 'Active' },
+    { code: 'BEAD_MAX',   name: 'Bead Max Designs',          type: 'Fashion',       currency: 'NGN', status: 'Active' },
+    { code: 'BEADMAX_SCHOOL', name: 'Beadmax Vocational School', type: 'Education', currency: 'NGN', status: 'Active' },
+  ];
+
+  const companyMap = new Map<string, bigint>();
+  let compCreated = 0;
+  for (const co of companies) {
+    const [company, created] = await retryFindOrCreate(() =>
+      (Company as any).findOrCreate({
+        where: { code: co.code },
+        defaults: { ...co, settings: {} },
+      })
+    );
+    companyMap.set(co.code, company.id);
+    if (created) {
+      compCreated++;
+      console.log(`   ✨ Created → ${co.name} (${co.code})`);
+    } else {
+      console.log(`   ⏭️  Exists  → ${co.name} (${co.code})`);
+    }
+  }
+  console.log(`✅  Companies: ${compCreated} created\n`);
+
+  // ── 11. Seed Demo Student User ──────────────────────────────────────────────
+  console.log('🎓  Seeding demo student user...');
+  const STUDENT_EMAIL = 'student@maxhub.com';
+  const studentPasswordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
+
+  const [studentUser, studentCreated] = await retryFindOrCreate(() =>
+    User.findOrCreate({
+      where: { email: STUDENT_EMAIL },
+      defaults: {
+        uuid: uuidv4(),
+        firstName: 'Ada',
+        lastName: 'Okonkwo',
+        email: STUDENT_EMAIL,
+        passwordHash: studentPasswordHash,
+        status: 'Active',
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+        loginAttempts: 0,
+      },
+    })
+  );
+
+  if (!studentCreated) {
+    await studentUser.update({ passwordHash: studentPasswordHash, loginAttempts: 0, lockedUntil: null });
+  }
+
+  const studentRoleId = roleMap.get(RoleCode.STUDENT);
+  if (studentRoleId) {
+    await retryFindOrCreate(() =>
+      UserRole.findOrCreate({
+        where: { userId: studentUser.id, roleId: studentRoleId },
+        defaults: { userId: studentUser.id, roleId: studentRoleId, assignedAt: new Date() },
+      })
+    );
+  }
+
+  // Create StudentProfile for the demo student (linked to BEADMAX_SCHOOL)
+  const schoolId = companyMap.get('BEADMAX_SCHOOL');
+  if (schoolId) {
+    const year = new Date().getFullYear();
+    const studentCount = await (StudentProfile as any).count();
+    const studentNumber = `BVS-${year}-${String(studentCount + 1).padStart(5, '0')}`;
+
+    await (StudentProfile as any).findOrCreate({
+      where: { userId: studentUser.id },
+      defaults: {
+        uuid: uuidv4(),
+        userId: studentUser.id,
+        companyId: schoolId,
+        studentNumber,
+        gender: 'Female',
+        enrollmentDate: new Date(),
+        status: 'Active',
+      },
+    });
+  }
+
+  console.log(`✅  Demo student: ${studentCreated ? 'created' : 'updated'}`);
+  console.log(`    Email   : ${STUDENT_EMAIL}`);
+  console.log(`    Password: ${DEMO_PASSWORD}\n`);
+
+  // ── 12. Done ─────────────────────────────────────────────────────────────────
   console.log('\n' + '═'.repeat(55));
   console.log('🎉  Seeding complete!');
   console.log('═'.repeat(55));

@@ -29,6 +29,7 @@
   "author": "MaxHub Team",
   "license": "MIT",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.2",
     "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^8.0.1",
     "@types/qrcode": "^1.5.6",

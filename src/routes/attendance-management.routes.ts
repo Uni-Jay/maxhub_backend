@@ -59,7 +59,10 @@ router.get(
   AuthMiddleware.verifyToken,
   async (req: Request, res: Response) => {
     try {
-      const staffId = (req as unknown as { user: { staffId: bigint } }).user.staffId;
+      const staffId = (req as any).user?.staffId;
+      if (!staffId) {
+        return res.status(404).json({ success: false, message: 'No staff profile linked to this account' });
+      }
       const today = new Date().toISOString().slice(0, 10);
       const record = await (Attendance as any).findOne({
         where: { staffId, date: today },

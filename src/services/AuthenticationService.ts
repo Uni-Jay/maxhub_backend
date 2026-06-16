@@ -1,4 +1,5 @@
 import { User } from '@models/User.model';
+import { Permission } from '@models/Permission.model';
 import { Session } from '@models/Session.model';
 import { OTPVerification } from '@models/OTPVerification.model';
 import { TwoFactorAuth } from '@models/TwoFactorAuth.model';
@@ -91,9 +92,17 @@ export class AuthenticationService {
       lastLoginAt: new Date(),
     });
 
-    // Get user roles and permissions
-    const roles = await user.getRoles();
-    const permissions = await user.getPermissions();
+    // Get user roles (with their permissions) + any direct user permissions
+    const roles = await user.getRoles({
+      include: [{ model: Permission, as: 'permissions' }],
+    });
+    const directPerms = await user.getPermissions();
+    const permCodes = [
+      ...new Set([
+        ...roles.flatMap((r: any) => (r.permissions || []).map((p: any) => p.code)),
+        ...directPerms.map((p: any) => p.code),
+      ]),
+    ];
 
     const authenticatedUser = {
       id: Number(user.id),
@@ -103,8 +112,8 @@ export class AuthenticationService {
       firstName: user.firstName,
       lastName: user.lastName,
       departmentId: user.departmentId ? Number(user.departmentId) : null,
-      roles: roles.map((r: any) => r.name),
-      permissions: permissions.map((p: any) => p.code),
+      roles: roles.map((r: any) => r.code),
+      permissions: permCodes,
     };
 
     // Check if 2FA is enabled
@@ -192,7 +201,7 @@ export class AuthenticationService {
     });
 
     // Assign default role
-    const staffRole = await (global as any).db.model('Role').findOne({ where: { name: 'STAFF' } });
+    const staffRole = await (global as any).db.model('Role').findOne({ where: { code: 'STAFF' } });
     if (staffRole) {
       await user.addRole(staffRole);
     }
@@ -216,8 +225,16 @@ export class AuthenticationService {
     // await EmailService.sendVerificationEmail(email, otpCode);
 
     // Auto-login and require email verification
-    const roles = await user.getRoles();
-    const permissions = await user.getPermissions();
+    const roles = await user.getRoles({
+      include: [{ model: Permission, as: 'permissions' }],
+    });
+    const directPerms = await user.getPermissions();
+    const permCodes = [
+      ...new Set([
+        ...roles.flatMap((r: any) => (r.permissions || []).map((p: any) => p.code)),
+        ...directPerms.map((p: any) => p.code),
+      ]),
+    ];
 
     const authenticatedUser = {
       id: Number(user.id),
@@ -227,8 +244,8 @@ export class AuthenticationService {
       firstName,
       lastName,
       departmentId: departmentId ? Number(departmentId) : null,
-      roles: roles.map((r: any) => r.name),
-      permissions: permissions.map((p: any) => p.code),
+      roles: roles.map((r: any) => r.code),
+      permissions: permCodes,
     };
 
     const accessToken = JWTService.generateAccessToken(authenticatedUser);
@@ -296,8 +313,16 @@ export class AuthenticationService {
     }
 
     // Generate new access token
-    const roles = await user.getRoles();
-    const permissions = await user.getPermissions();
+    const roles = await user.getRoles({
+      include: [{ model: Permission, as: 'permissions' }],
+    });
+    const directPerms = await user.getPermissions();
+    const permCodes = [
+      ...new Set([
+        ...roles.flatMap((r: any) => (r.permissions || []).map((p: any) => p.code)),
+        ...directPerms.map((p: any) => p.code),
+      ]),
+    ];
 
     const authenticatedUser = {
       id: Number(user.id),
@@ -307,8 +332,8 @@ export class AuthenticationService {
       firstName: user.firstName,
       lastName: user.lastName,
       departmentId: user.departmentId ? Number(user.departmentId) : null,
-      roles: roles.map((r: any) => r.name),
-      permissions: permissions.map((p: any) => p.code),
+      roles: roles.map((r: any) => r.code),
+      permissions: permCodes,
     };
 
     const newAccessToken = JWTService.generateAccessToken(authenticatedUser);
