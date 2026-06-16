@@ -5,14 +5,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthenticationService = void 0;
 const User_model_1 = require("@models/User.model");
+const Permission_model_1 = require("@models/Permission.model");
 const Session_model_1 = require("@models/Session.model");
 const OTPVerification_model_1 = require("@models/OTPVerification.model");
 const TwoFactorAuth_model_1 = require("@models/TwoFactorAuth.model");
 const DeviceLog_model_1 = require("@models/DeviceLog.model");
-const PasswordReset_model_1 = require("@models/PasswordReset.model");
 const JWTService_1 = __importDefault(require("./JWTService"));
 const OTPService_1 = __importDefault(require("./OTPService"));
 const PasswordService_1 = __importDefault(require("./PasswordService"));
+const CommunicationService_1 = require("./CommunicationService");
 const ErrorHandler_1 = require("@utils/ErrorHandler");
 class AuthenticationService {
     async login(payload) {
@@ -45,8 +46,16 @@ class AuthenticationService {
             lockedUntil: null,
             lastLoginAt: new Date(),
         });
-        const roles = await user.getRoles();
-        const permissions = await user.getPermissions();
+        const roles = await user.getRoles({
+            include: [{ model: Permission_model_1.Permission, as: 'permissions' }],
+        });
+        const directPerms = await user.getPermissions();
+        const permCodes = [
+            ...new Set([
+                ...roles.flatMap((r) => (r.permissions || []).map((p) => p.code)),
+                ...directPerms.map((p) => p.code),
+            ]),
+        ];
         const authenticatedUser = {
             id: Number(user.id),
             uuid: user.uuid,
@@ -55,8 +64,8 @@ class AuthenticationService {
             firstName: user.firstName,
             lastName: user.lastName,
             departmentId: user.departmentId ? Number(user.departmentId) : null,
-            roles: roles.map((r) => r.name),
-            permissions: permissions.map((p) => p.code),
+            roles: roles.map((r) => r.code),
+            permissions: permCodes,
         };
         const twoFactorAuth = await TwoFactorAuth_model_1.TwoFactorAuth.findOne({
             where: { userId: user.id, isEnabled: true },
@@ -90,6 +99,23 @@ class AuthenticationService {
                 },
             });
         }
+        if (requiresMFA && twoFactorAuth?.method === 'EMAIL') {
+            const otpCode = OTPService_1.default.generateOTPCode();
+            const otpHash = await OTPService_1.default.hashOTP(otpCode);
+            await OTPVerification_model_1.OTPVerification.update({ isUsed: true, usedAt: new Date() }, { where: { userId: user.id, type: '2FA', isUsed: false } });
+            await OTPVerification_model_1.OTPVerification.create({
+                userId: user.id,
+                email: user.email,
+                otpCode,
+                otpHash,
+                type: '2FA',
+                expiresAt: OTPService_1.default.getOTPExpirationTime(),
+                isUsed: false,
+                attempts: 0,
+            });
+            (0, CommunicationService_1.sendOTPEmail)({ to: user.email, firstName: user.firstName, otpCode, type: '2FA' })
+                .catch(err => console.error('[Auth] 2FA email OTP send failed:', err));
+        }
         return {
             user: authenticatedUser,
             accessToken,
@@ -120,7 +146,7 @@ class AuthenticationService {
             emailVerified: false,
             loginAttempts: 0,
         });
-        const staffRole = await global.db.model('Role').findOne({ where: { name: 'STAFF' } });
+        const staffRole = await global.db.model('Role').findOne({ where: { code: 'STAFF' } });
         if (staffRole) {
             await user.addRole(staffRole);
         }
@@ -136,8 +162,16 @@ class AuthenticationService {
             isUsed: false,
             attempts: 0,
         });
-        const roles = await user.getRoles();
-        const permissions = await user.getPermissions();
+        const roles = await user.getRoles({
+            include: [{ model: Permission_model_1.Permission, as: 'permissions' }],
+        });
+        const directPerms = await user.getPermissions();
+        const permCodes = [
+            ...new Set([
+                ...roles.flatMap((r) => (r.permissions || []).map((p) => p.code)),
+                ...directPerms.map((p) => p.code),
+            ]),
+        ];
         const authenticatedUser = {
             id: Number(user.id),
             uuid: user.uuid,
@@ -146,8 +180,8 @@ class AuthenticationService {
             firstName,
             lastName,
             departmentId: departmentId ? Number(departmentId) : null,
-            roles: roles.map((r) => r.name),
-            permissions: permissions.map((p) => p.code),
+            roles: roles.map((r) => r.code),
+            permissions: permCodes,
         };
         const accessToken = JWTService_1.default.generateAccessToken(authenticatedUser);
         const refreshToken = JWTService_1.default.generateRefreshToken(authenticatedUser);
@@ -194,8 +228,16 @@ class AuthenticationService {
         if (!user || user.status !== 'Active') {
             throw new ErrorHandler_1.UnauthorizedError('User not found or inactive');
         }
-        const roles = await user.getRoles();
-        const permissions = await user.getPermissions();
+        const roles = await user.getRoles({
+            include: [{ model: Permission_model_1.Permission, as: 'permissions' }],
+        });
+        const directPerms = await user.getPermissions();
+        const permCodes = [
+            ...new Set([
+                ...roles.flatMap((r) => (r.permissions || []).map((p) => p.code)),
+                ...directPerms.map((p) => p.code),
+            ]),
+        ];
         const authenticatedUser = {
             id: Number(user.id),
             uuid: user.uuid,
@@ -204,8 +246,8 @@ class AuthenticationService {
             firstName: user.firstName,
             lastName: user.lastName,
             departmentId: user.departmentId ? Number(user.departmentId) : null,
-            roles: roles.map((r) => r.name),
-            permissions: permissions.map((p) => p.code),
+            roles: roles.map((r) => r.code),
+            permissions: permCodes,
         };
         const newAccessToken = JWTService_1.default.generateAccessToken(authenticatedUser);
         await session.update({
@@ -220,45 +262,142 @@ class AuthenticationService {
     }
     async forgotPassword(email) {
         const user = await User_model_1.User.findOne({ where: { email } });
-        if (!user) {
+        if (!user)
             return;
-        }
-        const { token, hash } = PasswordService_1.default.generateResetToken();
-        await PasswordReset_model_1.PasswordReset.create({
+        await OTPVerification_model_1.OTPVerification.update({ isUsed: true, usedAt: new Date() }, { where: { userId: user.id, type: 'PASSWORD_RESET', isUsed: false } });
+        const otpCode = OTPService_1.default.generateOTPCode();
+        const otpHash = await OTPService_1.default.hashOTP(otpCode);
+        await OTPVerification_model_1.OTPVerification.create({
             userId: user.id,
             email,
-            token,
-            tokenHash: hash,
-            expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+            otpCode,
+            otpHash,
+            type: 'PASSWORD_RESET',
+            expiresAt: OTPService_1.default.getOTPExpirationTime(),
             isUsed: false,
+            attempts: 0,
         });
+        await (0, CommunicationService_1.sendOTPEmail)({ to: email, firstName: user.firstName, otpCode, type: 'PASSWORD_RESET' })
+            .catch(err => console.error('[Auth] Password reset OTP email failed:', err));
     }
-    async resetPassword(token, newPassword) {
-        const reset = await PasswordReset_model_1.PasswordReset.findOne({
-            where: { isUsed: false },
+    async resetPassword(email, otpCode, newPassword) {
+        const user = await User_model_1.User.findOne({ where: { email } });
+        if (!user)
+            throw new ErrorHandler_1.UnauthorizedError('Invalid or expired OTP');
+        const otp = await OTPVerification_model_1.OTPVerification.findOne({
+            where: { userId: user.id, type: 'PASSWORD_RESET', isUsed: false },
+            order: [['createdAt', 'DESC']],
         });
-        if (!reset || reset.expiresAt < new Date()) {
-            throw new ErrorHandler_1.UnauthorizedError('Invalid or expired reset token');
+        if (!otp || otp.expiresAt < new Date()) {
+            throw new ErrorHandler_1.UnauthorizedError('OTP has expired. Please request a new code.');
         }
-        const isTokenValid = PasswordService_1.default.verifyResetToken(token, reset.tokenHash);
-        if (!isTokenValid) {
-            throw new ErrorHandler_1.UnauthorizedError('Invalid reset token');
+        if (otp.attempts >= 5) {
+            throw new ErrorHandler_1.UnauthorizedError('Too many incorrect attempts. Please request a new OTP.');
+        }
+        const isValid = await OTPService_1.default.verifyOTP(otpCode, otp.otpHash);
+        if (!isValid) {
+            await otp.increment('attempts');
+            const remaining = 4 - otp.attempts;
+            if (remaining <= 0) {
+                await otp.update({ isUsed: true });
+                throw new ErrorHandler_1.UnauthorizedError('Too many incorrect attempts. Please request a new OTP.');
+            }
+            throw new ErrorHandler_1.UnauthorizedError(`Invalid OTP code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`);
         }
         const passwordStrength = PasswordService_1.default.checkPasswordStrength(newPassword);
         if (!passwordStrength.isStrong) {
             throw new ErrorHandler_1.ValidationError('Password is not strong enough', passwordStrength.feedback);
         }
-        const user = await User_model_1.User.findByPk(reset.userId);
-        if (!user) {
-            throw new ErrorHandler_1.NotFoundError('User not found');
-        }
         const passwordHash = await PasswordService_1.default.hashPassword(newPassword);
         await user.update({ passwordHash });
-        await reset.update({
-            isUsed: true,
-            usedAt: new Date(),
+        await otp.update({ isUsed: true, usedAt: new Date() });
+        await Session_model_1.Session.destroy({ where: { userId: user.id } });
+    }
+    async sendOTP(email, type) {
+        if (type === 'PASSWORD_RESET') {
+            return this.forgotPassword(email);
+        }
+        const user = await User_model_1.User.findOne({ where: { email } });
+        if (!user)
+            return;
+        await OTPVerification_model_1.OTPVerification.update({ isUsed: true, usedAt: new Date() }, { where: { userId: user.id, type, isUsed: false } });
+        const otpCode = OTPService_1.default.generateOTPCode();
+        const otpHash = await OTPService_1.default.hashOTP(otpCode);
+        await OTPVerification_model_1.OTPVerification.create({
+            userId: user.id,
+            email,
+            otpCode,
+            otpHash,
+            type,
+            expiresAt: OTPService_1.default.getOTPExpirationTime(),
+            isUsed: false,
+            attempts: 0,
         });
-        await Session_model_1.Session.update({ isActive: false, revokedAt: new Date() }, { where: { userId: user.id } });
+        await (0, CommunicationService_1.sendOTPEmail)({ to: email, firstName: user.firstName, otpCode, type })
+            .catch(err => console.error('[Auth] OTP email failed:', err));
+    }
+    async verify2FALogin(sessionId, otpCode) {
+        const session = await Session_model_1.Session.findOne({ where: { uuid: sessionId } });
+        if (!session || session.expiresAt < new Date()) {
+            throw new ErrorHandler_1.UnauthorizedError('Session expired. Please login again.');
+        }
+        const user = await User_model_1.User.findByPk(session.userId, {
+            include: ['roles', 'permissions'],
+        });
+        if (!user)
+            throw new ErrorHandler_1.NotFoundError('User not found');
+        const twoFA = await TwoFactorAuth_model_1.TwoFactorAuth.findOne({
+            where: { userId: user.id, isEnabled: true },
+        });
+        if (!twoFA)
+            throw new ErrorHandler_1.UnauthorizedError('2FA not configured for this account');
+        let isValid = false;
+        if (twoFA.method === 'TOTP' && twoFA.secret) {
+            isValid = OTPService_1.default.verifyTOTP(otpCode, twoFA.secret);
+        }
+        else if (twoFA.method === 'EMAIL') {
+            const otp = await OTPVerification_model_1.OTPVerification.findOne({
+                where: { userId: user.id, type: '2FA', isUsed: false },
+                order: [['createdAt', 'DESC']],
+            });
+            if (otp && otp.expiresAt >= new Date() && otp.attempts < 5) {
+                isValid = await OTPService_1.default.verifyOTP(otpCode, otp.otpHash);
+                if (isValid) {
+                    await otp.update({ isUsed: true, usedAt: new Date() });
+                }
+                else {
+                    await otp.increment('attempts');
+                }
+            }
+        }
+        if (!isValid)
+            throw new ErrorHandler_1.UnauthorizedError('Invalid verification code');
+        await twoFA.update({ lastUsedAt: new Date() });
+        const roles = await user.getRoles({
+            include: [{ model: Permission_model_1.Permission, as: 'permissions' }],
+        });
+        const directPerms = await user.getPermissions();
+        const permCodes = [
+            ...new Set([
+                ...roles.flatMap((r) => (r.permissions || []).map((p) => p.code)),
+                ...directPerms.map((p) => p.code),
+            ]),
+        ];
+        const authenticatedUser = {
+            id: Number(user.id),
+            uuid: user.uuid,
+            email: user.email,
+            name: `${user.firstName} ${user.lastName}`,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            departmentId: user.departmentId ? Number(user.departmentId) : null,
+            roles: roles.map((r) => r.code),
+            permissions: permCodes,
+        };
+        const accessToken = JWTService_1.default.generateAccessToken(authenticatedUser);
+        const refreshToken = JWTService_1.default.generateRefreshToken(authenticatedUser);
+        await session.update({ refreshToken, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) });
+        return { accessToken, refreshToken, user: authenticatedUser };
     }
     async verifyEmail(userId, otpCode) {
         const otp = await OTPVerification_model_1.OTPVerification.findOne({

@@ -121,6 +121,21 @@ class Staff extends sequelize_1.Model {
                 allowNull: true,
                 comment: 'Emergency contact phone',
             },
+            position: {
+                type: sequelize_1.DataTypes.STRING(200),
+                allowNull: true,
+                comment: 'Job title / position (e.g. Accountant, Instructor, Travel Consultant)',
+            },
+            businessUnit: {
+                type: sequelize_1.DataTypes.STRING(100),
+                allowNull: true,
+                comment: 'Primary business unit (Kurios SAT, VisaMax Travels Ltd, Beadmax Design, Beadmax Vocational School)',
+            },
+            businessUnits: {
+                type: sequelize_1.DataTypes.JSON,
+                allowNull: true,
+                comment: 'All assigned business units as a JSON array — staff may belong to multiple units',
+            },
             status: {
                 type: sequelize_1.DataTypes.ENUM('Active', 'Inactive', 'OnLeave', 'Suspended', 'Resigned', 'Retired'),
                 defaultValue: 'Active',

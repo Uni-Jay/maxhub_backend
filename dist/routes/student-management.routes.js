@@ -1,0 +1,31 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
+const StudentController_1 = __importDefault(require("../controllers/StudentController"));
+const PermissionCodes_1 = require("../config/PermissionCodes");
+const router = (0, express_1.Router)();
+router.post('/', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.STM_STUDENT_CREATE_ALL, PermissionCodes_1.PermissionCode.RECEP_STUDENT_REGISTER), StudentController_1.default.register);
+router.get('/', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.STM_STUDENT_READ_ALL), StudentController_1.default.list);
+router.get('/:id', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.STM_STUDENT_READ_ALL), StudentController_1.default.getById);
+router.patch('/:id', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.STM_STUDENT_UPDATE_ALL), StudentController_1.default.update);
+router.patch('/:id/status', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.STM_STUDENT_SUSPEND_ALL, PermissionCodes_1.PermissionCode.STM_STUDENT_UPDATE_ALL), StudentController_1.default.updateStatus);
+router.post('/:id/enroll', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.STM_ENROLLMENT_CREATE_ALL), StudentController_1.default.enroll);
+router.get('/:id/enrollments', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.STM_ENROLLMENT_READ_ALL), StudentController_1.default.getEnrollments);
+router.post('/attendance/mark', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.STM_ATTENDANCE_MARK_ALL, PermissionCodes_1.PermissionCode.INST_ATTENDANCE_MARK_OWN_CLASS), StudentController_1.default.markAttendance);
+router.get('/:id/attendance', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.STM_ATTENDANCE_READ_ALL, PermissionCodes_1.PermissionCode.INST_ATTENDANCE_READ_OWN_CLASS), StudentController_1.default.getAttendance);
+router.post('/:id/results', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.STM_RESULT_CREATE_ALL), StudentController_1.default.recordResult);
+router.get('/:id/results', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.STM_RESULT_READ_ALL, PermissionCodes_1.PermissionCode.INST_EXAM_RESULT_READ_OWN_COURSE), StudentController_1.default.getResults);
+router.get('/:id/analytics', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.STM_ANALYTICS_VIEW_ALL), StudentController_1.default.getAnalytics);
+router.get('/portal/me', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.STU_PROFILE_READ_OWN), StudentController_1.default.getMyProfile);
+router.patch('/portal/me', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.STU_PROFILE_UPDATE_OWN), StudentController_1.default.updateMyProfile);
+router.get('/portal/enrollments', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.STU_COURSE_VIEW_ENROLLED), StudentController_1.default.getMyEnrollments);
+router.get('/portal/attendance', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.STU_ATTENDANCE_READ_OWN), StudentController_1.default.getMyAttendance);
+router.get('/portal/results', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.STU_RESULT_READ_OWN), StudentController_1.default.getMyResults);
+router.get('/portal/analytics', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.STU_PROGRESS_READ_OWN), StudentController_1.default.getMyAnalytics);
+router.get('/portal/schedule', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.STU_SCHEDULE_READ_OWN), StudentController_1.default.getMySchedule);
+exports.default = router;
+//# sourceMappingURL=student-management.routes.js.map

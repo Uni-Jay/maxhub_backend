@@ -28,13 +28,16 @@ function setupRoutes(app) {
     apiRouter.use(AuthMiddleware_1.default.sorting);
     apiRouter.use('/auth', require('./auth.routes').default);
     apiRouter.use(AuthMiddleware_1.default.verifyToken);
+    apiRouter.use('/dashboards', require('./dashboard.routes').default);
     apiRouter.use('/staff', require('./staff.routes').default);
     apiRouter.use('/departments', require('./department.routes').default);
     apiRouter.use('/designations', require('./designation.routes').default);
-    apiRouter.use('/attendance', require('./attendance.routes').default);
+    apiRouter.use('/hr', require('./hr-management.routes').default);
+    apiRouter.use('/attendance', require('./attendance-management.routes').default);
     apiRouter.use('/leave', require('./leave.routes').default);
     apiRouter.use('/projects', require('./project.routes').default);
     apiRouter.use('/tasks', require('./task.routes').default);
+    apiRouter.use('/project-collaboration', require('./project-collaboration.routes').default);
     apiRouter.use('/contacts', require('./contact.routes').default);
     apiRouter.use('/opportunities', require('./opportunity.routes').default);
     apiRouter.use('/courses', require('./course.routes').default);
@@ -51,9 +54,20 @@ function setupRoutes(app) {
     apiRouter.use('/notifications', require('./notification.routes').default);
     apiRouter.use('/admin/roles', require('./role.routes').default);
     apiRouter.use('/admin/permissions', require('./permission.routes').default);
-    apiRouter.use('/admin/settings', require('./settings.routes').default);
+    apiRouter.use('/queries', require('./query.routes').default);
+    apiRouter.use('/clients', require('./client.routes').default);
+    apiRouter.use('/communication', require('./communication.routes').default);
+    apiRouter.use('/students', require('./student-management.routes').default);
+    apiRouter.use('/meetings', require('./meeting.routes').default);
+    apiRouter.use('/calls', require('./call.routes').default);
+    apiRouter.use('/calendar', require('./calendar.routes').default);
+    apiRouter.use('/files', require('./file.routes').default);
+    apiRouter.use('/ai', require('./ai.routes').default);
+    apiRouter.use('/audit-logs', require('./audit-log.routes').default);
+    apiRouter.use('/settings', require('./settings.routes').default);
     app.use('/api', apiRouter);
     app.use(ErrorMiddleware_1.ErrorMiddleware.notFound);
     app.use(ErrorMiddleware_1.ErrorMiddleware.handle);
 }
+exports.default = setupRoutes;
 //# sourceMappingURL=index.js.map

@@ -29,7 +29,13 @@ export declare class AuthenticationService {
         expiresIn: number;
     }>;
     forgotPassword(email: string): Promise<void>;
-    resetPassword(token: string, newPassword: string): Promise<void>;
+    resetPassword(email: string, otpCode: string, newPassword: string): Promise<void>;
+    sendOTP(email: string, type: 'PASSWORD_RESET' | 'EMAIL_VERIFICATION' | '2FA'): Promise<void>;
+    verify2FALogin(sessionId: string, otpCode: string): Promise<{
+        accessToken: string;
+        refreshToken: string;
+        user: any;
+    }>;
     verifyEmail(userId: bigint, otpCode: string): Promise<void>;
     setup2FA(userId: bigint, method: 'TOTP' | 'SMS' | 'EMAIL'): Promise<{
         secret?: string;

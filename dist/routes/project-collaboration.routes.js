@@ -1,21 +1,18 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const AuthMiddleware_1 = require("../middleware/AuthMiddleware");
-const RBACMiddleware_1 = require("../middleware/RBACMiddleware");
+const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
 const PermissionCodes_1 = require("../config/PermissionCodes");
 const ProjectService_1 = require("../services/ProjectService");
 const router = (0, express_1.Router)();
 const projectService = new ProjectService_1.ProjectService();
-const auth = new AuthMiddleware_1.AuthMiddleware();
-const rbac = new RBACMiddleware_1.RBACMiddleware();
-router.post('/:projectId/comments', auth.authenticate(), rbac.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_COMMENT_CREATE_ALL), async (req, res) => {
+router.post('/:projectId/comments', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_COMMENT_CREATE_ALL), async (req, res) => {
     try {
         const projectId = BigInt(req.params.projectId);
-        const commentData = {
-            ...req.body,
-            projectId,
-        };
+        const commentData = { ...req.body, projectId };
         const result = await projectService.addComment(req, commentData);
         res.json({ success: true, data: result });
     }
@@ -23,7 +20,7 @@ router.post('/:projectId/comments', auth.authenticate(), rbac.requirePermission(
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.put('/:projectId/comments/:commentId', auth.authenticate(), rbac.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_COMMENT_CREATE_ALL), async (req, res) => {
+router.put('/:projectId/comments/:commentId', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_COMMENT_CREATE_ALL), async (req, res) => {
     try {
         const commentId = BigInt(req.params.commentId);
         const result = await projectService.updateComment(req, commentId, req.body.content);
@@ -33,7 +30,7 @@ router.put('/:projectId/comments/:commentId', auth.authenticate(), rbac.requireP
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.delete('/:projectId/comments/:commentId', auth.authenticate(), rbac.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_COMMENT_DELETE_ALL), async (req, res) => {
+router.delete('/:projectId/comments/:commentId', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_COMMENT_DELETE_ALL), async (req, res) => {
     try {
         const commentId = BigInt(req.params.commentId);
         const result = await projectService.deleteComment(req, commentId);
@@ -43,7 +40,7 @@ router.delete('/:projectId/comments/:commentId', auth.authenticate(), rbac.requi
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.put('/:projectId/comments/:commentId/resolve', auth.authenticate(), async (req, res) => {
+router.put('/:projectId/comments/:commentId/resolve', AuthMiddleware_1.default.verifyToken, async (req, res) => {
     try {
         const commentId = BigInt(req.params.commentId);
         const result = await projectService.resolveComment(req, commentId);
@@ -53,13 +50,10 @@ router.put('/:projectId/comments/:commentId/resolve', auth.authenticate(), async
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.post('/:projectId/attachments', auth.authenticate(), rbac.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_ATTACHMENT_CREATE_ALL), async (req, res) => {
+router.post('/:projectId/attachments', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_ATTACHMENT_CREATE_ALL), async (req, res) => {
     try {
         const projectId = BigInt(req.params.projectId);
-        const attachmentData = {
-            ...req.body,
-            projectId,
-        };
+        const attachmentData = { ...req.body, projectId };
         const result = await projectService.uploadAttachment(req, attachmentData);
         res.json({ success: true, data: result });
     }
@@ -67,7 +61,7 @@ router.post('/:projectId/attachments', auth.authenticate(), rbac.requirePermissi
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.get('/:projectId/attachments/:attachmentId', auth.authenticate(), rbac.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_ATTACHMENT_READ_ALL), async (req, res) => {
+router.get('/:projectId/attachments/:attachmentId', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_ATTACHMENT_READ_ALL), async (req, res) => {
     try {
         const attachmentId = BigInt(req.params.attachmentId);
         const result = await projectService.downloadAttachment(req, attachmentId);
@@ -77,13 +71,10 @@ router.get('/:projectId/attachments/:attachmentId', auth.authenticate(), rbac.re
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.post('/:projectId/tasks/assign', auth.authenticate(), rbac.requirePermission(PermissionCodes_1.PermissionCode.TASK_UPDATE_ALL), async (req, res) => {
+router.post('/:projectId/tasks/assign', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.TASK_UPDATE_ALL), async (req, res) => {
     try {
         const projectId = BigInt(req.params.projectId);
-        const assignmentData = {
-            ...req.body,
-            projectId,
-        };
+        const assignmentData = { ...req.body, projectId };
         const result = await projectService.assignTask(req, assignmentData);
         res.json({ success: true, data: result });
     }
@@ -91,7 +82,7 @@ router.post('/:projectId/tasks/assign', auth.authenticate(), rbac.requirePermiss
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.put('/:projectId/tasks/assignments/:assignmentId/accept', auth.authenticate(), async (req, res) => {
+router.put('/:projectId/tasks/assignments/:assignmentId/accept', AuthMiddleware_1.default.verifyToken, async (req, res) => {
     try {
         const assignmentId = BigInt(req.params.assignmentId);
         const staffId = req.user.staffId;
@@ -102,7 +93,7 @@ router.put('/:projectId/tasks/assignments/:assignmentId/accept', auth.authentica
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.put('/:projectId/tasks/assignments/:assignmentId/decline', auth.authenticate(), async (req, res) => {
+router.put('/:projectId/tasks/assignments/:assignmentId/decline', AuthMiddleware_1.default.verifyToken, async (req, res) => {
     try {
         const assignmentId = BigInt(req.params.assignmentId);
         const staffId = req.user.staffId;
@@ -114,13 +105,10 @@ router.put('/:projectId/tasks/assignments/:assignmentId/decline', auth.authentic
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.post('/:projectId/kanban', auth.authenticate(), rbac.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_KANBAN_UPDATE_ALL), async (req, res) => {
+router.post('/:projectId/kanban', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_KANBAN_UPDATE_ALL), async (req, res) => {
     try {
         const projectId = BigInt(req.params.projectId);
-        const boardData = {
-            ...req.body,
-            projectId,
-        };
+        const boardData = { ...req.body, projectId };
         const result = await projectService.createKanbanBoard(req, boardData);
         res.json({ success: true, data: result });
     }
@@ -128,7 +116,7 @@ router.post('/:projectId/kanban', auth.authenticate(), rbac.requirePermission(Pe
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.put('/:projectId/kanban/:boardId', auth.authenticate(), rbac.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_KANBAN_UPDATE_ALL), async (req, res) => {
+router.put('/:projectId/kanban/:boardId', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_KANBAN_UPDATE_ALL), async (req, res) => {
     try {
         const boardId = BigInt(req.params.boardId);
         const result = await projectService.updateKanbanBoard(req, boardId, req.body);
@@ -138,7 +126,7 @@ router.put('/:projectId/kanban/:boardId', auth.authenticate(), rbac.requirePermi
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.put('/:projectId/kanban/:boardId/move-task', auth.authenticate(), rbac.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_KANBAN_VIEW_ALL), async (req, res) => {
+router.put('/:projectId/kanban/:boardId/move-task', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_KANBAN_VIEW_ALL), async (req, res) => {
     try {
         const boardId = BigInt(req.params.boardId);
         const { taskId, newStatus } = req.body;
@@ -149,7 +137,7 @@ router.put('/:projectId/kanban/:boardId/move-task', auth.authenticate(), rbac.re
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.get('/:projectId/kanban/:boardId', auth.authenticate(), rbac.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_KANBAN_VIEW_ALL), async (req, res) => {
+router.get('/:projectId/kanban/:boardId', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_KANBAN_VIEW_ALL), async (req, res) => {
     try {
         const projectId = BigInt(req.params.projectId);
         const result = await projectService.getKanbanView(req, projectId);

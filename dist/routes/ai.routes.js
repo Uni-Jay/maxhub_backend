@@ -1,0 +1,20 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const AIController_1 = require("../modules/ai/controllers/AIController");
+const AIRateLimiter_1 = require("../modules/ai/middleware/AIRateLimiter");
+const router = (0, express_1.Router)();
+router.get('/status', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AIController_1.AIController.status));
+router.post('/chat', (0, AIRateLimiter_1.aiRateLimit)('chat'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AIController_1.AIController.chat));
+router.post('/report', (0, AIRateLimiter_1.aiRateLimit)('report'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AIController_1.AIController.generateReport));
+router.post('/summarize', (0, AIRateLimiter_1.aiRateLimit)('summarize'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AIController_1.AIController.summarizeMeeting));
+router.post('/email-draft', (0, AIRateLimiter_1.aiRateLimit)('email'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AIController_1.AIController.draftEmail));
+router.post('/task-suggestions', (0, AIRateLimiter_1.aiRateLimit)('tasks'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AIController_1.AIController.taskSuggestions));
+router.post('/reminder', (0, AIRateLimiter_1.aiRateLimit)('reminder'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AIController_1.AIController.generateReminder));
+router.get('/conversations', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AIController_1.AIController.listConversations));
+router.get('/conversations/:uuid', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AIController_1.AIController.getConversation));
+router.get('/meeting-summaries', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AIController_1.AIController.listMeetingSummaries));
+router.get('/reminders', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AIController_1.AIController.listReminders));
+exports.default = router;
+//# sourceMappingURL=ai.routes.js.map

@@ -21,10 +21,12 @@ class NotificationService extends BaseService_1.default {
     }
     initializeProviders() {
         this.emailTransporter = nodemailer_1.default.createTransport({
-            service: process.env.EMAIL_SERVICE || 'gmail',
+            host: process.env.SMTP_HOST,
+            port: parseInt(process.env.SMTP_PORT || '465'),
+            secure: process.env.SMTP_SECURE === 'true',
             auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASSWORD,
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASSWORD,
             },
         });
         if (process.env.TWILIO_ACCOUNT_SID) {

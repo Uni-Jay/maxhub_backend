@@ -37,11 +37,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppBootstrapper = void 0;
+const http_1 = __importDefault(require("http"));
 const express_1 = __importDefault(require("express"));
 const helmet_1 = __importDefault(require("helmet"));
 const cors_1 = __importDefault(require("cors"));
 const sequelize_1 = require("sequelize");
 const dotenv = __importStar(require("dotenv"));
+BigInt.prototype.toJSON = function () {
+    return Number(this);
+};
 const User_model_1 = require("@models/User.model");
 const Role_model_1 = require("@models/Role.model");
 const Permission_model_1 = require("@models/Permission.model");
@@ -50,10 +54,14 @@ const RolePermission_model_1 = require("@models/RolePermission.model");
 const UserPermission_model_1 = require("@models/UserPermission.model");
 const Session_model_1 = require("@models/Session.model");
 const OTPVerification_model_1 = require("@models/OTPVerification.model");
+const TwoFactorAuth_model_1 = require("@models/TwoFactorAuth.model");
+const DeviceLog_model_1 = require("@models/DeviceLog.model");
+const PasswordReset_model_1 = require("@models/PasswordReset.model");
 const Department_model_1 = require("@models/Department.model");
 const Designation_model_1 = require("@models/Designation.model");
 const Location_model_1 = require("@models/Location.model");
 const Staff_model_1 = require("@models/Staff.model");
+const StaffDepartment_model_1 = require("@models/StaffDepartment.model");
 const StaffQualification_model_1 = require("@models/StaffQualification.model");
 const StaffSkill_model_1 = require("@models/StaffSkill.model");
 const StaffDocument_model_1 = require("@models/StaffDocument.model");
@@ -126,9 +134,29 @@ const Complaint_model_1 = require("@models/Complaint.model");
 const SystemSetting_model_1 = require("@models/SystemSetting.model");
 const AuditLog_model_1 = require("@models/AuditLog.model");
 const Associations_1 = require("@models/Associations");
-const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
-const dashboard_routes_1 = __importDefault(require("@routes/dashboard.routes"));
-const auth_routes_1 = __importDefault(require("@routes/auth.routes"));
+const StaffQuery_model_1 = require("@models/StaffQuery.model");
+const StaffQueryReply_model_1 = require("@models/StaffQueryReply.model");
+const Client_model_1 = require("@models/Client.model");
+const ClientDocument_model_1 = require("@models/ClientDocument.model");
+const ClientNote_model_1 = require("@models/ClientNote.model");
+const MessageTemplate_model_1 = require("@models/MessageTemplate.model");
+const CommunicationLog_model_1 = require("@models/CommunicationLog.model");
+const Company_model_1 = require("@models/Company.model");
+const Program_model_1 = require("@models/Program.model");
+const StudentProfile_model_1 = require("@models/StudentProfile.model");
+const StudentEnrollment_model_1 = require("@models/StudentEnrollment.model");
+const StudentResult_model_1 = require("@models/StudentResult.model");
+const StudentAttendance_model_1 = require("@models/StudentAttendance.model");
+const ClassSchedule_model_1 = require("@models/ClassSchedule.model");
+const Meeting_model_1 = require("@models/Meeting.model");
+const MeetingParticipant_model_1 = require("@models/MeetingParticipant.model");
+const Call_model_1 = require("@models/Call.model");
+const index_1 = __importDefault(require("./routes/index"));
+const AIConversation_model_1 = require("./modules/ai/models/AIConversation.model");
+const AIMessage_model_1 = require("./modules/ai/models/AIMessage.model");
+const AIMeetingSummary_model_1 = require("./modules/ai/models/AIMeetingSummary.model");
+const AIReminder_model_1 = require("./modules/ai/models/AIReminder.model");
+const SchedulerService_1 = require("./services/SchedulerService");
 dotenv.config();
 class AppBootstrapper {
     constructor() {
@@ -146,10 +174,22 @@ class AppBootstrapper {
     }
     initMiddleware() {
         this.app.use((0, helmet_1.default)());
-        this.app.use((0, cors_1.default)({
-            origin: (process.env.CORS_ORIGIN || 'http://localhost:3000').split(','),
+        const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174,http://localhost:3000').split(',');
+        const corsOptions = {
+            origin: (origin, callback) => {
+                if (!origin || allowedOrigins.includes(origin)) {
+                    callback(null, true);
+                }
+                else {
+                    callback(new Error(`CORS: Origin ${origin} not allowed`));
+                }
+            },
             credentials: true,
-        }));
+            methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+            allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+        };
+        this.app.options('*', (0, cors_1.default)(corsOptions));
+        this.app.use((0, cors_1.default)(corsOptions));
         this.app.use(express_1.default.json({ limit: '10mb' }));
         this.app.use(express_1.default.urlencoded({ limit: '10mb', extended: true }));
         this.app.use((req, res, next) => {
@@ -175,10 +215,14 @@ class AppBootstrapper {
         UserPermission_model_1.UserPermission.initModel(this.sequelize);
         Session_model_1.Session.initModel(this.sequelize);
         OTPVerification_model_1.OTPVerification.initModel(this.sequelize);
+        TwoFactorAuth_model_1.TwoFactorAuth.initModel(this.sequelize);
+        DeviceLog_model_1.DeviceLog.initModel(this.sequelize);
+        PasswordReset_model_1.PasswordReset.initModel(this.sequelize);
         Department_model_1.Department.initModel(this.sequelize);
         Designation_model_1.Designation.initModel(this.sequelize);
         Location_model_1.Location.initModel(this.sequelize);
         Staff_model_1.Staff.initModel(this.sequelize);
+        StaffDepartment_model_1.StaffDepartment.initModel(this.sequelize);
         StaffQualification_model_1.StaffQualification.initModel(this.sequelize);
         StaffSkill_model_1.StaffSkill.initModel(this.sequelize);
         StaffDocument_model_1.StaffDocument.initModel(this.sequelize);
@@ -250,39 +294,36 @@ class AppBootstrapper {
         Complaint_model_1.Complaint.initModel(this.sequelize);
         SystemSetting_model_1.SystemSetting.initModel(this.sequelize);
         AuditLog_model_1.AuditLog.initModel(this.sequelize);
-        console.log('✅ 83+ models initialized');
+        AIConversation_model_1.AIConversation.initModel(this.sequelize);
+        AIMessage_model_1.AIMessage.initModel(this.sequelize);
+        AIMeetingSummary_model_1.AIMeetingSummary.initModel(this.sequelize);
+        AIReminder_model_1.AIReminder.initModel(this.sequelize);
+        StaffQuery_model_1.StaffQuery.initModel(this.sequelize);
+        StaffQueryReply_model_1.StaffQueryReply.initModel(this.sequelize);
+        Client_model_1.Client.initModel(this.sequelize);
+        ClientDocument_model_1.ClientDocument.initModel(this.sequelize);
+        ClientNote_model_1.ClientNote.initModel(this.sequelize);
+        MessageTemplate_model_1.MessageTemplate.initModel(this.sequelize);
+        CommunicationLog_model_1.CommunicationLog.initModel(this.sequelize);
+        Company_model_1.Company.initModel(this.sequelize);
+        Program_model_1.Program.initModel(this.sequelize);
+        StudentProfile_model_1.StudentProfile.initModel(this.sequelize);
+        StudentEnrollment_model_1.StudentEnrollment.initModel(this.sequelize);
+        StudentResult_model_1.StudentResult.initModel(this.sequelize);
+        StudentAttendance_model_1.StudentAttendance.initModel(this.sequelize);
+        ClassSchedule_model_1.ClassSchedule.initModel(this.sequelize);
+        Meeting_model_1.Meeting.initModel(this.sequelize);
+        MeetingParticipant_model_1.MeetingParticipant.initModel(this.sequelize);
+        Call_model_1.Call.initModel(this.sequelize);
+        console.log('✅ 100+ models initialized');
     }
     initAssociations() {
         Associations_1.AssociationManager.initializeAssociations(this.sequelize);
         console.log('✅ All associations initialized');
     }
-    setupRoutes() {
-        this.app.get('/health', (req, res) => {
-            res.json({
-                status: 'OK',
-                service: 'MaxHub ERP Backend',
-                timestamp: new Date().toISOString(),
-                uptime: process.uptime(),
-            });
-        });
-        this.app.get('/api/version', (req, res) => {
-            res.json({
-                version: process.env.APP_VERSION || '1.0.0',
-                name: process.env.APP_NAME || 'MaxHub ERP',
-                environment: process.env.NODE_ENV || 'development',
-                timestamp: new Date().toISOString(),
-            });
-        });
-        this.app.use('/api/auth', auth_routes_1.default);
-        this.app.use('/api/dashboards', dashboard_routes_1.default);
-        console.log('✅ Routes initialized');
-    }
-    setupErrorHandling() {
-        this.app.use(ErrorMiddleware_1.ErrorMiddleware.notFound);
-        this.app.use((err, req, res, next) => {
-            ErrorMiddleware_1.ErrorMiddleware.handle(err, req, res, next);
-        });
-        console.log('✅ Error handling initialized');
+    initRoutes() {
+        (0, index_1.default)(this.app);
+        console.log('✅ Routes and error handling initialized');
     }
     async start() {
         try {
@@ -290,8 +331,7 @@ class AppBootstrapper {
             this.initModels();
             this.initAssociations();
             this.app.set('sequelize', this.sequelize);
-            this.setupRoutes();
-            this.setupErrorHandling();
+            this.initRoutes();
             console.log('📡 Connecting to database...');
             await this.sequelize.authenticate();
             console.log('✅ Database connected');
@@ -300,8 +340,10 @@ class AppBootstrapper {
                 await this.sequelize.sync({ alter: process.env.DB_FORCE_SYNC === 'true' });
                 console.log('✅ Database synced');
             }
+            (0, SchedulerService_1.startScheduler)();
             const port = process.env.PORT || 3000;
-            this.app.listen(port, () => {
+            const server = http_1.default.createServer({ maxHeaderSize: 65536 }, this.app);
+            server.listen(port, () => {
                 console.log(`
 ╔════════════════════════════════════════╗
 ║   MaxHub ERP Backend - Server Started  ║

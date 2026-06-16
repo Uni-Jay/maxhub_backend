@@ -16,18 +16,18 @@
     "removeComments": true,
     "typeRoots": ["./node_modules/@types"],
     "moduleResolution": "node",
-    "baseUrl": "./src",
-    "ignoreDeprecations": "6.0",
-    "paths": {
-      "@/*": ["./*"],
-      "@models/*": ["./models/*"],
-      "@services/*": ["./services/*"],
-      "@controllers/*": ["./controllers/*"],
-      "@repositories/*": ["./repositories/*"],
-      "@config/*": ["./config/*"],
-      "@middleware/*": ["./middleware/*"],
-      "@utils/*": ["./utils/*"],
-      "@types/*": ["./types/*"]
+    "baseUrl": ".",
+    "ignoreDeprecations": "5.0",
+   "paths": {
+      "@/*": ["src/*"],
+      "@models/*": ["src/models/*"],
+      "@services/*": ["src/services/*"],
+      "@controllers/*": ["src/controllers/*"],
+      "@repositories/*": ["src/repositories/*"],
+      "@config/*": ["src/config/*"],
+      "@middleware/*": ["src/middleware/*"],
+      "@utils/*": ["src/utils/*"],
+      "@types/*": ["src/types/*"]
     }
   },
   "include": ["src/**/*"],

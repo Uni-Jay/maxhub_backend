@@ -1,15 +1,15 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const AuthMiddleware_1 = require("../middleware/AuthMiddleware");
-const RBACMiddleware_1 = require("../middleware/RBACMiddleware");
+const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
 const PermissionCodes_1 = require("../config/PermissionCodes");
 const HRService_1 = require("../services/HRService");
 const router = (0, express_1.Router)();
 const hrService = new HRService_1.HRService();
-const auth = new AuthMiddleware_1.AuthMiddleware();
-const rbac = new RBACMiddleware_1.RBACMiddleware();
-router.post('/warnings/issue', auth.authenticate(), rbac.requirePermission(PermissionCodes_1.PermissionCode.HR_WARNING_CREATE_ALL), async (req, res) => {
+router.post('/warnings/issue', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.HR_WARNING_CREATE_ALL), async (req, res) => {
     try {
         const warningData = req.body;
         const result = await hrService.issueWarning(req, warningData);
@@ -19,7 +19,7 @@ router.post('/warnings/issue', auth.authenticate(), rbac.requirePermission(Permi
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.put('/warnings/:id/acknowledge', auth.authenticate(), rbac.requirePermission(PermissionCodes_1.PermissionCode.HR_WARNING_READ_OWN), async (req, res) => {
+router.put('/warnings/:id/acknowledge', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.HR_WARNING_READ_OWN), async (req, res) => {
     try {
         const warningId = BigInt(req.params.id);
         const staffId = req.user.staffId;
@@ -30,7 +30,7 @@ router.put('/warnings/:id/acknowledge', auth.authenticate(), rbac.requirePermiss
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.post('/resignation/submit', auth.authenticate(), rbac.requirePermission(PermissionCodes_1.PermissionCode.HR_RESIGNATION_CREATE_OWN), async (req, res) => {
+router.post('/resignation/submit', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.HR_RESIGNATION_CREATE_OWN), async (req, res) => {
     try {
         const staffId = req.user.staffId;
         const resignationData = req.body;
@@ -41,7 +41,7 @@ router.post('/resignation/submit', auth.authenticate(), rbac.requirePermission(P
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.put('/resignation/:id/approve', auth.authenticate(), rbac.requirePermission(PermissionCodes_1.PermissionCode.HR_RESIGNATION_APPROVE_ALL), async (req, res) => {
+router.put('/resignation/:id/approve', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.HR_RESIGNATION_APPROVE_ALL), async (req, res) => {
     try {
         const resignationId = BigInt(req.params.id);
         const result = await hrService.approveResignation(req, resignationId);
@@ -51,7 +51,7 @@ router.put('/resignation/:id/approve', auth.authenticate(), rbac.requirePermissi
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.post('/promotion/propose', auth.authenticate(), rbac.requirePermission(PermissionCodes_1.PermissionCode.HR_PROMOTION_CREATE_ALL), async (req, res) => {
+router.post('/promotion/propose', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.HR_PROMOTION_CREATE_ALL), async (req, res) => {
     try {
         const promotionData = req.body;
         const result = await hrService.proposePromotion(req, promotionData);
@@ -61,7 +61,7 @@ router.post('/promotion/propose', auth.authenticate(), rbac.requirePermission(Pe
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.put('/promotion/:id/approve', auth.authenticate(), rbac.requirePermission(PermissionCodes_1.PermissionCode.HR_PROMOTION_APPROVE_ALL), async (req, res) => {
+router.put('/promotion/:id/approve', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.HR_PROMOTION_APPROVE_ALL), async (req, res) => {
     try {
         const promotionId = BigInt(req.params.id);
         const result = await hrService.approvePromotion(req, promotionId);
@@ -71,7 +71,7 @@ router.put('/promotion/:id/approve', auth.authenticate(), rbac.requirePermission
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.put('/onboarding/:taskId/complete', auth.authenticate(), rbac.requirePermission(PermissionCodes_1.PermissionCode.HR_ONBOARDING_COMPLETE_OWN), async (req, res) => {
+router.put('/onboarding/:taskId/complete', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.HR_ONBOARDING_COMPLETE_OWN), async (req, res) => {
     try {
         const onboardingTaskId = BigInt(req.params.taskId);
         const staffId = req.user.staffId;
@@ -82,7 +82,7 @@ router.put('/onboarding/:taskId/complete', auth.authenticate(), rbac.requirePerm
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.get('/records/:staffId', auth.authenticate(), rbac.requirePermission(PermissionCodes_1.PermissionCode.HR_RECORDS_READ_ALL), async (req, res) => {
+router.get('/records/:staffId', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.HR_RECORDS_READ_ALL), async (req, res) => {
     try {
         const staffId = BigInt(req.params.staffId);
         const result = await hrService.getEmployeeRecords(req, staffId);
@@ -92,7 +92,7 @@ router.get('/records/:staffId', auth.authenticate(), rbac.requirePermission(Perm
         res.status(400).json({ success: false, error: error.message });
     }
 });
-router.put('/records/:staffId', auth.authenticate(), rbac.requirePermission(PermissionCodes_1.PermissionCode.HR_RECORDS_UPDATE_ALL), async (req, res) => {
+router.put('/records/:staffId', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.HR_RECORDS_UPDATE_ALL), async (req, res) => {
     try {
         const staffId = BigInt(req.params.staffId);
         const result = await hrService.updateEmployeeRecords(req, staffId, req.body);

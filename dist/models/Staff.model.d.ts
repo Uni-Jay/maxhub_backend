@@ -23,6 +23,9 @@ interface StaffAttributes {
     emergencyContactName?: string;
     emergencyContactPhone?: string;
     status: 'Active' | 'Inactive' | 'OnLeave' | 'Suspended' | 'Resigned' | 'Retired';
+    position?: string;
+    businessUnit?: string;
+    businessUnits?: string[];
     deletedAt?: Date;
 }
 interface StaffCreationAttributes extends Optional<StaffAttributes, 'id' | 'uuid'> {
@@ -51,6 +54,9 @@ export declare class Staff extends Model<StaffAttributes, StaffCreationAttribute
     emergencyContactName?: string;
     emergencyContactPhone?: string;
     status: 'Active' | 'Inactive' | 'OnLeave' | 'Suspended' | 'Resigned' | 'Retired';
+    position?: string;
+    businessUnit?: string;
+    businessUnits?: string[];
     deletedAt?: Date;
     readonly createdAt: Date;
     readonly updatedAt: Date;

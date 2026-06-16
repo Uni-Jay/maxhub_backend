@@ -51,7 +51,7 @@ class Permission extends sequelize_1.Model {
                 comment: 'Action type (create, read, update, delete, approve, etc.)',
             },
             scope: {
-                type: sequelize_1.DataTypes.ENUM('all', 'own', 'own_department'),
+                type: sequelize_1.DataTypes.ENUM('all', 'own', 'own_department', 'own_warehouse'),
                 defaultValue: 'all',
                 allowNull: false,
                 comment: 'Permission scope: all records, own records, or own department only',

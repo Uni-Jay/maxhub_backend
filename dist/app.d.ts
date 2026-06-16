@@ -5,8 +5,7 @@ declare class AppBootstrapper {
     private initMiddleware;
     private initModels;
     private initAssociations;
-    private setupRoutes;
-    private setupErrorHandling;
+    private initRoutes;
     start(): Promise<void>;
 }
 export { AppBootstrapper };

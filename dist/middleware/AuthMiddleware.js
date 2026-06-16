@@ -1,6 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthMiddleware = void 0;
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const ResponseFormatter_1 = require("@utils/ResponseFormatter");
 const ErrorHandler_1 = require("@utils/ErrorHandler");
 class AuthMiddleware {
@@ -15,7 +19,17 @@ class AuthMiddleware {
                 throw new ErrorHandler_1.UnauthorizedError('Invalid authorization header format');
             }
             const token = parts[1];
-            console.warn('⚠️  JWT token verification not yet implemented - add jwt library and configure token validation');
+            const secret = process.env.JWT_SECRET || 'access-secret-key';
+            const decoded = jsonwebtoken_1.default.verify(token, secret, { algorithms: ['HS256'] });
+            req.user = {
+                id: decoded.id,
+                uuid: decoded.uuid,
+                email: decoded.email,
+                roles: decoded.roles || [],
+                permissions: decoded.permissions || [],
+                staffId: decoded.staffId,
+                departmentId: decoded.departmentId,
+            };
             next();
         }
         catch (error) {
@@ -30,17 +44,26 @@ class AuthMiddleware {
     static optionalAuth(req, res, next) {
         try {
             const authHeader = req.headers.authorization;
-            if (!authHeader) {
+            if (!authHeader)
                 return next();
-            }
             const parts = authHeader.split(' ');
-            if (parts.length !== 2 || parts[0] !== 'Bearer') {
+            if (parts.length !== 2 || parts[0] !== 'Bearer')
                 return next();
-            }
             const token = parts[1];
+            const secret = process.env.JWT_SECRET || 'access-secret-key';
+            const decoded = jsonwebtoken_1.default.verify(token, secret, { algorithms: ['HS256'] });
+            req.user = {
+                id: decoded.id,
+                uuid: decoded.uuid,
+                email: decoded.email,
+                roles: decoded.roles || [],
+                permissions: decoded.permissions || [],
+                staffId: decoded.staffId,
+                departmentId: decoded.departmentId,
+            };
             next();
         }
-        catch (error) {
+        catch {
             next();
         }
     }
@@ -67,7 +90,27 @@ class AuthMiddleware {
                 ResponseFormatter_1.ResponseFormatter.unauthorized(res, 'User not authenticated', req.path);
                 return;
             }
-            const hasPermission = permissions.some((permission) => req.user?.permissions.includes(permission));
+            if ((req.user.roles || []).includes('superadmin')) {
+                return next();
+            }
+            const PREFIX_ALIASES = {
+                'finance.': 'fin.',
+                'account.': 'acc.',
+                'human-resources.': 'hr.',
+                'notify.': 'comm.',
+            };
+            const normalise = (p) => {
+                const lower = p.toLowerCase().replace(/_/g, '.');
+                const variants = [lower];
+                for (const [alias, real] of Object.entries(PREFIX_ALIASES)) {
+                    if (lower.startsWith(alias)) {
+                        variants.push(lower.replace(alias, real));
+                    }
+                }
+                return variants;
+            };
+            const userPerms = new Set((req.user.permissions || []).map((p) => p.toLowerCase()));
+            const hasPermission = permissions.some((reqPerm) => normalise(reqPerm).some((variant) => userPerms.has(variant)));
             if (!hasPermission) {
                 ResponseFormatter_1.ResponseFormatter.forbidden(res, `Required permissions: ${permissions.join(', ')}`, req.path);
                 return;

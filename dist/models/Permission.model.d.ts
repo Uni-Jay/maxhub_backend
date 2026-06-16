@@ -8,7 +8,7 @@ interface PermissionAttributes {
     module: string;
     resource: string;
     action: string;
-    scope: 'all' | 'own' | 'own_department';
+    scope: 'all' | 'own' | 'own_department' | 'own_warehouse';
     isActive: boolean;
     deletedAt?: Date;
 }

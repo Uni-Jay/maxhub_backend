@@ -4,13 +4,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DashboardController = void 0;
 const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
 const ResponseFormatter_1 = require("@utils/ResponseFormatter");
-const permissions_1 = require("@constants/permissions");
+const PermissionCodes_1 = require("@config/PermissionCodes");
 class DashboardController {
 }
 exports.DashboardController = DashboardController;
 _a = DashboardController;
 DashboardController.getSuperAdminStats = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    if (!req.user?.permissions.includes(permissions_1.PermissionCode.ORG_DASHBOARD_VIEW)) {
+    if (!req.user?.permissions.includes(PermissionCodes_1.PermissionCode.ORG_DASHBOARD_VIEW)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions to view dashboard');
     }
     const stats = {
@@ -26,7 +26,7 @@ DashboardController.getSuperAdminStats = ErrorMiddleware_1.ErrorMiddleware.async
     ResponseFormatter_1.ResponseFormatter.success(res, stats, 'Dashboard statistics retrieved');
 });
 DashboardController.getSuperAdminAttendance = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    if (!req.user?.permissions.includes(permissions_1.PermissionCode.ORG_ATTENDANCE_READ)) {
+    if (!req.user?.permissions.includes(PermissionCodes_1.PermissionCode.ORG_ATTENDANCE_READ)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
     }
     const days = parseInt(req.query.days) || 7;
@@ -44,7 +44,7 @@ DashboardController.getSuperAdminAttendance = ErrorMiddleware_1.ErrorMiddleware.
     ResponseFormatter_1.ResponseFormatter.success(res, attendanceData, 'Attendance data retrieved');
 });
 DashboardController.getSuperAdminRevenue = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    if (!req.user?.permissions.includes(permissions_1.PermissionCode.ORG_REPORT_READ)) {
+    if (!req.user?.permissions.includes(PermissionCodes_1.PermissionCode.ORG_REPORT_READ)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
     }
     const months = parseInt(req.query.months) || 6;
@@ -59,7 +59,7 @@ DashboardController.getSuperAdminRevenue = ErrorMiddleware_1.ErrorMiddleware.asy
     ResponseFormatter_1.ResponseFormatter.success(res, revenueData, 'Revenue data retrieved');
 });
 DashboardController.getSuperAdminPayroll = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    if (!req.user?.permissions.includes(permissions_1.PermissionCode.ORG_PAYROLL_READ)) {
+    if (!req.user?.permissions.includes(PermissionCodes_1.PermissionCode.ORG_PAYROLL_READ)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
     }
     const payrollData = [
@@ -71,7 +71,7 @@ DashboardController.getSuperAdminPayroll = ErrorMiddleware_1.ErrorMiddleware.asy
     ResponseFormatter_1.ResponseFormatter.success(res, payrollData, 'Payroll data retrieved');
 });
 DashboardController.getSuperAdminDepartments = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    if (!req.user?.permissions.includes(permissions_1.PermissionCode.ORG_DEPARTMENT_READ)) {
+    if (!req.user?.permissions.includes(PermissionCodes_1.PermissionCode.ORG_DEPARTMENT_READ)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
     }
     const departments = [
@@ -84,7 +84,7 @@ DashboardController.getSuperAdminDepartments = ErrorMiddleware_1.ErrorMiddleware
     ResponseFormatter_1.ResponseFormatter.success(res, departments, 'Department data retrieved');
 });
 DashboardController.getSuperAdminStudents = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    if (!req.user?.permissions.includes(permissions_1.PermissionCode.ORG_ENROLLMENT_READ)) {
+    if (!req.user?.permissions.includes(PermissionCodes_1.PermissionCode.ORG_ENROLLMENT_READ)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
     }
     const studentData = {
@@ -96,7 +96,7 @@ DashboardController.getSuperAdminStudents = ErrorMiddleware_1.ErrorMiddleware.as
     ResponseFormatter_1.ResponseFormatter.success(res, studentData, 'Student analytics retrieved');
 });
 DashboardController.getSuperAdminProjects = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    if (!req.user?.permissions.includes(permissions_1.PermissionCode.ORG_PROJECT_READ)) {
+    if (!req.user?.permissions.includes(PermissionCodes_1.PermissionCode.ORG_PROJECT_READ)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
     }
     const projects = [
@@ -108,7 +108,7 @@ DashboardController.getSuperAdminProjects = ErrorMiddleware_1.ErrorMiddleware.as
     ResponseFormatter_1.ResponseFormatter.success(res, projects, 'Project data retrieved');
 });
 DashboardController.getSuperAdminCRM = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    if (!req.user?.permissions.includes(permissions_1.PermissionCode.ORG_OPPORTUNITY_READ)) {
+    if (!req.user?.permissions.includes(PermissionCodes_1.PermissionCode.ORG_OPPORTUNITY_READ)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
     }
     const crmData = {
@@ -121,7 +121,7 @@ DashboardController.getSuperAdminCRM = ErrorMiddleware_1.ErrorMiddleware.asyncHa
     ResponseFormatter_1.ResponseFormatter.success(res, crmData, 'CRM metrics retrieved');
 });
 DashboardController.getSuperAdminNotifications = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    if (!req.user?.permissions.includes(permissions_1.PermissionCode.ORG_NOTIFICATION_READ)) {
+    if (!req.user?.permissions.includes(PermissionCodes_1.PermissionCode.ORG_NOTIFICATION_READ)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
     }
     const limit = parseInt(req.query.limit) || 5;
@@ -134,7 +134,7 @@ DashboardController.getSuperAdminNotifications = ErrorMiddleware_1.ErrorMiddlewa
     ResponseFormatter_1.ResponseFormatter.success(res, notifications, 'Notifications retrieved');
 });
 DashboardController.getHeadOfAdminStats = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    if (!req.user?.permissions.includes(permissions_1.PermissionCode.ORG_STAFF_READ)) {
+    if (!req.user?.permissions.includes(PermissionCodes_1.PermissionCode.ORG_STAFF_READ)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
     }
     const stats = {
@@ -146,7 +146,7 @@ DashboardController.getHeadOfAdminStats = ErrorMiddleware_1.ErrorMiddleware.asyn
     ResponseFormatter_1.ResponseFormatter.success(res, stats, 'Dashboard statistics retrieved');
 });
 DashboardController.getHeadOfAdminLeaveApprovals = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    if (!req.user?.permissions.includes(permissions_1.PermissionCode.ORG_LEAVE_REQUEST_APPROVE)) {
+    if (!req.user?.permissions.includes(PermissionCodes_1.PermissionCode.ORG_LEAVE_REQUEST_APPROVE)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
     }
     const approvals = [
@@ -170,7 +170,7 @@ DashboardController.getHeadOfAdminLeaveApprovals = ErrorMiddleware_1.ErrorMiddle
     ResponseFormatter_1.ResponseFormatter.success(res, approvals, 'Leave approvals retrieved');
 });
 DashboardController.approveLeave = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    if (!req.user?.permissions.includes(permissions_1.PermissionCode.ORG_LEAVE_REQUEST_APPROVE)) {
+    if (!req.user?.permissions.includes(PermissionCodes_1.PermissionCode.ORG_LEAVE_REQUEST_APPROVE)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
     }
     const { leaveId } = req.params;
@@ -178,7 +178,7 @@ DashboardController.approveLeave = ErrorMiddleware_1.ErrorMiddleware.asyncHandle
     ResponseFormatter_1.ResponseFormatter.success(res, null, `Leave ${leaveId} approved successfully`);
 });
 DashboardController.rejectLeave = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    if (!req.user?.permissions.includes(permissions_1.PermissionCode.ORG_LEAVE_REQUEST_APPROVE)) {
+    if (!req.user?.permissions.includes(PermissionCodes_1.PermissionCode.ORG_LEAVE_REQUEST_APPROVE)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
     }
     const { leaveId } = req.params;
@@ -186,7 +186,7 @@ DashboardController.rejectLeave = ErrorMiddleware_1.ErrorMiddleware.asyncHandler
     ResponseFormatter_1.ResponseFormatter.success(res, null, `Leave ${leaveId} rejected successfully`);
 });
 DashboardController.getHeadOfAdminAttendanceReports = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    if (!req.user?.permissions.includes(permissions_1.PermissionCode.ORG_ATTENDANCE_READ)) {
+    if (!req.user?.permissions.includes(PermissionCodes_1.PermissionCode.ORG_ATTENDANCE_READ)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
     }
     const reports = [
@@ -197,7 +197,7 @@ DashboardController.getHeadOfAdminAttendanceReports = ErrorMiddleware_1.ErrorMid
     ResponseFormatter_1.ResponseFormatter.success(res, reports, 'Attendance reports retrieved');
 });
 DashboardController.getHeadOfAdminDepartmentKPIs = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    if (!req.user?.permissions.includes(permissions_1.PermissionCode.ORG_DEPARTMENT_READ)) {
+    if (!req.user?.permissions.includes(PermissionCodes_1.PermissionCode.ORG_DEPARTMENT_READ)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
     }
     const kpis = [
@@ -208,7 +208,7 @@ DashboardController.getHeadOfAdminDepartmentKPIs = ErrorMiddleware_1.ErrorMiddle
     ResponseFormatter_1.ResponseFormatter.success(res, kpis, 'Department KPIs retrieved');
 });
 DashboardController.getHeadOfAdminProjects = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    if (!req.user?.permissions.includes(permissions_1.PermissionCode.ORG_PROJECT_READ)) {
+    if (!req.user?.permissions.includes(PermissionCodes_1.PermissionCode.ORG_PROJECT_READ)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
     }
     const projects = [
@@ -219,7 +219,7 @@ DashboardController.getHeadOfAdminProjects = ErrorMiddleware_1.ErrorMiddleware.a
     ResponseFormatter_1.ResponseFormatter.success(res, projects, 'Projects retrieved');
 });
 DashboardController.getHeadOfAdminCommunications = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    if (!req.user?.permissions.includes(permissions_1.PermissionCode.ORG_MESSAGE_READ)) {
+    if (!req.user?.permissions.includes(PermissionCodes_1.PermissionCode.ORG_MESSAGE_READ)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
     }
     const limit = parseInt(req.query.limit) || 10;
@@ -230,7 +230,7 @@ DashboardController.getHeadOfAdminCommunications = ErrorMiddleware_1.ErrorMiddle
     ResponseFormatter_1.ResponseFormatter.success(res, comms, 'Communications retrieved');
 });
 DashboardController.getHeadOfAdminLeaveSummary = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    if (!req.user?.permissions.includes(permissions_1.PermissionCode.ORG_LEAVE_REQUEST_READ)) {
+    if (!req.user?.permissions.includes(PermissionCodes_1.PermissionCode.ORG_LEAVE_REQUEST_READ)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
     }
     const summary = {
