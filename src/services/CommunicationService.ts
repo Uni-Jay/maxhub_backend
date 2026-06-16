@@ -295,6 +295,105 @@ export async function sendBirthdayEmail(params: {
 }
 
 /**
+ * Send a branded OTP verification email.
+ */
+export async function sendOTPEmail(params: {
+  to: string;
+  firstName: string;
+  otpCode: string;
+  type: 'PASSWORD_RESET' | 'EMAIL_VERIFICATION' | '2FA';
+  expiryMinutes?: number;
+}): Promise<boolean> {
+  const { to, firstName, otpCode, type, expiryMinutes = 10 } = params;
+  const companyName = process.env.COMPANY_NAME || 'MaxHub';
+
+  const config = {
+    PASSWORD_RESET: {
+      subject: `Password Reset Code — ${companyName}`,
+      title: 'Reset Your Password',
+      subtitle: 'You requested a password reset. Use the code below to continue.',
+      warning: "If you didn't request this, please ignore this email or contact your administrator immediately.",
+      icon: '🔑',
+    },
+    EMAIL_VERIFICATION: {
+      subject: `Verify Your Email — ${companyName}`,
+      title: 'Email Verification',
+      subtitle: 'Please enter this code to verify your email address.',
+      warning: "If you didn't create an account, please ignore this email.",
+      icon: '✉️',
+    },
+    '2FA': {
+      subject: `Login Verification Code — ${companyName}`,
+      title: 'Login Verification',
+      subtitle: 'Use this code to complete your sign-in.',
+      warning: "If you didn't attempt to sign in, please secure your account immediately.",
+      icon: '🔒',
+    },
+  };
+
+  const { subject, title, subtitle, warning, icon } = config[type];
+  const digits = otpCode.split('');
+  const digitBoxes = digits
+    .map(d => `<span style="display:inline-block;width:44px;height:56px;line-height:56px;margin:0 3px;background:#ffffff;border:2px solid #c4b5fd;border-radius:10px;font-size:26px;font-weight:800;color:#4f46e5;font-family:monospace;text-align:center;">${d}</span>`)
+    .join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${title}</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f8;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f8;padding:32px 0;">
+    <tr><td align="center">
+      <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);padding:36px 40px;text-align:center;">
+            <div style="font-size:40px;margin-bottom:10px;">${icon}</div>
+            <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;">${companyName} ERP</h1>
+            <p style="margin:6px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">${title}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:40px;">
+            <p style="margin:0 0 6px;font-size:18px;font-weight:700;color:#111827;">Hello, ${firstName}!</p>
+            <p style="margin:0 0 28px;font-size:14px;color:#6b7280;line-height:1.6;">${subtitle}</p>
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f3ff;border:2px solid #e0d9ff;border-radius:14px;margin-bottom:28px;">
+              <tr>
+                <td style="padding:28px;text-align:center;">
+                  <p style="margin:0 0 16px;font-size:11px;font-weight:700;letter-spacing:1.5px;color:#7c3aed;text-transform:uppercase;">Your Verification Code</p>
+                  <div>${digitBoxes}</div>
+                  <p style="margin:16px 0 0;font-size:12px;color:#9ca3af;">This code expires in ${expiryMinutes} minutes. Do not share it with anyone.</p>
+                </td>
+              </tr>
+            </table>
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;">
+              <tr>
+                <td style="padding:14px 18px;font-size:12px;color:#92400e;line-height:1.5;">
+                  ⚠️ ${warning}
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f9fafb;border-top:1px solid #f3f4f6;padding:18px 40px;text-align:center;">
+            <p style="margin:0;font-size:11px;color:#9ca3af;">
+              This is an automated security email from ${companyName} ERP. Do not reply to this email.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  return sendEmail(to, subject, html);
+}
+
+/**
  * Build weekly greeting message with company name substitution
  */
 export function buildWeeklyMessage(

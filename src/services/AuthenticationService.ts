@@ -9,6 +9,7 @@ import JWTService from './JWTService';
 import OTPService from './OTPService';
 import PasswordService from './PasswordService';
 import RBACService from './RBACService';
+import { sendOTPEmail } from './CommunicationService';
 import { PermissionCode } from '@config/PermissionCodes';
 import {
   UnauthorizedError,
@@ -155,6 +156,28 @@ export class AuthenticationService {
           isTrusted: false,
         },
       });
+    }
+
+    // If EMAIL-based 2FA, generate and send an OTP now
+    if (requiresMFA && twoFactorAuth?.method === 'EMAIL') {
+      const otpCode = OTPService.generateOTPCode();
+      const otpHash = await OTPService.hashOTP(otpCode);
+      await OTPVerification.update(
+        { isUsed: true, usedAt: new Date() },
+        { where: { userId: user.id, type: '2FA', isUsed: false } }
+      );
+      await OTPVerification.create({
+        userId: user.id,
+        email: user.email,
+        otpCode,
+        otpHash,
+        type: '2FA',
+        expiresAt: OTPService.getOTPExpirationTime(),
+        isUsed: false,
+        attempts: 0,
+      });
+      sendOTPEmail({ to: user.email, firstName: user.firstName, otpCode, type: '2FA' })
+        .catch(err => console.error('[Auth] 2FA email OTP send failed:', err));
     }
 
     return {
@@ -352,79 +375,193 @@ export class AuthenticationService {
   }
 
   /**
-   * Send password reset OTP
+   * Generate and email a 6-digit OTP for password reset
    */
   async forgotPassword(email: string): Promise<void> {
     const user = await User.findOne({ where: { email } });
+    if (!user) return; // Security: don't reveal whether the email exists
 
-    if (!user) {
-      // Don't reveal if email exists for security
-      return;
-    }
+    // Expire any previous unused PASSWORD_RESET OTPs for this user
+    await OTPVerification.update(
+      { isUsed: true, usedAt: new Date() },
+      { where: { userId: user.id, type: 'PASSWORD_RESET', isUsed: false } }
+    );
 
-    // Generate reset token
-    const { token, hash } = PasswordService.generateResetToken();
+    const otpCode = OTPService.generateOTPCode();
+    const otpHash = await OTPService.hashOTP(otpCode);
 
-    // Create password reset record
-    await PasswordReset.create({
+    await OTPVerification.create({
       userId: user.id,
       email,
-      token,
-      tokenHash: hash,
-      expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
+      otpCode,
+      otpHash,
+      type: 'PASSWORD_RESET',
+      expiresAt: OTPService.getOTPExpirationTime(),
       isUsed: false,
+      attempts: 0,
     });
 
-    // In real app, send email with reset link
-    // const resetLink = `${process.env.FRONTEND_URL}/auth/reset-password?token=${token}`;
-    // await EmailService.sendPasswordResetEmail(email, resetLink);
+    await sendOTPEmail({ to: email, firstName: user.firstName, otpCode, type: 'PASSWORD_RESET' })
+      .catch(err => console.error('[Auth] Password reset OTP email failed:', err));
   }
 
   /**
-   * Reset password using reset token
+   * Reset password by verifying the emailed OTP code
    */
-  async resetPassword(token: string, newPassword: string): Promise<void> {
-    // Find reset record
-    const reset = await PasswordReset.findOne({
-      where: { isUsed: false },
+  async resetPassword(email: string, otpCode: string, newPassword: string): Promise<void> {
+    const user = await User.findOne({ where: { email } });
+    if (!user) throw new UnauthorizedError('Invalid or expired OTP');
+
+    const otp = await OTPVerification.findOne({
+      where: { userId: user.id, type: 'PASSWORD_RESET', isUsed: false },
+      order: [['createdAt', 'DESC']],
     });
 
-    if (!reset || reset.expiresAt < new Date()) {
-      throw new UnauthorizedError('Invalid or expired reset token');
+    if (!otp || otp.expiresAt < new Date()) {
+      throw new UnauthorizedError('OTP has expired. Please request a new code.');
     }
 
-    // Verify token
-    const isTokenValid = PasswordService.verifyResetToken(token, reset.tokenHash);
-    if (!isTokenValid) {
-      throw new UnauthorizedError('Invalid reset token');
+    if (otp.attempts >= 5) {
+      throw new UnauthorizedError('Too many incorrect attempts. Please request a new OTP.');
     }
 
-    // Validate new password
+    const isValid = await OTPService.verifyOTP(otpCode, otp.otpHash);
+    if (!isValid) {
+      await otp.increment('attempts');
+      const remaining = 4 - otp.attempts;
+      if (remaining <= 0) {
+        await otp.update({ isUsed: true });
+        throw new UnauthorizedError('Too many incorrect attempts. Please request a new OTP.');
+      }
+      throw new UnauthorizedError(
+        `Invalid OTP code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`
+      );
+    }
+
     const passwordStrength = PasswordService.checkPasswordStrength(newPassword);
     if (!passwordStrength.isStrong) {
       throw new ValidationError('Password is not strong enough', passwordStrength.feedback);
     }
 
-    // Update user password
-    const user = await User.findByPk(reset.userId);
-    if (!user) {
-      throw new NotFoundError('User not found');
-    }
-
     const passwordHash = await PasswordService.hashPassword(newPassword);
     await user.update({ passwordHash });
 
-    // Mark reset token as used
-    await reset.update({
-      isUsed: true,
-      usedAt: new Date(),
+    await otp.update({ isUsed: true, usedAt: new Date() });
+
+    // Soft-delete (paranoid) all sessions so user must log in again
+    await Session.destroy({ where: { userId: user.id } });
+  }
+
+  /**
+   * Send an OTP email for any supported type (wrapper used by sendOTP controller)
+   */
+  async sendOTP(email: string, type: 'PASSWORD_RESET' | 'EMAIL_VERIFICATION' | '2FA'): Promise<void> {
+    if (type === 'PASSWORD_RESET') {
+      return this.forgotPassword(email);
+    }
+
+    const user = await User.findOne({ where: { email } });
+    if (!user) return;
+
+    await OTPVerification.update(
+      { isUsed: true, usedAt: new Date() },
+      { where: { userId: user.id, type, isUsed: false } }
+    );
+
+    const otpCode = OTPService.generateOTPCode();
+    const otpHash = await OTPService.hashOTP(otpCode);
+
+    await OTPVerification.create({
+      userId: user.id,
+      email,
+      otpCode,
+      otpHash,
+      type,
+      expiresAt: OTPService.getOTPExpirationTime(),
+      isUsed: false,
+      attempts: 0,
     });
 
-    // Revoke all sessions
-    await Session.update(
-      { isActive: false, revokedAt: new Date() },
-      { where: { userId: user.id } }
-    );
+    await sendOTPEmail({ to: email, firstName: user.firstName, otpCode, type })
+      .catch(err => console.error('[Auth] OTP email failed:', err));
+  }
+
+  /**
+   * Verify MFA code after login and return tokens
+   */
+  async verify2FALogin(sessionId: string, otpCode: string): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: any;
+  }> {
+    const session = await Session.findOne({ where: { uuid: sessionId } });
+    if (!session || session.expiresAt < new Date()) {
+      throw new UnauthorizedError('Session expired. Please login again.');
+    }
+
+    const user = await User.findByPk(session.userId, {
+      include: ['roles', 'permissions'],
+    });
+    if (!user) throw new NotFoundError('User not found');
+
+    const twoFA = await TwoFactorAuth.findOne({
+      where: { userId: user.id, isEnabled: true },
+    });
+    if (!twoFA) throw new UnauthorizedError('2FA not configured for this account');
+
+    let isValid = false;
+
+    if (twoFA.method === 'TOTP' && twoFA.secret) {
+      isValid = OTPService.verifyTOTP(otpCode, twoFA.secret);
+    } else if (twoFA.method === 'EMAIL') {
+      const otp = await OTPVerification.findOne({
+        where: { userId: user.id, type: '2FA', isUsed: false },
+        order: [['createdAt', 'DESC']],
+      });
+      if (otp && otp.expiresAt >= new Date() && otp.attempts < 5) {
+        isValid = await OTPService.verifyOTP(otpCode, otp.otpHash);
+        if (isValid) {
+          await otp.update({ isUsed: true, usedAt: new Date() });
+        } else {
+          await otp.increment('attempts');
+        }
+      }
+    }
+
+    if (!isValid) throw new UnauthorizedError('Invalid verification code');
+
+    await twoFA.update({ lastUsedAt: new Date() });
+
+    // Re-build user payload and issue fresh tokens
+    const roles = await user.getRoles({
+      include: [{ model: Permission, as: 'permissions' }],
+    });
+    const directPerms = await user.getPermissions();
+    const permCodes = [
+      ...new Set([
+        ...roles.flatMap((r: any) => (r.permissions || []).map((p: any) => p.code)),
+        ...directPerms.map((p: any) => p.code),
+      ]),
+    ];
+
+    const authenticatedUser = {
+      id: Number(user.id),
+      uuid: user.uuid,
+      email: user.email,
+      name: `${user.firstName} ${user.lastName}`,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      departmentId: user.departmentId ? Number(user.departmentId) : null,
+      roles: roles.map((r: any) => r.code),
+      permissions: permCodes,
+    };
+
+    const accessToken = JWTService.generateAccessToken(authenticatedUser);
+    const refreshToken = JWTService.generateRefreshToken(authenticatedUser);
+
+    await session.update({ refreshToken, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) });
+
+    return { accessToken, refreshToken, user: authenticatedUser };
   }
 
   /**

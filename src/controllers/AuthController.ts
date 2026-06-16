@@ -120,16 +120,22 @@ export class AuthController {
   }
 
   /**
-   * Reset password endpoint
+   * Reset password endpoint (OTP-based)
    * POST /api/auth/reset-password
+   * Body: { email, otpCode, newPassword }
    */
   static async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { token, newPassword } = req.body;
+      const { email, otpCode, newPassword } = req.body;
 
-      await AuthenticationService.resetPassword(token, newPassword);
+      if (!email || !otpCode || !newPassword) {
+        ResponseFormatter.error(res, 'email, otpCode, and newPassword are required', 400);
+        return;
+      }
 
-      ResponseFormatter.success(res, null, 'Password reset successful. Please login again');
+      await AuthenticationService.resetPassword(email, otpCode, newPassword);
+
+      ResponseFormatter.success(res, null, 'Password reset successful. Please login again.');
     } catch (error) {
       next(error);
     }
@@ -160,15 +166,21 @@ export class AuthController {
   /**
    * Send OTP for verification
    * POST /api/auth/send-otp
+   * Body: { email, type: 'PASSWORD_RESET' | 'EMAIL_VERIFICATION' | '2FA' }
    */
   static async sendOTP(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email, type } = req.body;
 
-      // TODO: Implement OTP sending logic
-      // await OTPService.sendOTP(email, type);
+      if (!email || !type) {
+        ResponseFormatter.error(res, 'email and type are required', 400);
+        return;
+      }
 
-      ResponseFormatter.success(res, null, `OTP sent to ${email}`);
+      await AuthenticationService.sendOTP(email, type);
+
+      // Always respond success — don't reveal whether the email exists
+      ResponseFormatter.success(res, null, `If an account exists for ${email}, an OTP has been sent.`);
     } catch (error) {
       next(error);
     }
@@ -284,19 +296,26 @@ export class AuthController {
   }
 
   /**
-   * Verify with 2FA
+   * Verify MFA code after login
    * POST /api/auth/2fa/verify-login
+   * Body: { sessionId, otpCode }
    */
   static async verify2FALogin(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { sessionId, otpCode } = req.body;
 
-      // TODO: Implement 2FA login verification
+      if (!sessionId || !otpCode) {
+        ResponseFormatter.error(res, 'sessionId and otpCode are required', 400);
+        return;
+      }
+
+      const result = await AuthenticationService.verify2FALogin(sessionId, otpCode);
 
       ResponseFormatter.success(res, {
-        accessToken: 'token',
-        refreshToken: 'token',
-      }, 'Login verified with 2FA');
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+      }, 'Login verified successfully');
     } catch (error) {
       next(error);
     }
