@@ -90,8 +90,8 @@ class TwoFactorAuth extends sequelize_1.Model {
             timestamps: true,
             paranoid: true,
             indexes: [
-                { fields: ['userId', 'isEnabled'] },
-                { fields: ['userId', 'method'] },
+                { fields: ['user_id', 'is_enabled'] },
+                { fields: ['user_id', 'method'] },
             ],
             comment: 'Two-factor authentication settings per user',
         });

@@ -122,10 +122,10 @@ class DeviceLog extends sequelize_1.Model {
             timestamps: true,
             paranoid: true,
             indexes: [
-                { fields: ['userId', 'isVerified'] },
-                { fields: ['userId', 'isTrusted'] },
-                { fields: ['deviceId', 'userId'] },
-                { fields: ['lastActivityAt'] },
+                { fields: ['user_id', 'is_verified'] },
+                { fields: ['user_id', 'is_trusted'] },
+                { fields: ['device_id', 'user_id'] },
+                { fields: ['last_activity_at'] },
             ],
             comment: 'Device tracking and verification logs',
         });

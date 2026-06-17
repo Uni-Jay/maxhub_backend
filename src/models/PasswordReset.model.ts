@@ -128,9 +128,9 @@ export class PasswordReset
         timestamps: true,
         paranoid: true,
         indexes: [
-          { fields: ['userId', 'isUsed'] },
-          { fields: ['email', 'expiresAt'] },
-          { fields: ['tokenHash'] },
+          { fields: ['user_id', 'is_used'] },
+          { fields: ['email', 'expires_at'] },
+          { fields: ['token_hash'] },
         ],
         comment: 'Password reset token management',
       }
