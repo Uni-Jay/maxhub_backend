@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AssociationManager = void 0;
+const Branch_model_1 = require("./Branch.model");
+const Unit_model_1 = require("./Unit.model");
 const User_model_1 = require("./User.model");
 const Role_model_1 = require("./Role.model");
 const Permission_model_1 = require("./Permission.model");
@@ -65,6 +67,16 @@ class AssociationManager {
         UserPermission_model_1.UserPermission.belongsTo(Permission_model_1.Permission, { foreignKey: 'permissionId' });
         Session_model_1.Session.belongsTo(User_model_1.User, { foreignKey: 'userId' });
         OTPVerification_model_1.OTPVerification.belongsTo(User_model_1.User, { foreignKey: 'userId' });
+        Branch_model_1.Branch.belongsTo(User_model_1.User, { foreignKey: 'managerId', as: 'manager' });
+        Branch_model_1.Branch.hasMany(Department_model_1.Department, { foreignKey: 'branchId', as: 'departments' });
+        Branch_model_1.Branch.hasMany(Unit_model_1.Unit, { foreignKey: 'branchId', as: 'units' });
+        Branch_model_1.Branch.hasMany(Staff_model_1.Staff, { foreignKey: 'branchId', as: 'staff' });
+        Unit_model_1.Unit.belongsTo(Branch_model_1.Branch, { foreignKey: 'branchId', as: 'branch' });
+        Unit_model_1.Unit.belongsTo(User_model_1.User, { foreignKey: 'headUserId', as: 'head' });
+        Unit_model_1.Unit.hasMany(Staff_model_1.Staff, { foreignKey: 'unitId', as: 'staff' });
+        Staff_model_1.Staff.belongsTo(Branch_model_1.Branch, { foreignKey: 'branchId', as: 'branch' });
+        Staff_model_1.Staff.belongsTo(Unit_model_1.Unit, { foreignKey: 'unitId', as: 'unit' });
+        Department_model_1.Department.belongsTo(Branch_model_1.Branch, { foreignKey: 'branchId', as: 'branch' });
         Department_model_1.Department.belongsTo(Department_model_1.Department, { foreignKey: 'parentDepartmentId', as: 'parentDepartment' });
         Department_model_1.Department.hasMany(Department_model_1.Department, { foreignKey: 'parentDepartmentId', as: 'childDepartments' });
         Department_model_1.Department.belongsTo(User_model_1.User, { foreignKey: 'headUserId', as: 'head' });

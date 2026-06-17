@@ -38,6 +38,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppBootstrapper = void 0;
 const http_1 = __importDefault(require("http"));
+const path_1 = __importDefault(require("path"));
 const express_1 = __importDefault(require("express"));
 const helmet_1 = __importDefault(require("helmet"));
 const cors_1 = __importDefault(require("cors"));
@@ -133,6 +134,8 @@ const Survey_model_1 = require("./models/Survey.model");
 const Complaint_model_1 = require("./models/Complaint.model");
 const SystemSetting_model_1 = require("./models/SystemSetting.model");
 const AuditLog_model_1 = require("./models/AuditLog.model");
+const Branch_model_1 = require("./models/Branch.model");
+const Unit_model_1 = require("./models/Unit.model");
 const Associations_1 = require("./models/Associations");
 const StaffQuery_model_1 = require("./models/StaffQuery.model");
 const StaffQueryReply_model_1 = require("./models/StaffQueryReply.model");
@@ -192,6 +195,7 @@ class AppBootstrapper {
         this.app.use((0, cors_1.default)(corsOptions));
         this.app.use(express_1.default.json({ limit: '10mb' }));
         this.app.use(express_1.default.urlencoded({ limit: '10mb', extended: true }));
+        this.app.use('/uploads', express_1.default.static(path_1.default.join(process.cwd(), 'uploads')));
         this.app.use((req, res, next) => {
             req.id = Math.random().toString(36).substr(2, 9);
             next();
@@ -218,6 +222,8 @@ class AppBootstrapper {
         TwoFactorAuth_model_1.TwoFactorAuth.initModel(this.sequelize);
         DeviceLog_model_1.DeviceLog.initModel(this.sequelize);
         PasswordReset_model_1.PasswordReset.initModel(this.sequelize);
+        Branch_model_1.Branch.initModel(this.sequelize);
+        Unit_model_1.Unit.initModel(this.sequelize);
         Department_model_1.Department.initModel(this.sequelize);
         Designation_model_1.Designation.initModel(this.sequelize);
         Location_model_1.Location.initModel(this.sequelize);

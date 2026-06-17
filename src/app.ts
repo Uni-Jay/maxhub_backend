@@ -1,4 +1,5 @@
 import http from 'http';
+import path from 'path';
 import express, { Express, Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -111,6 +112,8 @@ import { Complaint } from '@models/Complaint.model';
 // System models
 import { SystemSetting } from '@models/SystemSetting.model';
 import { AuditLog } from '@models/AuditLog.model';
+import { Branch } from '@models/Branch.model';
+import { Unit } from '@models/Unit.model';
 import { AssociationManager } from '@models/Associations';
 // New feature models
 import { StaffQuery } from '@models/StaffQuery.model';
@@ -202,6 +205,9 @@ class AppBootstrapper {
     this.app.use(express.json({ limit: '10mb' }));
     this.app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
+    // Serve uploaded files (ID cards, certificates, etc.)
+    this.app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
     // Request ID for tracing
     this.app.use((req: Request, res: Response, next: NextFunction) => {
       (req as any).id = Math.random().toString(36).substr(2, 9);
@@ -237,6 +243,10 @@ class AppBootstrapper {
     TwoFactorAuth.initModel(this.sequelize);
     DeviceLog.initModel(this.sequelize);
     PasswordReset.initModel(this.sequelize);
+
+    // Branch and Unit models
+    Branch.initModel(this.sequelize);
+    Unit.initModel(this.sequelize);
 
     // Organizational models
     Department.initModel(this.sequelize);

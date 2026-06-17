@@ -7,6 +7,7 @@ interface DepartmentAttributes {
     description?: string;
     parentDepartmentId?: bigint;
     headUserId?: bigint;
+    branchId?: bigint;
     budget?: number;
     status: 'Active' | 'Inactive' | 'Archived';
     deletedAt?: Date;
@@ -21,6 +22,7 @@ export declare class Department extends Model<DepartmentAttributes, DepartmentCr
     description?: string;
     parentDepartmentId?: bigint;
     headUserId?: bigint;
+    branchId?: bigint;
     budget?: number;
     status: 'Active' | 'Inactive' | 'Archived';
     deletedAt?: Date;

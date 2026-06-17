@@ -44,6 +44,11 @@ class Department extends sequelize_1.Model {
                 allowNull: true,
                 comment: 'Reference to users table for department head',
             },
+            branchId: {
+                type: sequelize_1.DataTypes.BIGINT.UNSIGNED,
+                allowNull: true,
+                comment: 'Reference to branches table',
+            },
             budget: {
                 type: sequelize_1.DataTypes.DECIMAL(15, 2),
                 allowNull: true,
@@ -79,6 +84,10 @@ class Department extends sequelize_1.Model {
                 {
                     fields: ['headUserId'],
                     name: 'idx_departments_headUserId',
+                },
+                {
+                    fields: ['branchId'],
+                    name: 'idx_departments_branchId',
                 },
                 {
                     fields: ['status'],

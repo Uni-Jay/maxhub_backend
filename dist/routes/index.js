@@ -29,6 +29,8 @@ function setupRoutes(app) {
     apiRouter.use('/auth', require('./auth.routes').default);
     apiRouter.use(AuthMiddleware_1.default.verifyToken);
     apiRouter.use('/dashboards', require('./dashboard.routes').default);
+    apiRouter.use('/branches', require('./branch.routes').default);
+    apiRouter.use('/units', require('./unit.routes').default);
     apiRouter.use('/staff', require('./staff.routes').default);
     apiRouter.use('/departments', require('./department.routes').default);
     apiRouter.use('/designations', require('./designation.routes').default);

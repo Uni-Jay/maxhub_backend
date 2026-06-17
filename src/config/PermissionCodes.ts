@@ -51,6 +51,19 @@ export enum PermissionCode {
   ORG_STAFF_UPDATE_OWN_DEPARTMENT = 'org.staff.update.own_department',
   ORG_STAFF_DELETE_ALL = 'org.staff.delete.all',
 
+  ORG_BRANCH_CREATE_ALL = 'org.branch.create.all',
+  ORG_BRANCH_READ_ALL = 'org.branch.read.all',
+  ORG_BRANCH_READ_OWN_BRANCH = 'org.branch.read.own_branch',
+  ORG_BRANCH_UPDATE_ALL = 'org.branch.update.all',
+  ORG_BRANCH_UPDATE_OWN_BRANCH = 'org.branch.update.own_branch',
+  ORG_BRANCH_DELETE_ALL = 'org.branch.delete.all',
+
+  ORG_UNIT_CREATE_ALL = 'org.unit.create.all',
+  ORG_UNIT_READ_ALL = 'org.unit.read.all',
+  ORG_UNIT_READ_OWN_BRANCH = 'org.unit.read.own_branch',
+  ORG_UNIT_UPDATE_ALL = 'org.unit.update.all',
+  ORG_UNIT_DELETE_ALL = 'org.unit.delete.all',
+
   ORG_QUALIFICATION_CREATE_ALL = 'org.qualification.create.all',
   ORG_QUALIFICATION_READ_ALL = 'org.qualification.read.all',
   ORG_QUALIFICATION_READ_OWN = 'org.qualification.read.own',

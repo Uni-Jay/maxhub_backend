@@ -9,6 +9,7 @@ interface DepartmentAttributes {
   description?: string;
   parentDepartmentId?: bigint;
   headUserId?: bigint;
+  branchId?: bigint;
   budget?: number;
   status: 'Active' | 'Inactive' | 'Archived';
   deletedAt?: Date;
@@ -25,6 +26,7 @@ export class Department extends Model<DepartmentAttributes, DepartmentCreationAt
   public description?: string;
   public parentDepartmentId?: bigint;
   public headUserId?: bigint;
+  public branchId?: bigint;
   public budget?: number;
   public status!: 'Active' | 'Inactive' | 'Archived';
   public deletedAt?: Date;
@@ -74,6 +76,11 @@ export class Department extends Model<DepartmentAttributes, DepartmentCreationAt
           allowNull: true,
           comment: 'Reference to users table for department head',
         },
+        branchId: {
+          type: DataTypes.BIGINT.UNSIGNED,
+          allowNull: true,
+          comment: 'Reference to branches table',
+        },
         budget: {
           type: DataTypes.DECIMAL(15, 2),
           allowNull: true,
@@ -110,6 +117,10 @@ export class Department extends Model<DepartmentAttributes, DepartmentCreationAt
           {
             fields: ['headUserId'],
             name: 'idx_departments_headUserId',
+          },
+          {
+            fields: ['branchId'],
+            name: 'idx_departments_branchId',
           },
           {
             fields: ['status'],

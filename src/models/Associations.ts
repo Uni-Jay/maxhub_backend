@@ -1,4 +1,6 @@
 import { DataTypes, Model, Sequelize } from 'sequelize';
+import { Branch } from './Branch.model';
+import { Unit } from './Unit.model';
 import { User } from './User.model';
 import { Role } from './Role.model';
 import { Permission } from './Permission.model';
@@ -81,6 +83,21 @@ export class AssociationManager {
 
     // OTP associations
     OTPVerification.belongsTo(User, { foreignKey: 'userId' });
+
+    // ======== BRANCH & UNIT STRUCTURE ========
+
+    Branch.belongsTo(User, { foreignKey: 'managerId', as: 'manager' });
+    Branch.hasMany(Department, { foreignKey: 'branchId', as: 'departments' });
+    Branch.hasMany(Unit, { foreignKey: 'branchId', as: 'units' });
+    Branch.hasMany(Staff, { foreignKey: 'branchId', as: 'staff' });
+
+    Unit.belongsTo(Branch, { foreignKey: 'branchId', as: 'branch' });
+    Unit.belongsTo(User, { foreignKey: 'headUserId', as: 'head' });
+    Unit.hasMany(Staff, { foreignKey: 'unitId', as: 'staff' });
+
+    Staff.belongsTo(Branch, { foreignKey: 'branchId', as: 'branch' });
+    Staff.belongsTo(Unit, { foreignKey: 'unitId', as: 'unit' });
+    Department.belongsTo(Branch, { foreignKey: 'branchId', as: 'branch' });
 
     // ======== ORGANIZATIONAL STRUCTURE ========
 

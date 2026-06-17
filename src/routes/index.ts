@@ -43,6 +43,8 @@ function setupRoutes(app: any): void {
   apiRouter.use('/dashboards', require('./dashboard.routes').default);
 
   // Organizational routes
+  apiRouter.use('/branches', require('./branch.routes').default);
+  apiRouter.use('/units', require('./unit.routes').default);
   apiRouter.use('/staff', require('./staff.routes').default);
   apiRouter.use('/departments', require('./department.routes').default);
   apiRouter.use('/designations', require('./designation.routes').default);
