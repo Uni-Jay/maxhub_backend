@@ -6,7 +6,7 @@ interface JobPostingAttributes {
     title: string;
     description?: string;
     departmentId: bigint;
-    designationId: bigint;
+    designationId?: bigint;
     noOfPositions: number;
     jobType: 'Full-time' | 'Part-time' | 'Contract' | 'Temporary' | 'Internship';
     salaryMin?: number;
@@ -38,7 +38,7 @@ export declare class JobPosting extends Model<JobPostingAttributes, JobPostingCr
     title: string;
     description?: string;
     departmentId: bigint;
-    designationId: bigint;
+    designationId?: bigint;
     noOfPositions: number;
     jobType: 'Full-time' | 'Part-time' | 'Contract' | 'Temporary' | 'Internship';
     salaryMin?: number;

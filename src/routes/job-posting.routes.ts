@@ -80,8 +80,8 @@ router.post('/', AuthMiddleware.requirePermission('rec.posting.create.all'), Err
     description, salaryMin, salaryMax, currency, location, requiredExperience, qualifications, skills, benefits,
     businessUnit } = req.body;
 
-  if (!title || !departmentId || !designationId || !noOfPositions || !jobType || !postedDate || !closingDate) {
-    return ResponseFormatter.error(res, 'title, departmentId, designationId, noOfPositions, jobType, postedDate, closingDate are required', 400);
+  if (!title || !departmentId || !noOfPositions || !jobType || !postedDate || !closingDate) {
+    return ResponseFormatter.error(res, 'title, departmentId, noOfPositions, jobType, postedDate, closingDate are required', 400);
   }
   if (!businessUnit || !BUSINESS_UNITS.includes(businessUnit)) {
     return ResponseFormatter.error(res, `businessUnit is required and must be one of: ${BUSINESS_UNITS.join(', ')}`, 400);

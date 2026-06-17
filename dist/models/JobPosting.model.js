@@ -12,7 +12,7 @@ class JobPosting extends sequelize_1.Model {
             title: { type: sequelize_1.DataTypes.STRING(200), allowNull: false, comment: 'Job title' },
             description: { type: sequelize_1.DataTypes.TEXT, allowNull: true, comment: 'Job description' },
             departmentId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'Hiring department' },
-            designationId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'Job designation' },
+            designationId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Job designation (optional)' },
             noOfPositions: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false, comment: 'Number of positions' },
             jobType: { type: sequelize_1.DataTypes.ENUM('Full-time', 'Part-time', 'Contract', 'Temporary', 'Internship'), allowNull: false },
             salaryMin: { type: sequelize_1.DataTypes.DECIMAL(15, 2), allowNull: true, comment: 'Minimum salary' },

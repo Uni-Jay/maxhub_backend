@@ -72,8 +72,8 @@ router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, re
 }));
 router.post('/', AuthMiddleware_1.default.requirePermission('rec.posting.create.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { title, departmentId, designationId, noOfPositions, jobType, postedDate, closingDate, description, salaryMin, salaryMax, currency, location, requiredExperience, qualifications, skills, benefits, businessUnit } = req.body;
-    if (!title || !departmentId || !designationId || !noOfPositions || !jobType || !postedDate || !closingDate) {
-        return ResponseFormatter_1.ResponseFormatter.error(res, 'title, departmentId, designationId, noOfPositions, jobType, postedDate, closingDate are required', 400);
+    if (!title || !departmentId || !noOfPositions || !jobType || !postedDate || !closingDate) {
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'title, departmentId, noOfPositions, jobType, postedDate, closingDate are required', 400);
     }
     if (!businessUnit || !BUSINESS_UNITS.includes(businessUnit)) {
         return ResponseFormatter_1.ResponseFormatter.error(res, `businessUnit is required and must be one of: ${BUSINESS_UNITS.join(', ')}`, 400);

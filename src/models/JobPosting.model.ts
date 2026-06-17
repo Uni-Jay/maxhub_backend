@@ -8,7 +8,7 @@ interface JobPostingAttributes {
   title: string;
   description?: string;
   departmentId: bigint;
-  designationId: bigint;
+  designationId?: bigint;
   noOfPositions: number;
   jobType: 'Full-time' | 'Part-time' | 'Contract' | 'Temporary' | 'Internship';
   salaryMin?: number;
@@ -42,7 +42,7 @@ export class JobPosting extends Model<JobPostingAttributes, JobPostingCreationAt
   public title!: string;
   public description?: string;
   public departmentId!: bigint;
-  public designationId!: bigint;
+  public designationId?: bigint;
   public noOfPositions!: number;
   public jobType!: 'Full-time' | 'Part-time' | 'Contract' | 'Temporary' | 'Internship';
   public salaryMin?: number;
@@ -77,7 +77,7 @@ export class JobPosting extends Model<JobPostingAttributes, JobPostingCreationAt
         title: { type: DataTypes.STRING(200), allowNull: false, comment: 'Job title' },
         description: { type: DataTypes.TEXT, allowNull: true, comment: 'Job description' },
         departmentId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'Hiring department' },
-        designationId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'Job designation' },
+        designationId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Job designation (optional)' },
         noOfPositions: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, comment: 'Number of positions' },
         jobType: { type: DataTypes.ENUM('Full-time', 'Part-time', 'Contract', 'Temporary', 'Internship'), allowNull: false },
         salaryMin: { type: DataTypes.DECIMAL(15, 2), allowNull: true, comment: 'Minimum salary' },
