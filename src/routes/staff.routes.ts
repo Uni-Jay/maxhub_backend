@@ -105,6 +105,8 @@ router.post(
       emergencyHomeAddress, emergencyOfficeAddress,
       // Identity
       validIdType, validIdNumber,
+      // Documents (Cloudinary URLs)
+      idDocument, utilityBillDocument, certificateDocument, signatureImage,
       // Certifications & work history
       hasCertification, certifications, previousWorkHistory, skills,
       // Guarantor 1
@@ -201,6 +203,10 @@ router.post(
       emergencyOfficeAddress,
       validIdType,
       validIdNumber,
+      idDocument,
+      utilityBillDocument,
+      certificateDocument,
+      signatureImage,
       guarantor1Name, guarantor1Relationship, guarantor1Phone,
       guarantor1Address, guarantor1Email, guarantor1Occupation, guarantor1DurationKnown,
       guarantor2Name, guarantor2Relationship, guarantor2Phone,
@@ -251,6 +257,7 @@ router.patch(
     const updatableFields = [
       'firstName', 'lastName', 'phone', 'alternatePhone', 'whatsappNumber', 'socialMediaHandle',
       'status', 'gender', 'homeAddress', 'validIdType', 'validIdNumber',
+      'idDocument', 'utilityBillDocument', 'certificateDocument', 'signatureImage',
       'emergencyContactName', 'emergencyContactPhone', 'emergencyRelationship',
       'emergencyHomeAddress', 'emergencyOfficeAddress',
       'educationLevel', 'degree', 'institution', 'major', 'graduationYear', 'nyscCompleted',
