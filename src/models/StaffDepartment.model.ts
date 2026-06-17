@@ -57,6 +57,7 @@ export class StaffDepartment extends Model<StaffDepartmentAttributes, StaffDepar
         sequelize,
         tableName: 'staff_departments',
         timestamps: true,
+        paranoid: false,
         underscored: false,
         freezeTableName: true,
         indexes: [

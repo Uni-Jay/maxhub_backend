@@ -54,7 +54,7 @@ export class Call extends Model<CallAttributes, CallCreationAttributes>
       },
       {
         sequelize, tableName: 'calls', timestamps: true,
-        underscored: false, freezeTableName: true,
+        paranoid: false, underscored: false, freezeTableName: true,
         indexes: [
           { fields: ['callerUserId'], name: 'idx_calls_caller' },
           { fields: ['calleeUserId'], name: 'idx_calls_callee' },

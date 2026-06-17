@@ -37,6 +37,7 @@ class StaffDepartment extends sequelize_1.Model {
             sequelize,
             tableName: 'staff_departments',
             timestamps: true,
+            paranoid: false,
             underscored: false,
             freezeTableName: true,
             indexes: [

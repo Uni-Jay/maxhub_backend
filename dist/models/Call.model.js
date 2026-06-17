@@ -22,7 +22,7 @@ class Call extends sequelize_1.Model {
             durationSeconds: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: true },
         }, {
             sequelize, tableName: 'calls', timestamps: true,
-            underscored: false, freezeTableName: true,
+            paranoid: false, underscored: false, freezeTableName: true,
             indexes: [
                 { fields: ['callerUserId'], name: 'idx_calls_caller' },
                 { fields: ['calleeUserId'], name: 'idx_calls_callee' },

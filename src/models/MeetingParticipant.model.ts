@@ -41,7 +41,7 @@ export class MeetingParticipant extends Model<MeetingParticipantAttributes, Meet
       },
       {
         sequelize, tableName: 'meeting_participants', timestamps: true,
-        underscored: false, freezeTableName: true,
+        paranoid: false, underscored: false, freezeTableName: true,
         indexes: [
           { fields: ['meetingId'], name: 'idx_mp_meeting' },
           { fields: ['userId'], name: 'idx_mp_user' },
