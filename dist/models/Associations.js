@@ -98,7 +98,7 @@ class AssociationManager {
         Staff_model_1.Staff.belongsTo(Staff_model_1.Staff, { foreignKey: 'reportingManagerId', as: 'reportingManager' });
         Staff_model_1.Staff.hasMany(Staff_model_1.Staff, { foreignKey: 'reportingManagerId', as: 'subordinates' });
         Staff_model_1.Staff.hasMany(StaffQualification_model_1.StaffQualification, { foreignKey: 'staffId', as: 'qualifications' });
-        Staff_model_1.Staff.hasMany(StaffSkill_model_1.StaffSkill, { foreignKey: 'staffId', as: 'skills' });
+        Staff_model_1.Staff.hasMany(StaffSkill_model_1.StaffSkill, { foreignKey: 'staffId', as: 'staffSkills' });
         Staff_model_1.Staff.hasMany(StaffDocument_model_1.StaffDocument, { foreignKey: 'staffId', as: 'documents' });
         Staff_model_1.Staff.hasMany(Attendance_model_1.Attendance, { foreignKey: 'staffId', as: 'attendanceRecords' });
         Staff_model_1.Staff.hasMany(Timesheet_model_1.Timesheet, { foreignKey: 'staffId', as: 'timesheets' });

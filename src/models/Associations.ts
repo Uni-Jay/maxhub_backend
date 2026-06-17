@@ -129,7 +129,7 @@ export class AssociationManager {
     Staff.belongsTo(Staff, { foreignKey: 'reportingManagerId', as: 'reportingManager' });
     Staff.hasMany(Staff, { foreignKey: 'reportingManagerId', as: 'subordinates' });
     Staff.hasMany(StaffQualification, { foreignKey: 'staffId', as: 'qualifications' });
-    Staff.hasMany(StaffSkill, { foreignKey: 'staffId', as: 'skills' });
+    Staff.hasMany(StaffSkill, { foreignKey: 'staffId', as: 'staffSkills' });
     Staff.hasMany(StaffDocument, { foreignKey: 'staffId', as: 'documents' });
     Staff.hasMany(Attendance, { foreignKey: 'staffId', as: 'attendanceRecords' });
     Staff.hasMany(Timesheet, { foreignKey: 'staffId', as: 'timesheets' });
