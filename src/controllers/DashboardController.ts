@@ -34,12 +34,28 @@ function isSuperAdmin(req: AuthenticatedRequest): boolean {
   return !!req.user?.roles?.some((r: string) => SUPER_CODES.has(normaliseRole(r)));
 }
 
+function isAuthenticated(req: AuthenticatedRequest): boolean {
+  return !!req.user;
+}
+
+function canApproveLeave(req: AuthenticatedRequest): boolean {
+  return isSuperAdmin(req) || !!req.user?.permissions.some(p =>
+    [PermissionCode.LEAVE_REQUEST_APPROVE_ALL, PermissionCode.LEAVE_REQUEST_APPROVE_OWN_DEPARTMENT].includes(p as any)
+  );
+}
+
+function canReadLeave(req: AuthenticatedRequest): boolean {
+  return isSuperAdmin(req) || !!req.user?.permissions.some(p =>
+    [PermissionCode.LEAVE_REQUEST_READ_ALL, PermissionCode.LEAVE_REQUEST_READ_OWN_DEPARTMENT, PermissionCode.LEAVE_REQUEST_READ_OWN].includes(p as any)
+  );
+}
+
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 export class DashboardController {
   static getSuperAdminStats = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
-      if (!isSuperAdmin(req) && !req.user?.permissions.includes(PermissionCode.ORG_DASHBOARD_VIEW)) {
+      if (!isSuperAdmin(req)) {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions to view dashboard');
       }
 
@@ -84,7 +100,7 @@ export class DashboardController {
 
   static getSuperAdminAttendance = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
-      if (!isSuperAdmin(req) && !req.user?.permissions.includes(PermissionCode.ORG_ATTENDANCE_READ)) {
+      if (!isSuperAdmin(req)) {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 
@@ -117,7 +133,7 @@ export class DashboardController {
 
   static getSuperAdminRevenue = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
-      if (!isSuperAdmin(req) && !req.user?.permissions.includes(PermissionCode.ORG_REPORT_READ)) {
+      if (!isSuperAdmin(req)) {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 
@@ -145,7 +161,7 @@ export class DashboardController {
 
   static getSuperAdminPayroll = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
-      if (!isSuperAdmin(req) && !req.user?.permissions.includes(PermissionCode.ORG_PAYROLL_READ)) {
+      if (!isSuperAdmin(req)) {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 
@@ -165,7 +181,7 @@ export class DashboardController {
 
   static getSuperAdminDepartments = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
-      if (!isSuperAdmin(req) && !req.user?.permissions.includes(PermissionCode.ORG_DEPARTMENT_READ)) {
+      if (!isSuperAdmin(req)) {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 
@@ -187,7 +203,7 @@ export class DashboardController {
 
   static getSuperAdminStudents = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
-      if (!isSuperAdmin(req) && !req.user?.permissions.includes(PermissionCode.ORG_ENROLLMENT_READ)) {
+      if (!isSuperAdmin(req)) {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 
@@ -204,7 +220,7 @@ export class DashboardController {
 
   static getSuperAdminProjects = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
-      if (!isSuperAdmin(req) && !req.user?.permissions.includes(PermissionCode.ORG_PROJECT_READ)) {
+      if (!isSuperAdmin(req)) {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 
@@ -226,7 +242,7 @@ export class DashboardController {
 
   static getSuperAdminCRM = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
-      if (!isSuperAdmin(req) && !req.user?.permissions.includes(PermissionCode.ORG_OPPORTUNITY_READ)) {
+      if (!isSuperAdmin(req)) {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 
@@ -247,7 +263,7 @@ export class DashboardController {
 
   static getSuperAdminNotifications = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
-      if (!isSuperAdmin(req) && !req.user?.permissions.includes(PermissionCode.ORG_NOTIFICATION_READ)) {
+      if (!isSuperAdmin(req)) {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 
@@ -273,7 +289,7 @@ export class DashboardController {
 
   static getHeadOfAdminStats = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
-      if (!isSuperAdmin(req) && !req.user?.permissions.includes(PermissionCode.ORG_STAFF_READ)) {
+      if (!isAuthenticated(req)) {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 
@@ -297,7 +313,7 @@ export class DashboardController {
 
   static getHeadOfAdminLeaveApprovals = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
-      if (!isSuperAdmin(req) && !req.user?.permissions.includes(PermissionCode.ORG_LEAVE_REQUEST_APPROVE)) {
+      if (!canApproveLeave(req)) {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 
@@ -326,7 +342,7 @@ export class DashboardController {
 
   static approveLeave = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
-      if (!isSuperAdmin(req) && !req.user?.permissions.includes(PermissionCode.ORG_LEAVE_REQUEST_APPROVE)) {
+      if (!canApproveLeave(req)) {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 
@@ -351,7 +367,7 @@ export class DashboardController {
 
   static rejectLeave = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
-      if (!isSuperAdmin(req) && !req.user?.permissions.includes(PermissionCode.ORG_LEAVE_REQUEST_APPROVE)) {
+      if (!canApproveLeave(req)) {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 
@@ -376,7 +392,7 @@ export class DashboardController {
 
   static getHeadOfAdminAttendanceReports = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
-      if (!isSuperAdmin(req) && !req.user?.permissions.includes(PermissionCode.ORG_ATTENDANCE_READ)) {
+      if (!isAuthenticated(req)) {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 
@@ -420,7 +436,7 @@ export class DashboardController {
 
   static getHeadOfAdminDepartmentKPIs = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
-      if (!isSuperAdmin(req) && !req.user?.permissions.includes(PermissionCode.ORG_DEPARTMENT_READ)) {
+      if (!isAuthenticated(req)) {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 
@@ -445,7 +461,7 @@ export class DashboardController {
 
   static getHeadOfAdminProjects = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
-      if (!isSuperAdmin(req) && !req.user?.permissions.includes(PermissionCode.ORG_PROJECT_READ)) {
+      if (!isAuthenticated(req)) {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 
@@ -468,7 +484,7 @@ export class DashboardController {
 
   static getHeadOfAdminCommunications = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
-      if (!isSuperAdmin(req) && !req.user?.permissions.includes(PermissionCode.ORG_MESSAGE_READ)) {
+      if (!isAuthenticated(req)) {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 
@@ -478,7 +494,7 @@ export class DashboardController {
 
   static getHeadOfAdminLeaveSummary = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
-      if (!isSuperAdmin(req) && !req.user?.permissions.includes(PermissionCode.ORG_LEAVE_REQUEST_READ)) {
+      if (!canReadLeave(req)) {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 

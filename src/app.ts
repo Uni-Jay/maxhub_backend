@@ -446,7 +446,7 @@ class AppBootstrapper {
         console.log('✅ Database synced');
       } else if (dbSync === 'force' && process.env.NODE_ENV !== 'production') {
         console.log('🔄 Syncing database schema (force)...');
-        await this.sequelize.sync({ force: true });
+        await this.sequelize.sync({ alter: true });
         console.log('✅ Database synced (force)');
       } else {
         console.log('ℹ️  Database sync skipped (DB_SYNC=none)');
