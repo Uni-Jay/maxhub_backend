@@ -24,14 +24,14 @@ router.get(
       const offset = (pageNum - 1) * limitNum;
 
       const where: Record<string, unknown> = {};
-      if (date) where.date = date;
+      if (date) where.attendanceDate = date;
 
       const { count, rows } = await Attendance.findAndCountAll({
         where,
-        include: [{ model: Staff, attributes: ['id', 'firstName', 'lastName', 'employeeId'] }],
+        include: [{ model: Staff, as: 'staff', attributes: ['id', 'firstName', 'lastName', 'employeeId'] }],
         limit: limitNum,
         offset,
-        order: [['date', 'DESC'], ['checkInTime', 'DESC']],
+        order: [['attendanceDate', 'DESC'], ['checkInTime', 'DESC']],
       });
 
       res.json({
@@ -65,7 +65,7 @@ router.get(
       }
       const today = new Date().toISOString().slice(0, 10);
       const record = await (Attendance as any).findOne({
-        where: { staffId, date: today },
+        where: { staffId, attendanceDate: today },
       }) as InstanceType<typeof Attendance> | null;
       if (!record) {
         return res.status(404).json({ success: false, message: 'No record for today' });

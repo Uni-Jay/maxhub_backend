@@ -174,7 +174,7 @@ export class AssociationManager {
     Shift.hasMany(Attendance, { foreignKey: 'shiftId', as: 'attendanceRecords' });
 
     // Attendance associations
-    Attendance.belongsTo(Staff, { foreignKey: 'staffId' });
+    Attendance.belongsTo(Staff, { foreignKey: 'staffId', as: 'staff' });
     Attendance.belongsTo(Shift, { foreignKey: 'shiftId' });
     Attendance.belongsTo(User, { foreignKey: 'approvedBy', as: 'approver' });
     Attendance.hasMany(AttendanceLog, { foreignKey: 'attendanceId', as: 'logs' });

@@ -135,7 +135,7 @@ class AssociationManager {
         StaffDocument_model_1.StaffDocument.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId' });
         Shift_model_1.Shift.belongsTo(Department_model_1.Department, { foreignKey: 'departmentId' });
         Shift_model_1.Shift.hasMany(Attendance_model_1.Attendance, { foreignKey: 'shiftId', as: 'attendanceRecords' });
-        Attendance_model_1.Attendance.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId' });
+        Attendance_model_1.Attendance.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId', as: 'staff' });
         Attendance_model_1.Attendance.belongsTo(Shift_model_1.Shift, { foreignKey: 'shiftId' });
         Attendance_model_1.Attendance.belongsTo(User_model_1.User, { foreignKey: 'approvedBy', as: 'approver' });
         Attendance_model_1.Attendance.hasMany(AttendanceLog_model_1.AttendanceLog, { foreignKey: 'attendanceId', as: 'logs' });

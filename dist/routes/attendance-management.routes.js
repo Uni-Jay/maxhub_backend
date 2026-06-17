@@ -19,13 +19,13 @@ router.get('/', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.r
         const offset = (pageNum - 1) * limitNum;
         const where = {};
         if (date)
-            where.date = date;
+            where.attendanceDate = date;
         const { count, rows } = await Attendance_model_1.Attendance.findAndCountAll({
             where,
-            include: [{ model: Staff_model_1.Staff, attributes: ['id', 'firstName', 'lastName', 'employeeId'] }],
+            include: [{ model: Staff_model_1.Staff, as: 'staff', attributes: ['id', 'firstName', 'lastName', 'employeeId'] }],
             limit: limitNum,
             offset,
-            order: [['date', 'DESC'], ['checkInTime', 'DESC']],
+            order: [['attendanceDate', 'DESC'], ['checkInTime', 'DESC']],
         });
         res.json({
             success: true,
@@ -50,7 +50,7 @@ router.get('/today', AuthMiddleware_1.default.verifyToken, async (req, res) => {
         }
         const today = new Date().toISOString().slice(0, 10);
         const record = await Attendance_model_1.Attendance.findOne({
-            where: { staffId, date: today },
+            where: { staffId, attendanceDate: today },
         });
         if (!record) {
             return res.status(404).json({ success: false, message: 'No record for today' });
