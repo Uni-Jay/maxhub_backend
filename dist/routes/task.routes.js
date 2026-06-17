@@ -23,8 +23,8 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
         where.assigneeId = BigInt(req.query.assigneeId);
     if (req.query.search) {
         where[sequelize_1.Op.or] = [
-            { title: { [sequelize_1.Op.like]: `%${req.query.search}%` } },
-            { taskCode: { [sequelize_1.Op.like]: `%${req.query.search}%` } },
+            { title: { [sequelize_1.Op.iLike]: `%${req.query.search}%` } },
+            { taskCode: { [sequelize_1.Op.iLike]: `%${req.query.search}%` } },
         ];
     }
     const { count, rows } = await Task_model_1.Task.findAndCountAll({

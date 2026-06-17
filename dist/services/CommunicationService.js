@@ -269,9 +269,9 @@ async function sendOTPEmail(params) {
             icon: '✉️',
         },
         '2FA': {
-            subject: `Login Verification Code — ${companyName}`,
-            title: 'Login Verification',
-            subtitle: 'Use this code to complete your sign-in.',
+            subject: `${companyName} Security Verification Code`,
+            title: 'Security Verification',
+            subtitle: 'Use this code to complete your sign-in. It expires in 10 minutes.',
             warning: "If you didn't attempt to sign in, please secure your account immediately.",
             icon: '🔒',
         },

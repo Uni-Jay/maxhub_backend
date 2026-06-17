@@ -13,12 +13,14 @@ class JWTService {
         this.refreshTokenExpiry = process.env.JWT_REFRESH_EXPIRY || '7d';
     }
     generateAccessToken(user) {
+        const ADMIN_CODES = new Set(['superadmin', 'admin', 'headofadmin', 'super_admin', 'head_of_admin']);
+        const isAdmin = user.roles.some((r) => ADMIN_CODES.has(r.toLowerCase().replace(/[^a-z_]/g, '')));
         const payload = {
             id: user.id,
             uuid: user.uuid,
             email: user.email,
             roles: user.roles,
-            permissions: user.permissions,
+            permissions: isAdmin ? [] : user.permissions,
         };
         return jsonwebtoken_1.default.sign(payload, this.accessTokenSecret, {
             expiresIn: this.accessTokenExpiry,

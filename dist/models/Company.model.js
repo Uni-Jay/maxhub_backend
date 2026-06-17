@@ -20,12 +20,12 @@ class Company extends sequelize_1.Model {
             },
             name: { type: sequelize_1.DataTypes.STRING(150), allowNull: false },
             code: {
-                type: sequelize_1.DataTypes.ENUM('KURIOS_SAT', 'VISA_MAX', 'BEAD_MAX', 'BEADMAX_SCHOOL'),
+                type: sequelize_1.DataTypes.STRING(50),
                 allowNull: false,
                 unique: true,
             },
             type: {
-                type: sequelize_1.DataTypes.ENUM('Tech & Training', 'Travel & Visa Services', 'Jewelry & Sales', 'Vocational School'),
+                type: sequelize_1.DataTypes.STRING(100),
                 allowNull: false,
             },
             logo: { type: sequelize_1.DataTypes.STRING(500), allowNull: true },

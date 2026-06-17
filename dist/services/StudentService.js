@@ -65,9 +65,9 @@ class StudentService {
         const userWhere = {};
         if (filters.search) {
             userWhere[sequelize_1.Op.or] = [
-                { firstName: { [sequelize_1.Op.like]: `%${filters.search}%` } },
-                { lastName: { [sequelize_1.Op.like]: `%${filters.search}%` } },
-                { email: { [sequelize_1.Op.like]: `%${filters.search}%` } },
+                { firstName: { [sequelize_1.Op.iLike]: `%${filters.search}%` } },
+                { lastName: { [sequelize_1.Op.iLike]: `%${filters.search}%` } },
+                { email: { [sequelize_1.Op.iLike]: `%${filters.search}%` } },
             ];
         }
         const profileWhere = {};

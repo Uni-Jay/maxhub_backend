@@ -1,6 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AssociationManager = void 0;
+const Conversation_model_1 = require("./Conversation.model");
+const ConversationParticipant_model_1 = require("./ConversationParticipant.model");
+const Message_model_1 = require("./Message.model");
+const MessageRead_model_1 = require("./MessageRead.model");
 const Branch_model_1 = require("./Branch.model");
 const Unit_model_1 = require("./Unit.model");
 const User_model_1 = require("./User.model");
@@ -46,6 +50,8 @@ const StudentEnrollment_model_1 = require("./StudentEnrollment.model");
 const StudentResult_model_1 = require("./StudentResult.model");
 const StudentAttendance_model_1 = require("./StudentAttendance.model");
 const ClassSchedule_model_1 = require("./ClassSchedule.model");
+const Module_model_1 = require("./Module.model");
+const UserModulePermission_model_1 = require("./UserModulePermission.model");
 class AssociationManager {
     static initializeAssociations(sequelize) {
         User_model_1.User.hasMany(Session_model_1.Session, { foreignKey: 'userId', as: 'sessions' });
@@ -125,9 +131,9 @@ class AssociationManager {
         LeaveType_model_1.LeaveType.hasMany(LeaveBalance_model_1.LeaveBalance, { foreignKey: 'leaveTypeId', as: 'balances' });
         LeaveType_model_1.LeaveType.hasMany(LeaveRequest_model_1.LeaveRequest, { foreignKey: 'leaveTypeId', as: 'requests' });
         LeaveBalance_model_1.LeaveBalance.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId' });
-        LeaveBalance_model_1.LeaveBalance.belongsTo(LeaveType_model_1.LeaveType, { foreignKey: 'leaveTypeId' });
-        LeaveRequest_model_1.LeaveRequest.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId' });
-        LeaveRequest_model_1.LeaveRequest.belongsTo(LeaveType_model_1.LeaveType, { foreignKey: 'leaveTypeId' });
+        LeaveBalance_model_1.LeaveBalance.belongsTo(LeaveType_model_1.LeaveType, { foreignKey: 'leaveTypeId', as: 'leaveType' });
+        LeaveRequest_model_1.LeaveRequest.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId', as: 'staff' });
+        LeaveRequest_model_1.LeaveRequest.belongsTo(LeaveType_model_1.LeaveType, { foreignKey: 'leaveTypeId', as: 'leaveType' });
         LeaveRequest_model_1.LeaveRequest.belongsTo(User_model_1.User, { foreignKey: 'approverUserId', as: 'approver' });
         Project_model_1.Project.belongsTo(Department_model_1.Department, { foreignKey: 'departmentId' });
         Project_model_1.Project.belongsTo(Staff_model_1.Staff, { foreignKey: 'projectManagerId', as: 'projectManager' });
@@ -195,6 +201,22 @@ class AssociationManager {
         Call_model_1.Call.belongsTo(User_model_1.User, { foreignKey: 'calleeUserId', as: 'callee' });
         User_model_1.User.hasMany(Call_model_1.Call, { foreignKey: 'callerUserId', as: 'outgoingCalls' });
         User_model_1.User.hasMany(Call_model_1.Call, { foreignKey: 'calleeUserId', as: 'incomingCalls' });
+        Conversation_model_1.Conversation.hasMany(Message_model_1.Message, { foreignKey: 'conversationId', as: 'messages' });
+        Message_model_1.Message.belongsTo(Conversation_model_1.Conversation, { foreignKey: 'conversationId', as: 'conversation' });
+        Message_model_1.Message.belongsTo(User_model_1.User, { foreignKey: 'senderUserId', as: 'sender' });
+        User_model_1.User.hasMany(Message_model_1.Message, { foreignKey: 'senderUserId', as: 'sentMessages' });
+        Message_model_1.Message.belongsTo(Message_model_1.Message, { foreignKey: 'replyToMessageId', as: 'replyTo' });
+        Message_model_1.Message.hasMany(MessageRead_model_1.MessageRead, { foreignKey: 'messageId', as: 'reads' });
+        MessageRead_model_1.MessageRead.belongsTo(Message_model_1.Message, { foreignKey: 'messageId' });
+        MessageRead_model_1.MessageRead.belongsTo(User_model_1.User, { foreignKey: 'userId' });
+        Conversation_model_1.Conversation.hasMany(ConversationParticipant_model_1.ConversationParticipant, { foreignKey: 'conversationId', as: 'participants' });
+        ConversationParticipant_model_1.ConversationParticipant.belongsTo(Conversation_model_1.Conversation, { foreignKey: 'conversationId' });
+        ConversationParticipant_model_1.ConversationParticipant.belongsTo(User_model_1.User, { foreignKey: 'userId', as: 'user' });
+        User_model_1.User.hasMany(ConversationParticipant_model_1.ConversationParticipant, { foreignKey: 'userId', as: 'conversationParticipations' });
+        User_model_1.User.hasMany(UserModulePermission_model_1.UserModulePermission, { foreignKey: 'userId', as: 'modulePermissions' });
+        UserModulePermission_model_1.UserModulePermission.belongsTo(User_model_1.User, { foreignKey: 'userId' });
+        Module_model_1.AppModule.hasMany(UserModulePermission_model_1.UserModulePermission, { foreignKey: 'moduleCode', sourceKey: 'code', as: 'userOverrides' });
+        UserModulePermission_model_1.UserModulePermission.belongsTo(Module_model_1.AppModule, { foreignKey: 'moduleCode', targetKey: 'code', as: 'module' });
     }
 }
 exports.AssociationManager = AssociationManager;

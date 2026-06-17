@@ -138,6 +138,13 @@ const StudentEnrollment_model_1 = require("../models/StudentEnrollment.model");
 const StudentResult_model_1 = require("../models/StudentResult.model");
 const StudentAttendance_model_1 = require("../models/StudentAttendance.model");
 const ClassSchedule_model_1 = require("../models/ClassSchedule.model");
+const Branch_model_1 = require("../models/Branch.model");
+const Unit_model_1 = require("../models/Unit.model");
+const Meeting_model_1 = require("../models/Meeting.model");
+const MeetingParticipant_model_1 = require("../models/MeetingParticipant.model");
+const Call_model_1 = require("../models/Call.model");
+const Module_model_1 = require("../models/Module.model");
+const UserModulePermission_model_1 = require("../models/UserModulePermission.model");
 const Associations_1 = require("../models/Associations");
 function parsePermissionCode(code) {
     const parts = code.split('.');
@@ -179,22 +186,29 @@ async function retryFindOrCreate(fn, maxAttempts = 3, delayMs = 2000) {
 }
 async function main() {
     console.log('\n🚀  MaxHub ERP — Database Migration & Seeder\n');
-    console.log(`📡  Host : ${process.env.DB_HOST}`);
-    console.log(`🗄️   DB   : ${process.env.DB_NAME}`);
-    console.log(`👤  User : ${process.env.DB_USER}\n`);
-    const sequelize = new sequelize_1.Sequelize({
-        host: process.env.DB_HOST,
-        port: parseInt(process.env.DB_PORT || '3306'),
-        username: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME,
-        dialect: 'mysql',
-        logging: false,
-        pool: { max: 1, min: 0, idle: 10000 },
-        dialectOptions: {
-            ssl: false,
-        },
-    });
+    const dbUrl = process.env.DATABASE_URL;
+    console.log(`📡  Host : ${dbUrl ? '(DATABASE_URL)' : process.env.DB_HOST}`);
+    console.log(`🗄️   DB   : ${process.env.DB_NAME ?? 'postgres'}`);
+    console.log(`👤  User : ${process.env.DB_USER ?? 'postgres'}\n`);
+    const SSL_OPTIONS = { require: true, rejectUnauthorized: false };
+    const sequelize = dbUrl
+        ? new sequelize_1.Sequelize(dbUrl, {
+            dialect: 'postgres',
+            logging: false,
+            pool: { max: 2, min: 0, acquire: 60000, idle: 10000 },
+            dialectOptions: { ssl: SSL_OPTIONS },
+        })
+        : new sequelize_1.Sequelize({
+            host: process.env.DB_HOST,
+            port: parseInt(process.env.DB_PORT || '5432'),
+            username: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME,
+            dialect: 'postgres',
+            logging: false,
+            pool: { max: 2, min: 0, acquire: 60000, idle: 10000 },
+            dialectOptions: { ssl: SSL_OPTIONS },
+        });
     try {
         await sequelize.authenticate();
         console.log('✅  Database connection successful\n');
@@ -302,14 +316,21 @@ async function main() {
     StudentResult_model_1.StudentResult.initModel(sequelize);
     StudentAttendance_model_1.StudentAttendance.initModel(sequelize);
     ClassSchedule_model_1.ClassSchedule.initModel(sequelize);
+    Branch_model_1.Branch.initModel(sequelize);
+    Unit_model_1.Unit.initModel(sequelize);
+    Meeting_model_1.Meeting.initModel(sequelize);
+    MeetingParticipant_model_1.MeetingParticipant.initModel(sequelize);
+    Call_model_1.Call.initModel(sequelize);
+    Module_model_1.AppModule.initModel(sequelize);
+    UserModulePermission_model_1.UserModulePermission.initModel(sequelize);
     Associations_1.AssociationManager.initializeAssociations(sequelize);
     console.log('✅  Models initialized\n');
-    console.log('🔄  Syncing database tables (alter: true)...');
+    console.log('🔄  Syncing database tables (force: drop + recreate)...');
     console.log('    This may take a moment — creating/updating all tables...');
     let syncAttempt = 0;
     while (true) {
         try {
-            await sequelize.sync();
+            await sequelize.sync({ force: true });
             console.log('✅  All tables synced\n');
             break;
         }

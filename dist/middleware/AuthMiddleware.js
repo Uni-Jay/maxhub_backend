@@ -78,7 +78,9 @@ class AuthMiddleware {
                 ResponseFormatter_1.ResponseFormatter.unauthorized(res, 'User not authenticated', req.path);
                 return;
             }
-            const hasRole = roles.some((role) => req.user?.roles.includes(role));
+            const norm = (s) => s.toLowerCase().replace(/[^a-z]/g, '');
+            const userNormRoles = (req.user.roles || []).map(norm);
+            const hasRole = roles.some((role) => userNormRoles.includes(norm(role)));
             if (!hasRole) {
                 ResponseFormatter_1.ResponseFormatter.forbidden(res, `Required roles: ${roles.join(', ')}`, req.path);
                 return;
@@ -92,7 +94,8 @@ class AuthMiddleware {
                 ResponseFormatter_1.ResponseFormatter.unauthorized(res, 'User not authenticated', req.path);
                 return;
             }
-            if ((req.user.roles || []).includes('superadmin')) {
+            const normRoles = (req.user.roles || []).map((r) => r.toLowerCase().replace(/[^a-z]/g, ''));
+            if (normRoles.includes('superadmin') || normRoles.includes('admin') || normRoles.includes('headofadmin')) {
                 return next();
             }
             const PREFIX_ALIASES = {

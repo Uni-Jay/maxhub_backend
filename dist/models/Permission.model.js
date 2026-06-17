@@ -51,10 +51,10 @@ class Permission extends sequelize_1.Model {
                 comment: 'Action type (create, read, update, delete, approve, etc.)',
             },
             scope: {
-                type: sequelize_1.DataTypes.ENUM('all', 'own', 'own_department', 'own_warehouse'),
+                type: sequelize_1.DataTypes.STRING(50),
                 defaultValue: 'all',
                 allowNull: false,
-                comment: 'Permission scope: all records, own records, or own department only',
+                comment: 'Permission scope: all, own, own_department, own_warehouse, own_branch, or custom action scope',
             },
             isActive: {
                 type: sequelize_1.DataTypes.BOOLEAN,

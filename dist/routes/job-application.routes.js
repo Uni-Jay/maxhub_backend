@@ -22,8 +22,8 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
         where.jobPostingId = jobPostingId;
     if (search)
         where[sequelize_1.Op.or] = [
-            { applicantName: { [sequelize_1.Op.like]: `%${search}%` } },
-            { applicantEmail: { [sequelize_1.Op.like]: `%${search}%` } },
+            { applicantName: { [sequelize_1.Op.iLike]: `%${search}%` } },
+            { applicantEmail: { [sequelize_1.Op.iLike]: `%${search}%` } },
         ];
     const { count, rows } = await JobApplication_model_1.JobApplication.findAndCountAll({
         where,

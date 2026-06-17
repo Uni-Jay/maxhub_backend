@@ -25,9 +25,9 @@ router.get('/', AuthMiddleware_1.default.requirePermission('org.branch.read.all'
     if (req.query.search) {
         const s = `%${req.query.search}%`;
         where[sequelize_1.Op.or] = [
-            { branchName: { [sequelize_1.Op.like]: s } },
-            { branchCode: { [sequelize_1.Op.like]: s } },
-            { city: { [sequelize_1.Op.like]: s } },
+            { branchName: { [sequelize_1.Op.iLike]: s } },
+            { branchCode: { [sequelize_1.Op.iLike]: s } },
+            { city: { [sequelize_1.Op.iLike]: s } },
         ];
     }
     const { count, rows } = await Branch_model_1.Branch.findAndCountAll({

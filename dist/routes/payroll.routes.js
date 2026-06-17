@@ -402,6 +402,57 @@ router.patch('/salaries/:id/status', AuthMiddleware_1.AuthMiddleware.verifyToken
     await salary.update(updatePayload);
     return ResponseFormatter_1.ResponseFormatter.success(res, salary, `Salary status updated to '${status}'`);
 }));
+const MONTH_NAMES = [
+    '', 'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+];
+router.get('/my-slips', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const staff = await Staff_model_1.Staff.findOne({ where: { userId } });
+    if (!staff) {
+        return ResponseFormatter_1.ResponseFormatter.success(res, [], 'No payslips found');
+    }
+    const salaries = await EmployeeSalary_model_1.EmployeeSalary.findAll({
+        where: {
+            staffId: staff.id,
+            status: { [sequelize_1.Op.in]: ['Paid', 'Approved', 'Processed', 'Draft'] },
+        },
+        include: [
+            {
+                model: PayrollPeriod_model_1.PayrollPeriod,
+                as: 'payrollPeriod',
+                attributes: ['id', 'periodCode', 'month', 'year', 'bankTransferDate', 'salaryProcessDate'],
+                required: false,
+            },
+        ],
+        order: [
+            [{ model: PayrollPeriod_model_1.PayrollPeriod, as: 'payrollPeriod' }, 'year', 'DESC'],
+            [{ model: PayrollPeriod_model_1.PayrollPeriod, as: 'payrollPeriod' }, 'month', 'DESC'],
+        ],
+    });
+    const slips = salaries.map((s) => {
+        const period = s.payrollPeriod;
+        const month = period?.month ?? 0;
+        const year = period?.year ?? new Date().getFullYear();
+        return {
+            id: Number(s.id),
+            salaryCode: `SAL-${String(s.id).padStart(6, '0')}`,
+            periodName: period ? `${MONTH_NAMES[month]} ${year}` : s.uuid,
+            baseSalary: Number(s.baseSalary) || 0,
+            bonus: Number(s.bonus) || 0,
+            grossSalary: Number(s.grossSalary) || 0,
+            incomeTax: Number(s.incomeTax) || 0,
+            providentFund: Number(s.providentFund) || 0,
+            healthInsurance: Number(s.healthInsurance) || 0,
+            otherDeductions: Number(s.otherDeductions) || 0,
+            totalDeductions: Number(s.totalDeductions) || 0,
+            netSalary: Number(s.netSalary) || 0,
+            status: s.status,
+            payDate: (s.paidOn ?? period?.bankTransferDate ?? s.processedOn ?? s.updatedAt)?.toISOString?.() ?? '',
+        };
+    });
+    return ResponseFormatter_1.ResponseFormatter.success(res, slips, 'Payslips retrieved');
+}));
 router.get('/stats/overview', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthMiddleware_1.AuthMiddleware.requirePermission('PAYROLL_VIEW'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (_req, res) => {
     const now = new Date();
     const currentMonth = now.getMonth() + 1;

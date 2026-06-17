@@ -11,6 +11,8 @@ export declare class AuthController {
     static setup2FA(req: Request, res: Response, next: NextFunction): Promise<void>;
     static verify2FA(req: Request, res: Response, next: NextFunction): Promise<void>;
     static disable2FA(req: Request, res: Response, next: NextFunction): Promise<void>;
+    static enable2FA(req: Request, res: Response, next: NextFunction): Promise<void>;
+    static sendLoginOTP(req: Request, res: Response, next: NextFunction): Promise<void>;
     static getSessions(req: Request, res: Response, next: NextFunction): Promise<void>;
     static revokeSession(req: Request, res: Response, next: NextFunction): Promise<void>;
     static verify2FALogin(req: Request, res: Response, next: NextFunction): Promise<void>;

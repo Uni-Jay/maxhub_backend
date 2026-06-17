@@ -47,8 +47,8 @@ router.get('/stats/forecast', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthM
     const targetYear = year ? parseInt(year) : new Date().getFullYear();
     const rows = await Opportunity_model_1.Opportunity.findAll({
         attributes: [
-            [(0, sequelize_1.fn)('YEAR', (0, sequelize_1.col)('closeDate')), 'year'],
-            [(0, sequelize_1.fn)('MONTH', (0, sequelize_1.col)('closeDate')), 'month'],
+            [(0, sequelize_1.literal)('EXTRACT(YEAR FROM "close_date")'), 'year'],
+            [(0, sequelize_1.literal)('EXTRACT(MONTH FROM "close_date")'), 'month'],
             [(0, sequelize_1.fn)('COUNT', (0, sequelize_1.col)('id')), 'count'],
             [(0, sequelize_1.fn)('SUM', (0, sequelize_1.col)('amount')), 'totalAmount'],
             [(0, sequelize_1.fn)('SUM', (0, sequelize_1.col)('expectedRevenue')), 'totalExpectedRevenue'],
@@ -63,10 +63,10 @@ router.get('/stats/forecast', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthM
             },
         },
         group: [
-            (0, sequelize_1.literal)('YEAR(closeDate)'),
-            (0, sequelize_1.literal)('MONTH(closeDate)'),
+            (0, sequelize_1.literal)('EXTRACT(YEAR FROM "close_date")'),
+            (0, sequelize_1.literal)('EXTRACT(MONTH FROM "close_date")'),
         ],
-        order: [[(0, sequelize_1.literal)('MONTH(closeDate)'), 'ASC']],
+        order: [[(0, sequelize_1.literal)('EXTRACT(MONTH FROM "close_date")'), 'ASC']],
         raw: true,
     });
     const forecast = [];
@@ -101,9 +101,9 @@ router.get('/', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthMiddleware_1.Au
         where.type = type;
     if (search) {
         where[sequelize_1.Op.or] = [
-            { title: { [sequelize_1.Op.like]: `%${search}%` } },
-            { opportunityCode: { [sequelize_1.Op.like]: `%${search}%` } },
-            { description: { [sequelize_1.Op.like]: `%${search}%` } },
+            { title: { [sequelize_1.Op.iLike]: `%${search}%` } },
+            { opportunityCode: { [sequelize_1.Op.iLike]: `%${search}%` } },
+            { description: { [sequelize_1.Op.iLike]: `%${search}%` } },
         ];
     }
     const { count, rows } = await Opportunity_model_1.Opportunity.findAndCountAll({

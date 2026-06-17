@@ -71,7 +71,8 @@ class AuthenticationService {
         const twoFactorAuth = await TwoFactorAuth_model_1.TwoFactorAuth.findOne({
             where: { userId: user.id, isEnabled: true },
         });
-        const requiresMFA = !!twoFactorAuth;
+        const mfaLoginEnabled = process.env.ENABLE_2FA_LOGIN !== 'false';
+        const requiresMFA = mfaLoginEnabled && !!twoFactorAuth;
         const accessToken = JWTService_1.default.generateAccessToken(authenticatedUser);
         const refreshToken = JWTService_1.default.generateRefreshToken(authenticatedUser);
         const session = await Session_model_1.Session.create({
@@ -197,10 +198,16 @@ class AuthenticationService {
             sessionId: session.uuid,
         };
     }
-    async logout(sessionId) {
-        const session = await Session_model_1.Session.findOne({ where: { uuid: sessionId } });
-        if (session) {
-            await session.destroy();
+    async logout(sessionId, refreshToken) {
+        if (sessionId) {
+            const session = await Session_model_1.Session.findOne({ where: { uuid: sessionId } });
+            if (session)
+                await session.destroy();
+        }
+        else if (refreshToken) {
+            const session = await Session_model_1.Session.findOne({ where: { refreshToken } });
+            if (session)
+                await session.destroy();
         }
     }
     async refreshAccessToken(refreshToken) {
@@ -489,6 +496,65 @@ class AuthenticationService {
             backupCodes: backupCodesHash,
         });
         return { backupCodes };
+    }
+    async enable2FA(userId) {
+        const user = await User_model_1.User.findByPk(userId);
+        if (!user)
+            throw new ErrorHandler_1.NotFoundError('User not found');
+        await TwoFactorAuth_model_1.TwoFactorAuth.update({ isEnabled: false }, { where: { userId } });
+        await TwoFactorAuth_model_1.TwoFactorAuth.findOrCreate({
+            where: { userId, method: 'EMAIL' },
+            defaults: {
+                userId,
+                method: 'EMAIL',
+                isEnabled: true,
+                isVerified: true,
+                verifiedAt: new Date(),
+            },
+        }).then(async ([record, created]) => {
+            if (!created) {
+                await record.update({ isEnabled: true, isVerified: true, verifiedAt: new Date() });
+            }
+        });
+    }
+    async disable2FA(userId, password) {
+        const user = await User_model_1.User.findByPk(userId);
+        if (!user)
+            throw new ErrorHandler_1.NotFoundError('User not found');
+        if (password) {
+            const isValid = await PasswordService_1.default.verifyPassword(password, user.passwordHash);
+            if (!isValid)
+                throw new ErrorHandler_1.UnauthorizedError('Incorrect password');
+        }
+        await TwoFactorAuth_model_1.TwoFactorAuth.update({ isEnabled: false }, { where: { userId } });
+    }
+    async sendLoginOTP(sessionId) {
+        const session = await Session_model_1.Session.findOne({ where: { uuid: sessionId } });
+        if (!session || session.expiresAt < new Date()) {
+            throw new ErrorHandler_1.UnauthorizedError('Session expired. Please login again.');
+        }
+        const user = await User_model_1.User.findByPk(session.userId);
+        if (!user)
+            throw new ErrorHandler_1.NotFoundError('User not found');
+        const twoFA = await TwoFactorAuth_model_1.TwoFactorAuth.findOne({ where: { userId: user.id, isEnabled: true } });
+        if (!twoFA || twoFA.method !== 'EMAIL') {
+            throw new ErrorHandler_1.ValidationError('Email OTP not configured', []);
+        }
+        await OTPVerification_model_1.OTPVerification.update({ isUsed: true, usedAt: new Date() }, { where: { userId: user.id, type: '2FA', isUsed: false } });
+        const otpCode = OTPService_1.default.generateOTPCode();
+        const otpHash = await OTPService_1.default.hashOTP(otpCode);
+        await OTPVerification_model_1.OTPVerification.create({
+            userId: user.id,
+            email: user.email,
+            otpCode,
+            otpHash,
+            type: '2FA',
+            expiresAt: OTPService_1.default.getOTPExpirationTime(),
+            isUsed: false,
+            attempts: 0,
+        });
+        await (0, CommunicationService_1.sendOTPEmail)({ to: user.email, firstName: user.firstName, otpCode, type: '2FA' })
+            .catch(err => console.error('[Auth] 2FA resend OTP failed:', err));
     }
 }
 exports.AuthenticationService = AuthenticationService;

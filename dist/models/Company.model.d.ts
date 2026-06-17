@@ -3,8 +3,8 @@ interface CompanyAttributes {
     id: bigint;
     uuid: string;
     name: string;
-    code: 'KURIOS_SAT' | 'VISA_MAX' | 'BEAD_MAX' | 'BEADMAX_SCHOOL';
-    type: 'Tech & Training' | 'Travel & Visa Services' | 'Jewelry & Sales' | 'Vocational School';
+    code: string;
+    type: string;
     logo?: string;
     address?: string;
     city?: string;
@@ -24,8 +24,8 @@ export declare class Company extends Model<CompanyAttributes, CompanyCreationAtt
     id: bigint;
     uuid: string;
     name: string;
-    code: 'KURIOS_SAT' | 'VISA_MAX' | 'BEAD_MAX' | 'BEADMAX_SCHOOL';
-    type: 'Tech & Training' | 'Travel & Visa Services' | 'Jewelry & Sales' | 'Vocational School';
+    code: string;
+    type: string;
     logo?: string;
     address?: string;
     city?: string;

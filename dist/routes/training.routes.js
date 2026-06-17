@@ -23,7 +23,7 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
     if (trainingType)
         where.trainingType = trainingType;
     if (search)
-        where.trainingName = { [sequelize_1.Op.like]: `%${search}%` };
+        where.trainingName = { [sequelize_1.Op.iLike]: `%${search}%` };
     const { count, rows } = await TrainingProgram_model_1.TrainingProgram.findAndCountAll({
         where, order: [['startDate', 'DESC']], limit: Number(limit), offset,
     });

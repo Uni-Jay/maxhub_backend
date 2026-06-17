@@ -37,33 +37,53 @@ exports.DatabaseConfig = void 0;
 const sequelize_1 = require("sequelize");
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
+const SSL_OPTIONS = {
+    require: true,
+    rejectUnauthorized: false,
+};
+const logging = process.env.NODE_ENV === 'production'
+    ? false
+    : process.env.LOG_SQL === 'true'
+        ? console.log
+        : false;
+const POOL = {
+    max: parseInt(process.env.DB_POOL_MAX || '20'),
+    min: parseInt(process.env.DB_POOL_MIN || '2'),
+    acquire: parseInt(process.env.DB_POOL_ACQUIRE || '60000'),
+    idle: parseInt(process.env.DB_POOL_IDLE || '10000'),
+};
+const DEFINE = {
+    timestamps: true,
+    paranoid: true,
+    underscored: true,
+};
 class DatabaseConfig {
     static getInstance() {
         if (!DatabaseConfig.instance) {
-            DatabaseConfig.instance = new sequelize_1.Sequelize({
-                host: process.env.DB_HOST || 'localhost',
-                port: parseInt(process.env.DB_PORT || '3306'),
-                username: process.env.DB_USER || 'root',
-                password: process.env.DB_PASSWORD || 'password',
-                database: process.env.DB_NAME || 'maxhub_erp',
-                dialect: 'mysql',
-                logging: process.env.NODE_ENV === 'production'
-                    ? false
-                    : process.env.LOG_SQL === 'true'
-                        ? console.log
-                        : false,
-                pool: {
-                    max: parseInt(process.env.DB_POOL_MAX || '10'),
-                    min: parseInt(process.env.DB_POOL_MIN || '2'),
-                    idle: parseInt(process.env.DB_POOL_IDLE || '10000'),
-                },
-                timezone: process.env.DB_TIMEZONE || '+00:00',
-                define: {
-                    timestamps: true,
-                    paranoid: true,
-                    underscored: true,
-                },
-            });
+            const url = process.env.DATABASE_URL;
+            if (url) {
+                DatabaseConfig.instance = new sequelize_1.Sequelize(url, {
+                    dialect: 'postgres',
+                    logging,
+                    dialectOptions: { ssl: SSL_OPTIONS },
+                    pool: POOL,
+                    define: DEFINE,
+                });
+            }
+            else {
+                DatabaseConfig.instance = new sequelize_1.Sequelize({
+                    host: process.env.DB_HOST || 'localhost',
+                    port: parseInt(process.env.DB_PORT || '5432'),
+                    username: process.env.DB_USER || 'postgres',
+                    password: process.env.DB_PASSWORD || '',
+                    database: process.env.DB_NAME || 'postgres',
+                    dialect: 'postgres',
+                    logging,
+                    dialectOptions: { ssl: SSL_OPTIONS },
+                    pool: POOL,
+                    define: DEFINE,
+                });
+            }
         }
         return DatabaseConfig.instance;
     }

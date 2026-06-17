@@ -25,7 +25,7 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
     if (jobType)
         where.jobType = jobType;
     if (search)
-        where.title = { [sequelize_1.Op.like]: `%${search}%` };
+        where.title = { [sequelize_1.Op.iLike]: `%${search}%` };
     const { count, rows } = await JobPosting_model_1.JobPosting.findAndCountAll({
         where,
         include: [

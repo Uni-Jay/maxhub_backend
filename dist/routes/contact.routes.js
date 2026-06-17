@@ -47,12 +47,12 @@ router.get('/', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthMiddleware_1.Au
         where.ownerUserId = ownerUserId;
     if (search) {
         where[sequelize_1.Op.or] = [
-            { firstName: { [sequelize_1.Op.like]: `%${search}%` } },
-            { lastName: { [sequelize_1.Op.like]: `%${search}%` } },
-            { email: { [sequelize_1.Op.like]: `%${search}%` } },
-            { phone: { [sequelize_1.Op.like]: `%${search}%` } },
-            { company: { [sequelize_1.Op.like]: `%${search}%` } },
-            { contactCode: { [sequelize_1.Op.like]: `%${search}%` } },
+            { firstName: { [sequelize_1.Op.iLike]: `%${search}%` } },
+            { lastName: { [sequelize_1.Op.iLike]: `%${search}%` } },
+            { email: { [sequelize_1.Op.iLike]: `%${search}%` } },
+            { phone: { [sequelize_1.Op.iLike]: `%${search}%` } },
+            { company: { [sequelize_1.Op.iLike]: `%${search}%` } },
+            { contactCode: { [sequelize_1.Op.iLike]: `%${search}%` } },
         ];
     }
     const { count, rows } = await Contact_model_1.Contact.findAndCountAll({

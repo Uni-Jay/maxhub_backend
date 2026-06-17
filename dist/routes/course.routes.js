@@ -13,6 +13,7 @@ const Enrollment_model_1 = require("../models/Enrollment.model");
 const Exam_model_1 = require("../models/Exam.model");
 const Question_model_1 = require("../models/Question.model");
 const ExamResult_model_1 = require("../models/ExamResult.model");
+const Certificate_model_1 = require("../models/Certificate.model");
 const Staff_model_1 = require("../models/Staff.model");
 const User_model_1 = require("../models/User.model");
 const Department_model_1 = require("../models/Department.model");
@@ -25,7 +26,7 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
     const offset = (Number(page) - 1) * Number(limit);
     const where = {};
     if (search)
-        where.title = { [sequelize_1.Op.like]: `%${search}%` };
+        where.title = { [sequelize_1.Op.iLike]: `%${search}%` };
     if (status)
         where.status = status;
     if (departmentId)
@@ -136,6 +137,188 @@ router.delete('/:courseId/modules/:moduleId', AuthMiddleware_1.default.requirePe
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Module not found', 404);
     await mod.destroy();
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Module deleted');
+}));
+router.get('/student/exams', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const userId = req.user?.id;
+    if (!userId)
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'Unauthorized', 401);
+    const staffRecord = await Staff_model_1.Staff.findOne({ where: { userId }, attributes: ['id'] });
+    if (!staffRecord)
+        return ResponseFormatter_1.ResponseFormatter.success(res, [], 'No exams found');
+    const enrollments = await Enrollment_model_1.Enrollment.findAll({
+        where: { staffId: staffRecord.id },
+        attributes: ['id', 'courseId', 'status'],
+    });
+    const courseIds = [...new Set(enrollments.map((e) => e.courseId))];
+    if (courseIds.length === 0) {
+        return ResponseFormatter_1.ResponseFormatter.success(res, [], 'No exams found');
+    }
+    const exams = await Exam_model_1.Exam.findAll({
+        where: { courseId: { [sequelize_1.Op.in]: courseIds }, status: { [sequelize_1.Op.in]: ['Published', 'Draft'] } },
+        include: [{ model: Course_model_1.Course, as: 'course', attributes: ['id', 'courseCode', 'courseName'] }],
+        order: [['createdAt', 'DESC']],
+    });
+    const examIds = exams.map(e => e.id);
+    const results = examIds.length > 0 ? await ExamResult_model_1.ExamResult.findAll({
+        where: { examId: { [sequelize_1.Op.in]: examIds } },
+        order: [['attemptNumber', 'DESC']],
+    }) : [];
+    const resultMap = {};
+    results.forEach((r) => {
+        const key = String(r.examId);
+        if (!resultMap[key])
+            resultMap[key] = [];
+        resultMap[key].push(r);
+    });
+    const now = new Date();
+    const output = exams.map(exam => {
+        const myResults = resultMap[String(exam.id)] ?? [];
+        const bestResult = myResults.sort((a, b) => b.score - a.score)[0];
+        const attemptCount = myResults.length;
+        let status;
+        if (attemptCount >= exam.attempts) {
+            status = bestResult?.score >= exam.passingScore ? 'completed' : 'missed';
+        }
+        else if (attemptCount > 0) {
+            status = 'completed';
+        }
+        else {
+            status = exam.status === 'Published' ? 'available' : 'upcoming';
+        }
+        return {
+            id: Number(exam.id),
+            title: exam.examName,
+            course: exam.course?.courseName ?? 'Unknown Course',
+            duration: `${exam.duration} min`,
+            questions: exam.totalQuestions,
+            date: exam.createdAt?.toISOString?.()?.slice(0, 10) ?? '',
+            status,
+            score: bestResult ? Number(bestResult.score) : undefined,
+            maxScore: 100,
+            attempts: attemptCount,
+            maxAttempts: exam.attempts,
+            examCode: exam.examCode,
+            passingScore: exam.passingScore,
+        };
+    });
+    ResponseFormatter_1.ResponseFormatter.success(res, output, 'Exams retrieved');
+}));
+router.get('/student/enrollments', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const userId = req.user?.id;
+    if (!userId)
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'Unauthorized', 401);
+    const staff = await Staff_model_1.Staff.findOne({ where: { userId }, attributes: ['id'] });
+    if (!staff)
+        return ResponseFormatter_1.ResponseFormatter.success(res, [], 'No enrollments found');
+    const enrollments = await Enrollment_model_1.Enrollment.findAll({
+        where: { staffId: staff.id },
+        include: [{ model: Course_model_1.Course, as: 'course', attributes: ['id', 'uuid', 'courseCode', 'courseName', 'description', 'duration', 'instructor', 'thumbnail', 'status'] }],
+        order: [['enrollmentDate', 'DESC']],
+    });
+    const result = enrollments.map((e) => ({
+        id: Number(e.id),
+        courseId: Number(e.courseId),
+        title: e.course?.courseName ?? 'Unknown Course',
+        instructor: e.course?.instructor ?? '',
+        progress: Number(e.progressPercentage) ?? 0,
+        totalLessons: 0,
+        doneLessons: 0,
+        enrolledDate: e.enrollmentDate?.toISOString?.()?.slice(0, 10) ?? '',
+        completedDate: e.completionDate?.toISOString?.()?.slice(0, 10) ?? null,
+        status: e.status,
+        thumbnail: e.course?.thumbnail ?? null,
+    }));
+    ResponseFormatter_1.ResponseFormatter.success(res, result, 'Enrollments retrieved');
+}));
+router.get('/student/certificates', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const userId = req.user?.id;
+    if (!userId)
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'Unauthorized', 401);
+    const staff = await Staff_model_1.Staff.findOne({ where: { userId }, attributes: ['id'] });
+    if (!staff)
+        return ResponseFormatter_1.ResponseFormatter.success(res, [], 'No certificates found');
+    const enrollments = await Enrollment_model_1.Enrollment.findAll({
+        where: { staffId: staff.id },
+        attributes: ['id'],
+    });
+    const enrollmentIds = enrollments.map(e => e.id);
+    if (enrollmentIds.length === 0)
+        return ResponseFormatter_1.ResponseFormatter.success(res, [], 'No certificates found');
+    const certs = await Certificate_model_1.Certificate.findAll({
+        where: { enrollmentId: { [sequelize_1.Op.in]: enrollmentIds }, status: 'Issued' },
+        include: [{
+                model: Enrollment_model_1.Enrollment,
+                as: 'enrollment',
+                include: [{ model: Course_model_1.Course, as: 'course', attributes: ['courseName', 'instructor'] }],
+            }],
+        order: [['issuedDate', 'DESC']],
+    });
+    const result = certs.map((c) => ({
+        id: Number(c.id),
+        credentialId: c.certificateCode,
+        title: c.certificateName || 'Certificate of Completion',
+        course: c.enrollment?.course?.courseName ?? 'Unknown Course',
+        instructor: c.enrollment?.course?.instructor ?? '',
+        issueDate: c.issuedDate?.toISOString?.()?.slice(0, 10) ?? '',
+        status: c.status,
+        certificateUrl: c.certificateUrl ?? null,
+        verificationCode: c.verificationCode,
+    }));
+    ResponseFormatter_1.ResponseFormatter.success(res, result, 'Certificates retrieved');
+}));
+router.get('/exams/:examId/leaderboard', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const { examId } = req.params;
+    const exam = await Exam_model_1.Exam.findOne({ where: { [sequelize_1.Op.or]: [{ id: examId }, { uuid: examId }] } });
+    if (!exam)
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'Exam not found', 404);
+    const results = await ExamResult_model_1.ExamResult.findAll({
+        where: { examId: exam.id, status: { [sequelize_1.Op.in]: ['Passed', 'Failed', 'Submitted'] } },
+        include: [{
+                model: Enrollment_model_1.Enrollment,
+                as: 'enrollment',
+                include: [{ model: Staff_model_1.Staff, as: 'staff', attributes: ['id', 'firstName', 'lastName'] }],
+            }],
+        order: [['score', 'DESC']],
+    });
+    const ranked = results.map((r, idx) => {
+        const staff = r.enrollment?.staff;
+        const name = staff ? `${staff.firstName ?? ''} ${staff.lastName ?? ''}`.trim() : `Student #${r.enrollmentId}`;
+        const secs = r.completedAt && r.startedAt
+            ? Math.round((new Date(r.completedAt).getTime() - new Date(r.startedAt).getTime()) / 1000)
+            : 0;
+        const mins = Math.floor(secs / 60);
+        const sec2 = secs % 60;
+        return {
+            id: Number(r.id),
+            rank: idx + 1,
+            name,
+            score: Number(r.correctAnswers ?? 0),
+            maxScore: Number(r.totalQuestions ?? 0),
+            percentage: Number(r.score),
+            status: r.status === 'Passed' ? 'Pass' : 'Fail',
+            timeTaken: `${String(mins).padStart(2, '0')}:${String(sec2).padStart(2, '0')}`,
+            timeTakenSecs: secs,
+        };
+    });
+    const myEnrollment = await (async () => {
+        const userId = req.user?.id;
+        if (!userId)
+            return null;
+        const staff = await Staff_model_1.Staff.findOne({ where: { userId }, attributes: ['id'] });
+        if (!staff)
+            return null;
+        const enr = await Enrollment_model_1.Enrollment.findOne({ where: { staffId: staff.id, courseId: exam.courseId } });
+        return enr ? results.find((r) => String(r.enrollmentId) === String(enr.id)) : null;
+    })();
+    ResponseFormatter_1.ResponseFormatter.success(res, {
+        exam: { id: Number(exam.id), title: exam.examName, date: exam.createdAt, passingScore: exam.passingScore },
+        rankings: ranked,
+        myResult: myEnrollment ? {
+            score: Number(myEnrollment.score),
+            status: myEnrollment.status,
+            answers: myEnrollment.answers ?? null,
+        } : null,
+    }, 'Leaderboard retrieved');
 }));
 router.get('/:id/exams', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const course = await Course_model_1.Course.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });

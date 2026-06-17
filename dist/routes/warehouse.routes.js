@@ -21,7 +21,7 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
     if (isActive !== undefined)
         where.isActive = isActive === 'true';
     if (search)
-        where.warehouseName = { [sequelize_1.Op.like]: `%${search}%` };
+        where.warehouseName = { [sequelize_1.Op.iLike]: `%${search}%` };
     const { count, rows } = await Warehouse_model_1.Warehouse.findAndCountAll({
         where, order: [['warehouseName', 'ASC']], limit: Number(limit), offset,
     });

@@ -67,11 +67,11 @@ function scheduleBirthdayMessages() {
         const staffPattern = `%-${month}-${day}%`;
         const [clients, staffMembers] = await Promise.all([
             Client_model_1.Client.findAll({
-                where: { status: 'Active', dateOfBirth: { [sequelize_1.Op.like]: clientPattern } },
+                where: { status: 'Active', dateOfBirth: { [sequelize_1.Op.iLike]: clientPattern } },
                 attributes: ['id', 'fullName', 'email', 'phone'],
             }),
             Staff_model_1.Staff.findAll({
-                where: { status: 'Active', dateOfBirth: { [sequelize_1.Op.like]: staffPattern } },
+                where: { status: 'Active', dateOfBirth: { [sequelize_1.Op.iLike]: staffPattern } },
                 attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
             }),
         ]);

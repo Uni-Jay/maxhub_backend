@@ -42,8 +42,9 @@ const path_1 = __importDefault(require("path"));
 const express_1 = __importDefault(require("express"));
 const helmet_1 = __importDefault(require("helmet"));
 const cors_1 = __importDefault(require("cors"));
-const sequelize_1 = require("sequelize");
 const dotenv = __importStar(require("dotenv"));
+const Database_1 = require("./config/Database");
+const ChatSocket_1 = require("./socket/ChatSocket");
 BigInt.prototype.toJSON = function () {
     return Number(this);
 };
@@ -154,6 +155,8 @@ const ClassSchedule_model_1 = require("./models/ClassSchedule.model");
 const Meeting_model_1 = require("./models/Meeting.model");
 const MeetingParticipant_model_1 = require("./models/MeetingParticipant.model");
 const Call_model_1 = require("./models/Call.model");
+const Module_model_1 = require("./models/Module.model");
+const UserModulePermission_model_1 = require("./models/UserModulePermission.model");
 const index_1 = __importDefault(require("./routes/index"));
 const AIConversation_model_1 = require("./modules/ai/models/AIConversation.model");
 const AIMessage_model_1 = require("./modules/ai/models/AIMessage.model");
@@ -164,16 +167,7 @@ dotenv.config();
 class AppBootstrapper {
     constructor() {
         this.app = (0, express_1.default)();
-        this.sequelize = new sequelize_1.Sequelize({
-            host: process.env.DB_HOST || 'localhost',
-            port: parseInt(process.env.DB_PORT || '3306'),
-            username: process.env.DB_USER || 'root',
-            password: process.env.DB_PASSWORD || 'password',
-            database: process.env.DB_NAME || 'maxhub_erp',
-            dialect: 'mysql',
-            logging: process.env.NODE_ENV === 'production' ? false : console.log,
-            pool: { max: 10, min: 2, idle: 10000 },
-        });
+        this.sequelize = Database_1.DatabaseConfig.getInstance();
     }
     initMiddleware() {
         this.app.use((0, helmet_1.default)());
@@ -321,6 +315,8 @@ class AppBootstrapper {
         Meeting_model_1.Meeting.initModel(this.sequelize);
         MeetingParticipant_model_1.MeetingParticipant.initModel(this.sequelize);
         Call_model_1.Call.initModel(this.sequelize);
+        Module_model_1.AppModule.initModel(this.sequelize);
+        UserModulePermission_model_1.UserModulePermission.initModel(this.sequelize);
         console.log('✅ 100+ models initialized');
     }
     initAssociations() {
@@ -357,7 +353,10 @@ class AppBootstrapper {
             }
             (0, SchedulerService_1.startScheduler)();
             const port = process.env.PORT || 3000;
-            const server = http_1.default.createServer({ maxHeaderSize: 65536 }, this.app);
+            const server = http_1.default.createServer({ maxHeaderSize: 524288 }, this.app);
+            const io = (0, ChatSocket_1.initChatSocket)(server);
+            this.app.set('io', io);
+            console.log('✅ Socket.IO chat server initialized');
             server.listen(port, () => {
                 console.log(`
 ╔════════════════════════════════════════╗

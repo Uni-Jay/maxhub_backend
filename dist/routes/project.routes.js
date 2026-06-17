@@ -23,8 +23,8 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
         where.departmentId = BigInt(req.query.departmentId);
     if (req.query.search) {
         where[sequelize_1.Op.or] = [
-            { name: { [sequelize_1.Op.like]: `%${req.query.search}%` } },
-            { projectCode: { [sequelize_1.Op.like]: `%${req.query.search}%` } },
+            { name: { [sequelize_1.Op.iLike]: `%${req.query.search}%` } },
+            { projectCode: { [sequelize_1.Op.iLike]: `%${req.query.search}%` } },
         ];
     }
     const { count, rows } = await Project_model_1.Project.findAndCountAll({

@@ -29,8 +29,8 @@ router.get('/', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_1.ErrorMid
         where.departmentId = BigInt(departmentId);
     if (search) {
         where[sequelize_1.Op.or] = [
-            { title: { [sequelize_1.Op.like]: `%${search}%` } },
-            { description: { [sequelize_1.Op.like]: `%${search}%` } },
+            { title: { [sequelize_1.Op.iLike]: `%${search}%` } },
+            { description: { [sequelize_1.Op.iLike]: `%${search}%` } },
         ];
     }
     const { count, rows } = await StaffQuery_model_1.StaffQuery.findAndCountAll({

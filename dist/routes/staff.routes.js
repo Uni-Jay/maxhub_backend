@@ -36,10 +36,10 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
     if (req.query.search) {
         const s = `%${req.query.search}%`;
         where[sequelize_1.Op.or] = [
-            { firstName: { [sequelize_1.Op.like]: s } },
-            { lastName: { [sequelize_1.Op.like]: s } },
-            { email: { [sequelize_1.Op.like]: s } },
-            { employeeId: { [sequelize_1.Op.like]: s } },
+            { firstName: { [sequelize_1.Op.iLike]: s } },
+            { lastName: { [sequelize_1.Op.iLike]: s } },
+            { email: { [sequelize_1.Op.iLike]: s } },
+            { employeeId: { [sequelize_1.Op.iLike]: s } },
         ];
     }
     const { count, rows } = await Staff_model_1.Staff.findAndCountAll({
@@ -185,7 +185,7 @@ router.post('/', AuthMiddleware_1.default.requirePermission('org.staff.create.al
         businessUnit: businessUnit || undefined,
         department: dept?.name || undefined,
     }).catch(err => console.error('[Staff] Welcome email failed:', err));
-    ResponseFormatter_1.ResponseFormatter.success(res, staff.toJSON(), 'Staff member created successfully', 201);
+    ResponseFormatter_1.ResponseFormatter.success(res, { ...staff.toJSON(), temporaryPassword }, 'Staff member created successfully', 201);
 }));
 router.patch('/:id', AuthMiddleware_1.default.requirePermission('org.staff.update.all', 'org.staff.update.own'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const staff = await Staff_model_1.Staff.findOne({

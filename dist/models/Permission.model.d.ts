@@ -8,7 +8,7 @@ interface PermissionAttributes {
     module: string;
     resource: string;
     action: string;
-    scope: 'all' | 'own' | 'own_department' | 'own_warehouse';
+    scope: string;
     isActive: boolean;
     deletedAt?: Date;
 }
@@ -23,7 +23,7 @@ export declare class Permission extends Model<PermissionAttributes, PermissionCr
     module: string;
     resource: string;
     action: string;
-    scope: 'all' | 'own' | 'own_department';
+    scope: string;
     isActive: boolean;
     deletedAt?: Date;
     readonly createdAt: Date;

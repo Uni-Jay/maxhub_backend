@@ -28,10 +28,10 @@ router.get('/', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_1.ErrorMid
         where.assignedStaffId = BigInt(assignedStaffId);
     if (search) {
         where[sequelize_1.Op.or] = [
-            { fullName: { [sequelize_1.Op.like]: `%${search}%` } },
-            { email: { [sequelize_1.Op.like]: `%${search}%` } },
-            { phone: { [sequelize_1.Op.like]: `%${search}%` } },
-            { clientId: { [sequelize_1.Op.like]: `%${search}%` } },
+            { fullName: { [sequelize_1.Op.iLike]: `%${search}%` } },
+            { email: { [sequelize_1.Op.iLike]: `%${search}%` } },
+            { phone: { [sequelize_1.Op.iLike]: `%${search}%` } },
+            { clientId: { [sequelize_1.Op.iLike]: `%${search}%` } },
         ];
     }
     const { count, rows } = await Client_model_1.Client.findAndCountAll({

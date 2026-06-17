@@ -26,8 +26,8 @@ router.get('/', AuthMiddleware_1.default.requirePermission('org.unit.read.all', 
     if (req.query.search) {
         const s = `%${req.query.search}%`;
         where[sequelize_1.Op.or] = [
-            { name: { [sequelize_1.Op.like]: s } },
-            { code: { [sequelize_1.Op.like]: s } },
+            { name: { [sequelize_1.Op.iLike]: s } },
+            { code: { [sequelize_1.Op.iLike]: s } },
         ];
     }
     const { count, rows } = await Unit_model_1.Unit.findAndCountAll({

@@ -62,10 +62,14 @@ function setupRoutes(app) {
     apiRouter.use('/students', require('./student-management.routes').default);
     apiRouter.use('/meetings', require('./meeting.routes').default);
     apiRouter.use('/calls', require('./call.routes').default);
+    apiRouter.use('/visamax', require('./visamax.routes').default);
+    apiRouter.use('/beadmax', require('./beadmax.routes').default);
     apiRouter.use('/calendar', require('./calendar.routes').default);
     apiRouter.use('/files', require('./file.routes').default);
     apiRouter.use('/ai', require('./ai.routes').default);
     apiRouter.use('/audit-logs', require('./audit-log.routes').default);
+    apiRouter.use('/reports', require('./reports.routes').default);
+    apiRouter.use('/modules', require('./module.routes').default);
     apiRouter.use('/settings', require('./settings.routes').default);
     app.use('/api', apiRouter);
     app.use(ErrorMiddleware_1.ErrorMiddleware.notFound);

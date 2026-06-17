@@ -16,7 +16,7 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
         if (action && action !== 'All')
             where.action = action;
         if (mod)
-            where.module = { [sequelize_1.Op.like]: `%${mod}%` };
+            where.module = { [sequelize_1.Op.iLike]: `%${mod}%` };
         if (startDate)
             where.createdAt = { ...(where.createdAt ?? {}), [sequelize_1.Op.gte]: new Date(startDate) };
         if (endDate)

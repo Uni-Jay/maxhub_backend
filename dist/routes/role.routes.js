@@ -15,6 +15,7 @@ const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
 const router = (0, express_1.Router)();
+router.use(AuthMiddleware_1.default.requireRole('superadmin'));
 router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const roles = await Role_model_1.Role.findAll({
         order: [['isSystemRole', 'DESC'], ['name', 'ASC']],

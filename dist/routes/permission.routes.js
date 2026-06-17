@@ -13,6 +13,7 @@ const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
 const router = (0, express_1.Router)();
+router.use(AuthMiddleware_1.default.requireRole('superadmin'));
 router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { page = 1, limit = 50, module: mod, action, isActive, search } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
@@ -25,8 +26,8 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
         where.isActive = isActive === 'true';
     if (search)
         where[sequelize_1.Op.or] = [
-            { name: { [sequelize_1.Op.like]: `%${search}%` } },
-            { code: { [sequelize_1.Op.like]: `%${search}%` } },
+            { name: { [sequelize_1.Op.iLike]: `%${search}%` } },
+            { code: { [sequelize_1.Op.iLike]: `%${search}%` } },
         ];
     const { count, rows } = await Permission_model_1.Permission.findAndCountAll({
         where, order: [['module', 'ASC'], ['resource', 'ASC'], ['action', 'ASC']],

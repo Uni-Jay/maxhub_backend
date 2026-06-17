@@ -4,8 +4,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
+const bcrypt_1 = __importDefault(require("bcrypt"));
+const sequelize_1 = require("sequelize");
 const AuthenticationService_1 = __importDefault(require("../services/AuthenticationService"));
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
+const User_model_1 = require("../models/User.model");
+const Session_model_1 = require("../models/Session.model");
 class AuthController {
     static async login(req, res, next) {
         try {
@@ -62,8 +66,8 @@ class AuthController {
     }
     static async logout(req, res, next) {
         try {
-            const { sessionId } = req.body;
-            await AuthenticationService_1.default.logout(sessionId);
+            const { sessionId, refreshToken } = req.body;
+            await AuthenticationService_1.default.logout(sessionId, refreshToken);
             ResponseFormatter_1.ResponseFormatter.success(res, null, 'Logout successful');
         }
         catch (error) {
@@ -174,7 +178,36 @@ class AuthController {
                 ResponseFormatter_1.ResponseFormatter.unauthorized(res, 'Authentication required');
                 return;
             }
+            await AuthenticationService_1.default.disable2FA(BigInt(userId), password);
             ResponseFormatter_1.ResponseFormatter.success(res, null, '2FA disabled');
+        }
+        catch (error) {
+            next(error);
+        }
+    }
+    static async enable2FA(req, res, next) {
+        try {
+            const userId = req.user?.id;
+            if (!userId) {
+                ResponseFormatter_1.ResponseFormatter.unauthorized(res, 'Authentication required');
+                return;
+            }
+            await AuthenticationService_1.default.enable2FA(BigInt(userId));
+            ResponseFormatter_1.ResponseFormatter.success(res, null, '2FA enabled via email');
+        }
+        catch (error) {
+            next(error);
+        }
+    }
+    static async sendLoginOTP(req, res, next) {
+        try {
+            const { sessionId } = req.body;
+            if (!sessionId) {
+                ResponseFormatter_1.ResponseFormatter.error(res, 'sessionId is required', 400);
+                return;
+            }
+            await AuthenticationService_1.default.sendLoginOTP(sessionId);
+            ResponseFormatter_1.ResponseFormatter.success(res, null, 'Verification code sent');
         }
         catch (error) {
             next(error);
@@ -187,7 +220,15 @@ class AuthController {
                 ResponseFormatter_1.ResponseFormatter.unauthorized(res, 'Authentication required');
                 return;
             }
-            ResponseFormatter_1.ResponseFormatter.success(res, [], 'Sessions retrieved');
+            const sessions = await Session_model_1.Session.findAll({
+                where: {
+                    userId: BigInt(userId),
+                    expiresAt: { [sequelize_1.Op.gt]: new Date() },
+                },
+                attributes: ['id', 'uuid', 'ipAddress', 'userAgent', 'createdAt', 'expiresAt'],
+                order: [['createdAt', 'DESC']],
+            });
+            ResponseFormatter_1.ResponseFormatter.success(res, sessions, 'Sessions retrieved');
         }
         catch (error) {
             next(error);
@@ -201,6 +242,14 @@ class AuthController {
                 ResponseFormatter_1.ResponseFormatter.unauthorized(res, 'Authentication required');
                 return;
             }
+            const session = await Session_model_1.Session.findOne({
+                where: { uuid: sessionId, userId: BigInt(userId) },
+            });
+            if (!session) {
+                ResponseFormatter_1.ResponseFormatter.notFound(res, 'Session not found');
+                return;
+            }
+            await session.destroy();
             ResponseFormatter_1.ResponseFormatter.success(res, null, 'Session revoked');
         }
         catch (error) {
@@ -245,7 +294,25 @@ class AuthController {
                 ResponseFormatter_1.ResponseFormatter.unauthorized(res, 'Authentication required');
                 return;
             }
-            ResponseFormatter_1.ResponseFormatter.success(res, {}, 'Profile updated');
+            const user = await User_model_1.User.findByPk(BigInt(userId));
+            if (!user) {
+                ResponseFormatter_1.ResponseFormatter.notFound(res, 'User not found');
+                return;
+            }
+            await user.update({
+                firstName: firstName ?? user.firstName,
+                lastName: lastName ?? user.lastName,
+                phone: phone ?? user.phone,
+                avatar: avatar ?? user.avatar,
+            });
+            ResponseFormatter_1.ResponseFormatter.success(res, {
+                id: user.id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                phone: user.phone,
+                avatar: user.avatar,
+            }, 'Profile updated');
         }
         catch (error) {
             next(error);
@@ -259,6 +326,26 @@ class AuthController {
                 ResponseFormatter_1.ResponseFormatter.unauthorized(res, 'Authentication required');
                 return;
             }
+            if (!currentPassword || !newPassword) {
+                ResponseFormatter_1.ResponseFormatter.error(res, 'currentPassword and newPassword are required', 400);
+                return;
+            }
+            if (newPassword.length < 8) {
+                ResponseFormatter_1.ResponseFormatter.error(res, 'New password must be at least 8 characters', 400);
+                return;
+            }
+            const user = await User_model_1.User.findByPk(BigInt(userId));
+            if (!user) {
+                ResponseFormatter_1.ResponseFormatter.notFound(res, 'User not found');
+                return;
+            }
+            const isMatch = await bcrypt_1.default.compare(currentPassword, user.passwordHash);
+            if (!isMatch) {
+                ResponseFormatter_1.ResponseFormatter.error(res, 'Current password is incorrect', 401);
+                return;
+            }
+            const hash = await bcrypt_1.default.hash(newPassword, 12);
+            await user.update({ passwordHash: hash });
             ResponseFormatter_1.ResponseFormatter.success(res, null, 'Password changed successfully');
         }
         catch (error) {

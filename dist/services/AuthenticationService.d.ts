@@ -23,7 +23,7 @@ export interface RegistrationPayload {
 export declare class AuthenticationService {
     login(payload: LoginPayload): Promise<LoginResponse>;
     register(payload: RegistrationPayload): Promise<LoginResponse>;
-    logout(sessionId: string): Promise<void>;
+    logout(sessionId?: string, refreshToken?: string): Promise<void>;
     refreshAccessToken(refreshToken: string): Promise<{
         accessToken: string;
         expiresIn: number;
@@ -45,6 +45,9 @@ export declare class AuthenticationService {
     verify2FASetup(userId: bigint, otpCode: string): Promise<{
         backupCodes: string[];
     }>;
+    enable2FA(userId: bigint): Promise<void>;
+    disable2FA(userId: bigint, password?: string): Promise<void>;
+    sendLoginOTP(sessionId: string): Promise<void>;
 }
 declare const _default: AuthenticationService;
 export default _default;
