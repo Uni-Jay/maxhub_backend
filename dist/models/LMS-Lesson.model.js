@@ -42,7 +42,7 @@ Lesson.init({
         allowNull: true,
     },
     content: {
-        type: sequelize_1.DataTypes.LONGTEXT,
+        type: sequelize_1.DataTypes.TEXT('long'),
         allowNull: true,
     },
     duration: {

@@ -84,7 +84,7 @@ DirectMessage.init(
       comment: 'FK to Staff (recipient)',
     },
     messageText: {
-      type: DataTypes.LONGTEXT,
+      type: DataTypes.TEXT('long'),
       allowNull: false,
     },
     messageType: {

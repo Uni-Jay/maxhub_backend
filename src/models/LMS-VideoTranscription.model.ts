@@ -1,4 +1,4 @@
-import { DataTypes, Model } from 'sequelize';
+﻿import { DataTypes, Model } from 'sequelize';
 import sequelize from '../config/Database';
 
 /**
@@ -80,7 +80,7 @@ VideoTranscription.init(
       allowNull: false,
     },
     transcriptionText: {
-      type: DataTypes.LONGTEXT,
+      type: DataTypes.TEXT('long'),
       allowNull: false,
     },
     transcriptionFormat: {

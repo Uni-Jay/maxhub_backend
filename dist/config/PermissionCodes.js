@@ -486,7 +486,6 @@ var PermissionCode;
     PermissionCode["LMS_PROGRESS_READ_ALL"] = "lms.progress.read.all";
     PermissionCode["LMS_PROGRESS_READ_OWN"] = "lms.progress.read.own";
     PermissionCode["LMS_CERTIFICATE_AWARD_ALL"] = "lms.certificate.award.all";
-    PermissionCode["LMS_CERTIFICATE_READ_OWN"] = "lms.certificate.read.own";
     PermissionCode["LMS_CERTIFICATE_DOWNLOAD_OWN"] = "lms.certificate.download.own";
     PermissionCode["CBT_QUESTION_CREATE_ALL"] = "cbt.question.create.all";
     PermissionCode["CBT_QUESTION_READ_ALL"] = "cbt.question.read.all";

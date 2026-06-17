@@ -33,7 +33,7 @@ VideoTranscription.init({
         allowNull: false,
     },
     transcriptionText: {
-        type: sequelize_1.DataTypes.LONGTEXT,
+        type: sequelize_1.DataTypes.TEXT('long'),
         allowNull: false,
     },
     transcriptionFormat: {

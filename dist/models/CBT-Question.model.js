@@ -25,7 +25,7 @@ Question.init({
         comment: 'FK to QuestionBank',
     },
     questionText: {
-        type: sequelize_1.DataTypes.LONGTEXT,
+        type: sequelize_1.DataTypes.TEXT('long'),
         allowNull: false,
     },
     questionType: {
@@ -49,7 +49,7 @@ Question.init({
         allowNull: true,
     },
     explanation: {
-        type: sequelize_1.DataTypes.LONGTEXT,
+        type: sequelize_1.DataTypes.TEXT('long'),
         allowNull: true,
     },
     imageUrl: {

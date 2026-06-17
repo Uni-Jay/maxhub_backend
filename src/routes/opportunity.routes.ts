@@ -90,8 +90,8 @@ router.get(
       group: [
         literal('YEAR(closeDate)'),
         literal('MONTH(closeDate)'),
-      ],
-      order: [[literal('MONTH(closeDate)'), 'ASC']],
+      ] as any,
+      order: [[literal('MONTH(closeDate)'), 'ASC']] as any,
       raw: true,
     });
 

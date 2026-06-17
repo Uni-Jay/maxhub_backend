@@ -30,7 +30,7 @@ ChatMessage.init({
         comment: 'FK to Staff',
     },
     messageText: {
-        type: sequelize_1.DataTypes.LONGTEXT,
+        type: sequelize_1.DataTypes.TEXT('long'),
         allowNull: false,
     },
     messageType: {

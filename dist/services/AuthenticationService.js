@@ -64,6 +64,7 @@ class AuthenticationService {
             firstName: user.firstName,
             lastName: user.lastName,
             departmentId: user.departmentId ? Number(user.departmentId) : null,
+            departmentUuid: user.departmentUuid || '',
             roles: roles.map((r) => r.code),
             permissions: permCodes,
         };
@@ -75,20 +76,17 @@ class AuthenticationService {
         const refreshToken = JWTService_1.default.generateRefreshToken(authenticatedUser);
         const session = await Session_model_1.Session.create({
             userId: user.id,
-            token: accessToken,
             refreshToken,
-            deviceId: deviceId || 'unknown',
-            ipAddress: payload.deviceId,
+            ipAddress: payload.deviceId || 'unknown',
             userAgent: deviceName || 'unknown',
-            expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-            refreshExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            isActive: true,
-            lastActivityAt: new Date(),
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         });
         if (deviceId) {
             await DeviceLog_model_1.DeviceLog.findOrCreate({
                 where: { userId: user.id, deviceId },
                 defaults: {
+                    userId: user.id,
+                    deviceId: deviceId,
                     deviceName: deviceName,
                     deviceType: 'unknown',
                     ipAddress: payload.deviceId || 'unknown',
@@ -180,6 +178,7 @@ class AuthenticationService {
             firstName,
             lastName,
             departmentId: departmentId ? Number(departmentId) : null,
+            departmentUuid: '',
             roles: roles.map((r) => r.code),
             permissions: permCodes,
         };
@@ -187,12 +186,8 @@ class AuthenticationService {
         const refreshToken = JWTService_1.default.generateRefreshToken(authenticatedUser);
         const session = await Session_model_1.Session.create({
             userId: user.id,
-            token: accessToken,
             refreshToken,
-            expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-            refreshExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            isActive: true,
-            lastActivityAt: new Date(),
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         });
         return {
             user: authenticatedUser,
@@ -205,10 +200,7 @@ class AuthenticationService {
     async logout(sessionId) {
         const session = await Session_model_1.Session.findOne({ where: { uuid: sessionId } });
         if (session) {
-            await session.update({
-                isActive: false,
-                revokedAt: new Date(),
-            });
+            await session.destroy();
         }
     }
     async refreshAccessToken(refreshToken) {
@@ -217,9 +209,9 @@ class AuthenticationService {
             throw new ErrorHandler_1.UnauthorizedError('Invalid or expired refresh token');
         }
         const session = await Session_model_1.Session.findOne({
-            where: { refreshToken, isActive: true },
+            where: { refreshToken },
         });
-        if (!session || session.refreshExpiresAt < new Date()) {
+        if (!session || session.expiresAt < new Date()) {
             throw new ErrorHandler_1.UnauthorizedError('Refresh token expired');
         }
         const user = await User_model_1.User.findByPk(session.userId, {
@@ -246,14 +238,13 @@ class AuthenticationService {
             firstName: user.firstName,
             lastName: user.lastName,
             departmentId: user.departmentId ? Number(user.departmentId) : null,
+            departmentUuid: user.departmentUuid || '',
             roles: roles.map((r) => r.code),
             permissions: permCodes,
         };
         const newAccessToken = JWTService_1.default.generateAccessToken(authenticatedUser);
         await session.update({
-            token: newAccessToken,
-            expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-            lastActivityAt: new Date(),
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         });
         return {
             accessToken: newAccessToken,
@@ -391,6 +382,7 @@ class AuthenticationService {
             firstName: user.firstName,
             lastName: user.lastName,
             departmentId: user.departmentId ? Number(user.departmentId) : null,
+            departmentUuid: user.departmentUuid || '',
             roles: roles.map((r) => r.code),
             permissions: permCodes,
         };

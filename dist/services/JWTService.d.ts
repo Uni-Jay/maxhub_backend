@@ -1,4 +1,4 @@
-import { AuthenticatedUser } from '@types/express';
+import { AuthenticatedUser } from '../types/express';
 export interface JWTPayload {
     id: number;
     uuid: string;

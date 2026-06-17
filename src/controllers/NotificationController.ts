@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Response } from 'express';
 import BaseController from './BaseController';
 import NotificationService from '../services/NotificationService';

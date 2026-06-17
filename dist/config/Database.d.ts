@@ -6,5 +6,7 @@ declare class DatabaseConfig {
     static closeConnection(): Promise<void>;
     static syncDatabase(force?: boolean): Promise<void>;
 }
-export default DatabaseConfig;
+export { DatabaseConfig };
+declare const _default: Sequelize;
+export default _default;
 //# sourceMappingURL=Database.d.ts.map

@@ -38,7 +38,7 @@ SubmittedAssignment.init({
         allowNull: true,
     },
     submissionText: {
-        type: sequelize_1.DataTypes.LONGTEXT,
+        type: sequelize_1.DataTypes.TEXT('long'),
         allowNull: true,
     },
     attachmentUrl: {
@@ -58,7 +58,7 @@ SubmittedAssignment.init({
         allowNull: true,
     },
     feedback: {
-        type: sequelize_1.DataTypes.LONGTEXT,
+        type: sequelize_1.DataTypes.TEXT('long'),
         allowNull: true,
     },
     gradedBy: {

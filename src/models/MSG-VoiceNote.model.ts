@@ -81,7 +81,7 @@ VoiceNote.init(
       comment: 'File size in bytes',
     },
     transcription: {
-      type: DataTypes.LONGTEXT,
+      type: DataTypes.TEXT('long'),
       allowNull: true,
     },
     transcriptionStatus: {

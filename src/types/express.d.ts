@@ -8,7 +8,9 @@ export interface AuthenticatedUser {
   uuid: string;
   email: string;
   name: string;
-  departmentId: number;
+  firstName?: string;
+  lastName?: string;
+  departmentId: number | null;
   departmentUuid: string;
   roles: string[];
   permissions: string[];

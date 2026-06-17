@@ -63,7 +63,6 @@ export class PasswordReset
           defaultValue: () => uuidv4(),
           allowNull: false,
           unique: true,
-          index: true,
         },
         userId: {
           type: DataTypes.BIGINT.UNSIGNED,
@@ -74,7 +73,6 @@ export class PasswordReset
           },
           onDelete: 'CASCADE',
           onUpdate: 'CASCADE',
-          index: true,
         },
         email: {
           type: DataTypes.STRING(255),
@@ -91,7 +89,6 @@ export class PasswordReset
           allowNull: false,
           comment: 'SHA256 hashed token for storage',
           unique: true,
-          index: true,
         },
         ipAddress: {
           type: DataTypes.STRING(45),
@@ -107,7 +104,6 @@ export class PasswordReset
           type: DataTypes.BOOLEAN,
           defaultValue: false,
           allowNull: false,
-          index: true,
           comment: 'Whether reset token has been used',
         },
         usedAt: {
@@ -118,7 +114,6 @@ export class PasswordReset
         expiresAt: {
           type: DataTypes.DATE,
           allowNull: false,
-          index: true,
           comment: 'Token expiration timestamp',
         },
         deletedAt: {

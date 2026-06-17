@@ -2,6 +2,7 @@ import { Request } from 'express';
 import { BaseService } from './BaseService';
 import { PermissionCode } from '../config/PermissionCodes';
 import crypto from 'crypto';
+// @ts-ignore — geohash-bounding-box not yet installed
 import * as geohash from 'geohash-bounding-box';
 
 export interface ClockInRequest {

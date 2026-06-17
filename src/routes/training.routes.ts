@@ -157,7 +157,7 @@ router.put('/:id/attendance/:attendanceId', AuthMiddleware.requirePermission('HR
   if (!record) return ResponseFormatter.error(res, 'Attendance record not found', 404);
 
   const { status, notes } = req.body;
-  await record.update({ status, notes });
+  await (record as any).update({ status, notes });
   ResponseFormatter.success(res, record, 'Attendance updated');
 }));
 

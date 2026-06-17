@@ -1,7 +1,7 @@
 export declare abstract class BaseService {
-    protected checkPermission(userId: bigint, permissionCode: string, userRepo: any): Promise<boolean>;
-    protected checkAnyPermission(userId: bigint, permissionCodes: string[], userRepo: any): Promise<boolean>;
-    protected checkAllPermissions(userId: bigint, permissionCodes: string[], userRepo: any): Promise<boolean>;
+    protected checkPermission(reqOrUserId: any, permissionCode: string, userRepo?: any): Promise<boolean>;
+    protected checkAnyPermission(userId: any, permissionCodes: string[], userRepo?: any): Promise<boolean>;
+    protected checkAllPermissions(userId: any, permissionCodes: string[], userRepo?: any): Promise<boolean>;
     protected getScopeFilter(userScope: 'own' | 'own_department' | 'all', userId: bigint, departmentId?: bigint): any;
     protected createAuditLog(auditRepo: any, data: {
         userId: bigint;

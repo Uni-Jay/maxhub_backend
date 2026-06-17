@@ -25,10 +25,11 @@ class AuthMiddleware {
                 id: decoded.id,
                 uuid: decoded.uuid,
                 email: decoded.email,
+                name: decoded.name || '',
+                departmentId: decoded.departmentId || null,
+                departmentUuid: decoded.departmentUuid || '',
                 roles: decoded.roles || [],
                 permissions: decoded.permissions || [],
-                staffId: decoded.staffId,
-                departmentId: decoded.departmentId,
             };
             next();
         }
@@ -56,10 +57,11 @@ class AuthMiddleware {
                 id: decoded.id,
                 uuid: decoded.uuid,
                 email: decoded.email,
+                name: decoded.name || '',
+                departmentId: decoded.departmentId || null,
+                departmentUuid: decoded.departmentUuid || '',
                 roles: decoded.roles || [],
                 permissions: decoded.permissions || [],
-                staffId: decoded.staffId,
-                departmentId: decoded.departmentId,
             };
             next();
         }

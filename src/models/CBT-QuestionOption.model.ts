@@ -1,4 +1,4 @@
-import { DataTypes, Model } from 'sequelize';
+﻿import { DataTypes, Model } from 'sequelize';
 import sequelize from '../config/Database';
 
 /**
@@ -52,7 +52,7 @@ QuestionOption.init(
       allowNull: false,
     },
     optionText: {
-      type: DataTypes.LONGTEXT,
+      type: DataTypes.TEXT('long'),
       allowNull: false,
     },
     isCorrect: {

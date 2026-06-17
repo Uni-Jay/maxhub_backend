@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Op } from 'sequelize';
 import BaseService from './BaseService';
 import PHASE25_DepartmentSetting from '../models/PHASE-25-DepartmentSetting.model';

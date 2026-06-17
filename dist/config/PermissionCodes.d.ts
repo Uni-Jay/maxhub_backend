@@ -482,7 +482,6 @@ export declare enum PermissionCode {
     LMS_PROGRESS_READ_ALL = "lms.progress.read.all",
     LMS_PROGRESS_READ_OWN = "lms.progress.read.own",
     LMS_CERTIFICATE_AWARD_ALL = "lms.certificate.award.all",
-    LMS_CERTIFICATE_READ_OWN = "lms.certificate.read.own",
     LMS_CERTIFICATE_DOWNLOAD_OWN = "lms.certificate.download.own",
     CBT_QUESTION_CREATE_ALL = "cbt.question.create.all",
     CBT_QUESTION_READ_ALL = "cbt.question.read.all",

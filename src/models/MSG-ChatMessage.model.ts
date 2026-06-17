@@ -67,7 +67,7 @@ ChatMessage.init(
       comment: 'FK to Staff',
     },
     messageText: {
-      type: DataTypes.LONGTEXT,
+      type: DataTypes.TEXT('long'),
       allowNull: false,
     },
     messageType: {

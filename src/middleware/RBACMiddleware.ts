@@ -227,7 +227,7 @@ export class RBACMiddleware {
           });
         }
 
-        if (BigInt(resourceDeptId) !== BigInt(req.user.departmentId)) {
+        if (BigInt(resourceDeptId) !== BigInt(req.user.departmentId ?? 0)) {
           return res.status(403).json({
             success: false,
             message: 'Forbidden - Cross-department access not allowed',

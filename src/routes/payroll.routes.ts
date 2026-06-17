@@ -357,7 +357,7 @@ router.post(
     }
 
     // Set period to Processing immediately
-    await period.update({ status: 'Processing', processedBy: req.user!.id });
+    await period.update({ status: 'Processing', processedBy: req.user!.id as any });
 
     // Fetch all active staff
     const activeStaff = await Staff.findAll({

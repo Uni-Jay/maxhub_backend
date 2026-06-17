@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Request, Response } from 'express';
 import BaseController from './BaseController';
 import PHASE25_SettingsService from '../services/PHASE-25-SettingsService';

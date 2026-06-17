@@ -8,7 +8,7 @@ import { PasswordReset } from '@models/PasswordReset.model';
 import JWTService from './JWTService';
 import OTPService from './OTPService';
 import PasswordService from './PasswordService';
-import RBACService from './RBACService';
+import { RBACService } from './RBACService';
 import { sendOTPEmail } from './CommunicationService';
 import { PermissionCode } from '@config/PermissionCodes';
 import {
@@ -89,7 +89,7 @@ export class AuthenticationService {
     // Reset login attempts on successful login
     await user.update({
       loginAttempts: 0,
-      lockedUntil: null,
+      lockedUntil: null as any,
       lastLoginAt: new Date(),
     });
 
@@ -112,7 +112,8 @@ export class AuthenticationService {
       name: `${user.firstName} ${user.lastName}`,
       firstName: user.firstName,
       lastName: user.lastName,
-      departmentId: user.departmentId ? Number(user.departmentId) : null,
+      departmentId: (user as any).departmentId ? Number((user as any).departmentId) : null,
+      departmentUuid: (user as any).departmentUuid || '',
       roles: roles.map((r: any) => r.code),
       permissions: permCodes,
     };
@@ -131,15 +132,10 @@ export class AuthenticationService {
     // Create session
     const session = await Session.create({
       userId: user.id,
-      token: accessToken,
       refreshToken,
-      deviceId: deviceId || 'unknown',
-      ipAddress: payload.deviceId, // In real app, get from request context
+      ipAddress: payload.deviceId || 'unknown',
       userAgent: deviceName || 'unknown',
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
-      refreshExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      isActive: true,
-      lastActivityAt: new Date(),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days (refresh window)
     });
 
     // Track device
@@ -147,6 +143,8 @@ export class AuthenticationService {
       await DeviceLog.findOrCreate({
         where: { userId: user.id, deviceId },
         defaults: {
+          userId: user.id,
+          deviceId: deviceId as string,
           deviceName: deviceName,
           deviceType: 'unknown',
           ipAddress: payload.deviceId || 'unknown',
@@ -204,14 +202,14 @@ export class AuthenticationService {
     // Validate password strength
     const passwordStrength = PasswordService.checkPasswordStrength(password);
     if (!passwordStrength.isStrong) {
-      throw new ValidationError('Password is not strong enough', passwordStrength.feedback);
+      throw new ValidationError('Password is not strong enough', passwordStrength.feedback as any);
     }
 
     // Hash password
     const passwordHash = await PasswordService.hashPassword(password);
 
     // Create user with default role (STAFF)
-    const user = await User.create({
+    const user = await (User as any).create({
       firstName,
       lastName,
       email,
@@ -267,6 +265,7 @@ export class AuthenticationService {
       firstName,
       lastName,
       departmentId: departmentId ? Number(departmentId) : null,
+      departmentUuid: '',
       roles: roles.map((r: any) => r.code),
       permissions: permCodes,
     };
@@ -276,12 +275,8 @@ export class AuthenticationService {
 
     const session = await Session.create({
       userId: user.id,
-      token: accessToken,
       refreshToken,
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-      refreshExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      isActive: true,
-      lastActivityAt: new Date(),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 
     return {
@@ -300,10 +295,7 @@ export class AuthenticationService {
     const session = await Session.findOne({ where: { uuid: sessionId } });
 
     if (session) {
-      await session.update({
-        isActive: false,
-        revokedAt: new Date(),
-      });
+      await session.destroy();
     }
   }
 
@@ -319,10 +311,10 @@ export class AuthenticationService {
 
     // Find session
     const session = await Session.findOne({
-      where: { refreshToken, isActive: true },
+      where: { refreshToken },
     });
 
-    if (!session || session.refreshExpiresAt < new Date()) {
+    if (!session || session.expiresAt < new Date()) {
       throw new UnauthorizedError('Refresh token expired');
     }
 
@@ -354,18 +346,17 @@ export class AuthenticationService {
       name: `${user.firstName} ${user.lastName}`,
       firstName: user.firstName,
       lastName: user.lastName,
-      departmentId: user.departmentId ? Number(user.departmentId) : null,
+      departmentId: (user as any).departmentId ? Number((user as any).departmentId) : null,
+      departmentUuid: (user as any).departmentUuid || '',
       roles: roles.map((r: any) => r.code),
       permissions: permCodes,
     };
 
     const newAccessToken = JWTService.generateAccessToken(authenticatedUser);
 
-    // Update session
+    // Update session expiry
     await session.update({
-      token: newAccessToken,
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-      lastActivityAt: new Date(),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 
     return {
@@ -440,7 +431,7 @@ export class AuthenticationService {
 
     const passwordStrength = PasswordService.checkPasswordStrength(newPassword);
     if (!passwordStrength.isStrong) {
-      throw new ValidationError('Password is not strong enough', passwordStrength.feedback);
+      throw new ValidationError('Password is not strong enough', passwordStrength.feedback as any);
     }
 
     const passwordHash = await PasswordService.hashPassword(newPassword);
@@ -551,7 +542,8 @@ export class AuthenticationService {
       name: `${user.firstName} ${user.lastName}`,
       firstName: user.firstName,
       lastName: user.lastName,
-      departmentId: user.departmentId ? Number(user.departmentId) : null,
+      departmentId: (user as any).departmentId ? Number((user as any).departmentId) : null,
+      departmentUuid: (user as any).departmentUuid || '',
       roles: roles.map((r: any) => r.code),
       permissions: permCodes,
     };
@@ -647,7 +639,7 @@ export class AuthenticationService {
     } else if (method === 'SMS') {
       const user = await User.findByPk(userId);
       if (!user || !user.phone) {
-        throw new ValidationError('Phone number not provided', ['Phone number required for SMS 2FA']);
+        throw new ValidationError('Phone number not provided', ['Phone number required for SMS 2FA'] as any);
       }
 
       await TwoFactorAuth.create({
@@ -663,7 +655,7 @@ export class AuthenticationService {
       };
     }
 
-    throw new ValidationError('Invalid 2FA method', ['Only TOTP and SMS are supported']);
+    throw new ValidationError('Invalid 2FA method', ['Only TOTP and SMS are supported'] as any);
   }
 
   /**

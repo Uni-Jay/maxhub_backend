@@ -169,7 +169,7 @@ class RBACMiddleware {
                         message: `Missing department ID parameter: ${departmentParamName}`,
                     });
                 }
-                if (BigInt(resourceDeptId) !== BigInt(req.user.departmentId)) {
+                if (BigInt(resourceDeptId) !== BigInt(req.user.departmentId ?? 0)) {
                     return res.status(403).json({
                         success: false,
                         message: 'Forbidden - Cross-department access not allowed',

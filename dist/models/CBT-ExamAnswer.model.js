@@ -30,7 +30,7 @@ ExamAnswer.init({
         comment: 'FK to Question',
     },
     questionText: {
-        type: sequelize_1.DataTypes.LONGTEXT,
+        type: sequelize_1.DataTypes.TEXT('long'),
         allowNull: false,
     },
     marksAllocated: {
@@ -38,7 +38,7 @@ ExamAnswer.init({
         allowNull: false,
     },
     studentAnswer: {
-        type: sequelize_1.DataTypes.LONGTEXT,
+        type: sequelize_1.DataTypes.TEXT('long'),
         allowNull: true,
     },
     isCorrect: {
@@ -63,7 +63,7 @@ ExamAnswer.init({
         allowNull: true,
     },
     manualFeedback: {
-        type: sequelize_1.DataTypes.LONGTEXT,
+        type: sequelize_1.DataTypes.TEXT('long'),
         allowNull: true,
     },
     sequence: {

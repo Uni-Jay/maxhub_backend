@@ -86,4 +86,5 @@ class DatabaseConfig {
   }
 }
 
-export default DatabaseConfig;
+export { DatabaseConfig };
+export default DatabaseConfig.getInstance();

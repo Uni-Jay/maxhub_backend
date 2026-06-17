@@ -205,7 +205,7 @@ router.patch('/conversations/:convId/messages/:msgId/react', ErrorMiddleware.asy
     reactions[emoji] = [...users, user.id];
   }
 
-  await message.update({ reactions: { ...reactions } });
+  await message.update({ reactions: { ...reactions } as any });
   ResponseFormatter.success(res, message, 'Reaction updated');
 }));
 

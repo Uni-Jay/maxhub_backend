@@ -52,7 +52,7 @@ router.get('/analytics/summary', ErrorMiddleware.asyncHandler(async (req: Reques
   });
 
   const participants = await MeetingParticipant.findAll({
-    where: { joinedAt: { [Op.ne]: null } },
+    where: { joinedAt: { [Op.ne]: null as any } },
     attributes: ['durationSeconds'],
   });
 

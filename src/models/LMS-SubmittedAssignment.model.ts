@@ -1,4 +1,4 @@
-import { DataTypes, Model } from 'sequelize';
+﻿import { DataTypes, Model } from 'sequelize';
 import sequelize from '../config/Database';
 
 /**
@@ -80,7 +80,7 @@ SubmittedAssignment.init(
       allowNull: true,
     },
     submissionText: {
-      type: DataTypes.LONGTEXT,
+      type: DataTypes.TEXT('long'),
       allowNull: true,
     },
     attachmentUrl: {
@@ -100,7 +100,7 @@ SubmittedAssignment.init(
       allowNull: true,
     },
     feedback: {
-      type: DataTypes.LONGTEXT,
+      type: DataTypes.TEXT('long'),
       allowNull: true,
     },
     gradedBy: {

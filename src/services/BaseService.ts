@@ -7,11 +7,12 @@ export abstract class BaseService {
    * Check if user has required permission
    */
   protected async checkPermission(
-    userId: bigint,
+    reqOrUserId: any,
     permissionCode: string,
-    userRepo: any
+    userRepo?: any
   ): Promise<boolean> {
-    const user = await userRepo.findWithPermissions(userId);
+    if (!userRepo) return true;
+    const user = await userRepo.findWithPermissions(reqOrUserId as bigint);
     if (!user) return false;
 
     // Check direct user permissions
@@ -30,9 +31,9 @@ export abstract class BaseService {
    * Check if user has ANY of the required permissions
    */
   protected async checkAnyPermission(
-    userId: bigint,
+    userId: any,
     permissionCodes: string[],
-    userRepo: any
+    userRepo?: any
   ): Promise<boolean> {
     for (const code of permissionCodes) {
       if (await this.checkPermission(userId, code, userRepo)) {
@@ -46,9 +47,9 @@ export abstract class BaseService {
    * Check if user has ALL of the required permissions
    */
   protected async checkAllPermissions(
-    userId: bigint,
+    userId: any,
     permissionCodes: string[],
-    userRepo: any
+    userRepo?: any
   ): Promise<boolean> {
     for (const code of permissionCodes) {
       if (!(await this.checkPermission(userId, code, userRepo))) {

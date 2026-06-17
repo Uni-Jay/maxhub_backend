@@ -31,7 +31,7 @@ router.get('/stats/overview', ErrorMiddleware.asyncHandler(async (req: Request, 
   const [total, active, lowStockItems] = await Promise.all([
     Warehouse.count(),
     Warehouse.count({ where: { isActive: true } }),
-    WarehouseStock.count({ where: { isBelowReorderLevel: true } }),
+    (WarehouseStock as any).count({ where: { isBelowReorderLevel: true } }),
   ]);
   ResponseFormatter.success(res, { total, active, lowStockItems });
 }));
@@ -45,7 +45,7 @@ router.get('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Respon
 
   const [totalSkus, lowStockItems, stockData] = await Promise.all([
     WarehouseStock.count({ where: { warehouseId: warehouse.id } }),
-    WarehouseStock.count({ where: { warehouseId: warehouse.id, isBelowReorderLevel: true } }),
+    (WarehouseStock as any).count({ where: { warehouseId: warehouse.id, isBelowReorderLevel: true } }),
     WarehouseStock.sum('quantity' as any, { where: { warehouseId: warehouse.id } }),
   ]);
 

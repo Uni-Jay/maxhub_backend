@@ -1,4 +1,4 @@
-import { DataTypes, Model } from 'sequelize';
+﻿import { DataTypes, Model } from 'sequelize';
 import sequelize from '../config/Database';
 
 /**
@@ -64,7 +64,7 @@ Question.init(
       comment: 'FK to QuestionBank',
     },
     questionText: {
-      type: DataTypes.LONGTEXT,
+      type: DataTypes.TEXT('long'),
       allowNull: false,
     },
     questionType: {
@@ -88,7 +88,7 @@ Question.init(
       allowNull: true,
     },
     explanation: {
-      type: DataTypes.LONGTEXT,
+      type: DataTypes.TEXT('long'),
       allowNull: true,
     },
     imageUrl: {

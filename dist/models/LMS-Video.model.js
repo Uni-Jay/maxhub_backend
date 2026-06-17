@@ -51,7 +51,7 @@ Video.init({
         defaultValue: 'Local',
     },
     transcription: {
-        type: sequelize_1.DataTypes.LONGTEXT,
+        type: sequelize_1.DataTypes.TEXT('long'),
         allowNull: true,
     },
     subtitles: {

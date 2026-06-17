@@ -38,7 +38,7 @@ Assignment.init({
         allowNull: true,
     },
     instructions: {
-        type: sequelize_1.DataTypes.LONGTEXT,
+        type: sequelize_1.DataTypes.TEXT('long'),
         allowNull: true,
     },
     dueDate: {

@@ -70,7 +70,6 @@ export class TwoFactorAuth
           defaultValue: () => uuidv4(),
           allowNull: false,
           unique: true,
-          index: true,
         },
         userId: {
           type: DataTypes.BIGINT.UNSIGNED,
@@ -81,7 +80,6 @@ export class TwoFactorAuth
           },
           onDelete: 'CASCADE',
           onUpdate: 'CASCADE',
-          index: true,
         },
         method: {
           type: DataTypes.ENUM('TOTP', 'SMS', 'EMAIL', 'BACKUP_CODES'),
@@ -107,7 +105,6 @@ export class TwoFactorAuth
           type: DataTypes.BOOLEAN,
           defaultValue: false,
           allowNull: false,
-          index: true,
         },
         isVerified: {
           type: DataTypes.BOOLEAN,

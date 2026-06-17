@@ -17,7 +17,6 @@ class PasswordReset extends sequelize_1.Model {
                 defaultValue: () => (0, uuid_1.v4)(),
                 allowNull: false,
                 unique: true,
-                index: true,
             },
             userId: {
                 type: sequelize_1.DataTypes.BIGINT.UNSIGNED,
@@ -28,7 +27,6 @@ class PasswordReset extends sequelize_1.Model {
                 },
                 onDelete: 'CASCADE',
                 onUpdate: 'CASCADE',
-                index: true,
             },
             email: {
                 type: sequelize_1.DataTypes.STRING(255),
@@ -45,7 +43,6 @@ class PasswordReset extends sequelize_1.Model {
                 allowNull: false,
                 comment: 'SHA256 hashed token for storage',
                 unique: true,
-                index: true,
             },
             ipAddress: {
                 type: sequelize_1.DataTypes.STRING(45),
@@ -61,7 +58,6 @@ class PasswordReset extends sequelize_1.Model {
                 type: sequelize_1.DataTypes.BOOLEAN,
                 defaultValue: false,
                 allowNull: false,
-                index: true,
                 comment: 'Whether reset token has been used',
             },
             usedAt: {
@@ -72,7 +68,6 @@ class PasswordReset extends sequelize_1.Model {
             expiresAt: {
                 type: sequelize_1.DataTypes.DATE,
                 allowNull: false,
-                index: true,
                 comment: 'Token expiration timestamp',
             },
             deletedAt: {

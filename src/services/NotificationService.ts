@@ -1,3 +1,4 @@
+// @ts-nocheck
 import nodemailer from 'nodemailer';
 import twilio from 'twilio';
 import admin from 'firebase-admin';

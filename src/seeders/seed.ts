@@ -497,7 +497,7 @@ async function main() {
 
     if (!created) {
       // Ensure password is always Demo@12345! even if the account already existed
-      await demoUser.update({ passwordHash: demoPasswordHash, loginAttempts: 0, lockedUntil: null });
+      await demoUser.update({ passwordHash: demoPasswordHash, loginAttempts: 0, lockedUntil: null as any });
     }
     const roleId = roleMap.get(demo.role);
     if (roleId) {
@@ -575,7 +575,7 @@ async function main() {
         defaults: { ...co, settings: {} },
       })
     );
-    companyMap.set(co.code, company.id);
+    companyMap.set(co.code, (company as any).id);
     if (created) {
       compCreated++;
       console.log(`   ✨ Created → ${co.name} (${co.code})`);
@@ -608,7 +608,7 @@ async function main() {
   );
 
   if (!studentCreated) {
-    await studentUser.update({ passwordHash: studentPasswordHash, loginAttempts: 0, lockedUntil: null });
+    await studentUser.update({ passwordHash: studentPasswordHash, loginAttempts: 0, lockedUntil: null as any });
   }
 
   const studentRoleId = roleMap.get(RoleCode.STUDENT);

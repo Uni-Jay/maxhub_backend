@@ -17,7 +17,6 @@ class TwoFactorAuth extends sequelize_1.Model {
                 defaultValue: () => (0, uuid_1.v4)(),
                 allowNull: false,
                 unique: true,
-                index: true,
             },
             userId: {
                 type: sequelize_1.DataTypes.BIGINT.UNSIGNED,
@@ -28,7 +27,6 @@ class TwoFactorAuth extends sequelize_1.Model {
                 },
                 onDelete: 'CASCADE',
                 onUpdate: 'CASCADE',
-                index: true,
             },
             method: {
                 type: sequelize_1.DataTypes.ENUM('TOTP', 'SMS', 'EMAIL', 'BACKUP_CODES'),
@@ -54,7 +52,6 @@ class TwoFactorAuth extends sequelize_1.Model {
                 type: sequelize_1.DataTypes.BOOLEAN,
                 defaultValue: false,
                 allowNull: false,
-                index: true,
             },
             isVerified: {
                 type: sequelize_1.DataTypes.BOOLEAN,

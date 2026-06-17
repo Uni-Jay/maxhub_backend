@@ -1,4 +1,4 @@
-import { DataTypes, Model } from 'sequelize';
+﻿import { DataTypes, Model } from 'sequelize';
 import sequelize from '../config/Database';
 
 /**
@@ -67,7 +67,7 @@ ExamAnswer.init(
       comment: 'FK to Question',
     },
     questionText: {
-      type: DataTypes.LONGTEXT,
+      type: DataTypes.TEXT('long'),
       allowNull: false,
     },
     marksAllocated: {
@@ -75,7 +75,7 @@ ExamAnswer.init(
       allowNull: false,
     },
     studentAnswer: {
-      type: DataTypes.LONGTEXT,
+      type: DataTypes.TEXT('long'),
       allowNull: true,
     },
     isCorrect: {
@@ -100,7 +100,7 @@ ExamAnswer.init(
       allowNull: true,
     },
     manualFeedback: {
-      type: DataTypes.LONGTEXT,
+      type: DataTypes.TEXT('long'),
       allowNull: true,
     },
     sequence: {

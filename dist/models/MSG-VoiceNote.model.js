@@ -44,7 +44,7 @@ VoiceNote.init({
         comment: 'File size in bytes',
     },
     transcription: {
-        type: sequelize_1.DataTypes.LONGTEXT,
+        type: sequelize_1.DataTypes.TEXT('long'),
         allowNull: true,
     },
     transcriptionStatus: {

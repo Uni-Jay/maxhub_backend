@@ -84,7 +84,6 @@ export class DeviceLog
           defaultValue: () => uuidv4(),
           allowNull: false,
           unique: true,
-          index: true,
         },
         userId: {
           type: DataTypes.BIGINT.UNSIGNED,
@@ -95,7 +94,6 @@ export class DeviceLog
           },
           onDelete: 'CASCADE',
           onUpdate: 'CASCADE',
-          index: true,
         },
         deviceId: {
           type: DataTypes.STRING(255),
@@ -134,7 +132,6 @@ export class DeviceLog
           type: DataTypes.STRING(45),
           allowNull: false,
           comment: 'IPv4 or IPv6 address',
-          index: true,
         },
         city: {
           type: DataTypes.STRING(100),
@@ -173,7 +170,6 @@ export class DeviceLog
           type: DataTypes.DATE,
           defaultValue: () => new Date(),
           allowNull: false,
-          index: true,
           comment: 'Last activity timestamp on this device',
         },
         isTrusted: {

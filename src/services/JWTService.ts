@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { AuthenticatedUser } from '@types/express';
+import { AuthenticatedUser } from '../types/express';
 
 export interface JWTPayload {
   id: number;
@@ -37,7 +37,7 @@ export class JWTService {
     };
 
     return jwt.sign(payload, this.accessTokenSecret, {
-      expiresIn: this.accessTokenExpiry,
+      expiresIn: this.accessTokenExpiry as any,
       algorithm: 'HS256',
     });
   }
@@ -53,7 +53,7 @@ export class JWTService {
     };
 
     return jwt.sign(payload, this.refreshTokenSecret, {
-      expiresIn: this.refreshTokenExpiry,
+      expiresIn: this.refreshTokenExpiry as any,
       algorithm: 'HS256',
     });
   }

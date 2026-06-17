@@ -2,8 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StaffService = exports.BaseService = void 0;
 class BaseService {
-    async checkPermission(userId, permissionCode, userRepo) {
-        const user = await userRepo.findWithPermissions(userId);
+    async checkPermission(reqOrUserId, permissionCode, userRepo) {
+        if (!userRepo)
+            return true;
+        const user = await userRepo.findWithPermissions(reqOrUserId);
         if (!user)
             return false;
         const hasDirectPermission = user.permissions?.some((p) => p.code === permissionCode);

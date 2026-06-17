@@ -17,7 +17,6 @@ class DeviceLog extends sequelize_1.Model {
                 defaultValue: () => (0, uuid_1.v4)(),
                 allowNull: false,
                 unique: true,
-                index: true,
             },
             userId: {
                 type: sequelize_1.DataTypes.BIGINT.UNSIGNED,
@@ -28,7 +27,6 @@ class DeviceLog extends sequelize_1.Model {
                 },
                 onDelete: 'CASCADE',
                 onUpdate: 'CASCADE',
-                index: true,
             },
             deviceId: {
                 type: sequelize_1.DataTypes.STRING(255),
@@ -67,7 +65,6 @@ class DeviceLog extends sequelize_1.Model {
                 type: sequelize_1.DataTypes.STRING(45),
                 allowNull: false,
                 comment: 'IPv4 or IPv6 address',
-                index: true,
             },
             city: {
                 type: sequelize_1.DataTypes.STRING(100),
@@ -106,7 +103,6 @@ class DeviceLog extends sequelize_1.Model {
                 type: sequelize_1.DataTypes.DATE,
                 defaultValue: () => new Date(),
                 allowNull: false,
-                index: true,
                 comment: 'Last activity timestamp on this device',
             },
             isTrusted: {

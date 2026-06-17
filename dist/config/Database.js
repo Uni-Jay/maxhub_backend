@@ -33,6 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.DatabaseConfig = void 0;
 const sequelize_1 = require("sequelize");
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
@@ -96,5 +97,6 @@ class DatabaseConfig {
         }
     }
 }
-exports.default = DatabaseConfig;
+exports.DatabaseConfig = DatabaseConfig;
+exports.default = DatabaseConfig.getInstance();
 //# sourceMappingURL=Database.js.map
