@@ -19,7 +19,7 @@ router.get('/attendance', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (
         include: [{
                 model: Staff_model_1.Staff,
                 attributes: ['firstName', 'lastName', 'employeeId'],
-                include: [{ model: Department_model_1.Department, attributes: ['name'] }],
+                include: [{ model: Department_model_1.Department, as: 'department', attributes: ['name'] }],
             }],
     });
     const staffMap = new Map();

@@ -23,7 +23,7 @@ router.get('/attendance', ErrorMiddleware.asyncHandler(async (req: Request, res:
     include: [{
       model: Staff,
       attributes: ['firstName', 'lastName', 'employeeId'],
-      include: [{ model: Department, attributes: ['name'] }],
+      include: [{ model: Department, as: 'department', attributes: ['name'] }],
     }],
   });
 

@@ -123,14 +123,14 @@ export class AssociationManager {
 
     // Staff associations
     Staff.belongsTo(User, { foreignKey: 'userId' });
-    Staff.belongsTo(Department, { foreignKey: 'departmentId' });
+    Staff.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
     Staff.belongsToMany(Department, { through: StaffDepartment, foreignKey: 'staffId', otherKey: 'departmentId', as: 'departments' });
     Staff.hasMany(StaffDepartment, { foreignKey: 'staffId', as: 'staffDepartments' });
     Department.belongsToMany(Staff, { through: StaffDepartment, foreignKey: 'departmentId', otherKey: 'staffId', as: 'staffMembers' });
     Department.hasMany(StaffDepartment, { foreignKey: 'departmentId', as: 'staffDepartments' });
     StaffDepartment.belongsTo(Staff, { foreignKey: 'staffId' });
     StaffDepartment.belongsTo(Department, { foreignKey: 'departmentId' });
-    Staff.belongsTo(Designation, { foreignKey: 'designationId' });
+    Staff.belongsTo(Designation, { foreignKey: 'designationId', as: 'designation' });
     Staff.belongsTo(Location, { foreignKey: 'locationId' });
     Staff.belongsTo(Staff, { foreignKey: 'reportingManagerId', as: 'reportingManager' });
     Staff.hasMany(Staff, { foreignKey: 'reportingManagerId', as: 'subordinates' });
@@ -237,14 +237,14 @@ export class AssociationManager {
 
     // Course associations
     Course.belongsTo(Staff, { foreignKey: 'instructorId', as: 'instructor' });
-    Course.belongsTo(Department, { foreignKey: 'departmentId' });
+    Course.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
     Course.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
 
     // ======== RECRUITMENT ========
 
     // JobPosting associations
-    JobPosting.belongsTo(Department, { foreignKey: 'departmentId' });
-    JobPosting.belongsTo(Designation, { foreignKey: 'designationId' });
+    JobPosting.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
+    JobPosting.belongsTo(Designation, { foreignKey: 'designationId', as: 'designation' });
     JobPosting.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
 
     // ======== STUDENT MANAGEMENT SYSTEM ========

@@ -47,9 +47,9 @@ const logging = process.env.NODE_ENV === 'production'
         ? console.log
         : false;
 const POOL = {
-    max: parseInt(process.env.DB_POOL_MAX || '20'),
-    min: parseInt(process.env.DB_POOL_MIN || '2'),
-    acquire: parseInt(process.env.DB_POOL_ACQUIRE || '60000'),
+    max: parseInt(process.env.DB_POOL_MAX || '5'),
+    min: parseInt(process.env.DB_POOL_MIN || '0'),
+    acquire: parseInt(process.env.DB_POOL_ACQUIRE || '30000'),
     idle: parseInt(process.env.DB_POOL_IDLE || '10000'),
 };
 const DEFINE = {

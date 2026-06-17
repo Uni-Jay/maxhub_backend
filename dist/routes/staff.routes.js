@@ -45,8 +45,8 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
     const { count, rows } = await Staff_model_1.Staff.findAndCountAll({
         where,
         include: [
-            { model: Department_model_1.Department, attributes: ['id', 'name', 'code'], required: false },
-            { model: Designation_model_1.Designation, attributes: ['id', 'name'], required: false },
+            { model: Department_model_1.Department, as: 'department', attributes: ['id', 'name', 'code'], required: false },
+            { model: Designation_model_1.Designation, as: 'designation', attributes: ['id', 'name'], required: false },
             { model: Branch_model_1.Branch, as: 'branch', attributes: ['id', 'uuid', 'branchCode', 'branchName'], required: false },
             { model: Unit_model_1.Unit, as: 'unit', attributes: ['id', 'uuid', 'code', 'name'], required: false },
         ],
@@ -61,8 +61,8 @@ router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, re
     const staff = await Staff_model_1.Staff.findOne({
         where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
         include: [
-            { model: Department_model_1.Department, attributes: ['id', 'name', 'code'] },
-            { model: Designation_model_1.Designation, attributes: ['id', 'name'] },
+            { model: Department_model_1.Department, as: 'department', attributes: ['id', 'name', 'code'] },
+            { model: Designation_model_1.Designation, as: 'designation', attributes: ['id', 'name'] },
             { model: Branch_model_1.Branch, as: 'branch', attributes: ['id', 'uuid', 'branchCode', 'branchName'], required: false },
             { model: Unit_model_1.Unit, as: 'unit', attributes: ['id', 'uuid', 'code', 'name'], required: false },
             {
