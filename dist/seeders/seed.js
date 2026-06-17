@@ -145,6 +145,13 @@ const MeetingParticipant_model_1 = require("../models/MeetingParticipant.model")
 const Call_model_1 = require("../models/Call.model");
 const Module_model_1 = require("../models/Module.model");
 const UserModulePermission_model_1 = require("../models/UserModulePermission.model");
+const TwoFactorAuth_model_1 = require("../models/TwoFactorAuth.model");
+const PasswordReset_model_1 = require("../models/PasswordReset.model");
+const DeviceLog_model_1 = require("../models/DeviceLog.model");
+const AIConversation_model_1 = require("../modules/ai/models/AIConversation.model");
+const AIMessage_model_1 = require("../modules/ai/models/AIMessage.model");
+const AIMeetingSummary_model_1 = require("../modules/ai/models/AIMeetingSummary.model");
+const AIReminder_model_1 = require("../modules/ai/models/AIReminder.model");
 const Associations_1 = require("../models/Associations");
 function parsePermissionCode(code) {
     const parts = code.split('.');
@@ -323,6 +330,13 @@ async function main() {
     Call_model_1.Call.initModel(sequelize);
     Module_model_1.AppModule.initModel(sequelize);
     UserModulePermission_model_1.UserModulePermission.initModel(sequelize);
+    TwoFactorAuth_model_1.TwoFactorAuth.initModel(sequelize);
+    PasswordReset_model_1.PasswordReset.initModel(sequelize);
+    DeviceLog_model_1.DeviceLog.initModel(sequelize);
+    AIConversation_model_1.AIConversation.initModel(sequelize);
+    AIMessage_model_1.AIMessage.initModel(sequelize);
+    AIMeetingSummary_model_1.AIMeetingSummary.initModel(sequelize);
+    AIReminder_model_1.AIReminder.initModel(sequelize);
     Associations_1.AssociationManager.initializeAssociations(sequelize);
     console.log('✅  Models initialized\n');
     console.log('🔄  Syncing database tables (force: drop + recreate)...');

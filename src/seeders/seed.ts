@@ -124,6 +124,13 @@ import { MeetingParticipant } from '../models/MeetingParticipant.model';
 import { Call } from '../models/Call.model';
 import { AppModule } from '../models/Module.model';
 import { UserModulePermission } from '../models/UserModulePermission.model';
+import { TwoFactorAuth } from '../models/TwoFactorAuth.model';
+import { PasswordReset } from '../models/PasswordReset.model';
+import { DeviceLog } from '../models/DeviceLog.model';
+import { AIConversation } from '../modules/ai/models/AIConversation.model';
+import { AIMessage } from '../modules/ai/models/AIMessage.model';
+import { AIMeetingSummary } from '../modules/ai/models/AIMeetingSummary.model';
+import { AIReminder } from '../modules/ai/models/AIReminder.model';
 import { AssociationManager } from '../models/Associations';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -327,6 +334,13 @@ async function main() {
   Call.initModel(sequelize);
   AppModule.initModel(sequelize);
   UserModulePermission.initModel(sequelize);
+  TwoFactorAuth.initModel(sequelize);
+  PasswordReset.initModel(sequelize);
+  DeviceLog.initModel(sequelize);
+  AIConversation.initModel(sequelize);
+  AIMessage.initModel(sequelize);
+  AIMeetingSummary.initModel(sequelize);
+  AIReminder.initModel(sequelize);
 
   AssociationManager.initializeAssociations(sequelize);
   console.log('✅  Models initialized\n');

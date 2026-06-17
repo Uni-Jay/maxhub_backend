@@ -108,7 +108,7 @@ class DatabaseConfig {
     static async syncDatabase(force = false) {
         try {
             const sequelize = DatabaseConfig.getInstance();
-            await sequelize.sync({ alter: !force, force });
+            await sequelize.sync({ alter: true });
             console.log('✅ Database schema synced');
         }
         catch (error) {
