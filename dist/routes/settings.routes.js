@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
-const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
+const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const router = (0, express_1.Router)();
 let settingsStore = {
     company: {

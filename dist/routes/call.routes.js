@@ -3,10 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
 const uuid_1 = require("uuid");
-const Call_model_1 = require("@models/Call.model");
-const User_model_1 = require("@models/User.model");
-const ResponseFormatter_1 = require("@utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const Call_model_1 = require("../models/Call.model");
+const User_model_1 = require("../models/User.model");
+const ResponseFormatter_1 = require("../utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const router = (0, express_1.Router)();
 router.post('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const caller = req.user;

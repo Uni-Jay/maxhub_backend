@@ -2,13 +2,13 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
-const ResponseFormatter_1 = require("@utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
-const AuthMiddleware_1 = require("@middleware/AuthMiddleware");
-const InventoryCategory_model_1 = require("@models/InventoryCategory.model");
-const InventoryItem_model_1 = require("@models/InventoryItem.model");
-const WarehouseStock_model_1 = require("@models/WarehouseStock.model");
-const Warehouse_model_1 = require("@models/Warehouse.model");
+const ResponseFormatter_1 = require("../utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
+const AuthMiddleware_1 = require("../middleware/AuthMiddleware");
+const InventoryCategory_model_1 = require("../models/InventoryCategory.model");
+const InventoryItem_model_1 = require("../models/InventoryItem.model");
+const WarehouseStock_model_1 = require("../models/WarehouseStock.model");
+const Warehouse_model_1 = require("../models/Warehouse.model");
 const router = (0, express_1.Router)();
 async function generateItemCode() {
     const last = await InventoryItem_model_1.InventoryItem.findOne({ order: [['id', 'DESC']], paranoid: false });

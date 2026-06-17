@@ -2,8 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const Designation_model_1 = require("../models/Designation.model");
-const ResponseFormatter_1 = require("@utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const ResponseFormatter_1 = require("../utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const router = (0, express_1.Router)();
 router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { departmentId, status } = req.query;

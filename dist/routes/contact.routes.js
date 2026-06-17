@@ -2,10 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
-const ResponseFormatter_1 = require("@utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
-const AuthMiddleware_1 = require("@middleware/AuthMiddleware");
-const Contact_model_1 = require("@models/Contact.model");
+const ResponseFormatter_1 = require("../utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
+const AuthMiddleware_1 = require("../middleware/AuthMiddleware");
+const Contact_model_1 = require("../models/Contact.model");
 const router = (0, express_1.Router)();
 async function generateContactCode() {
     const last = await Contact_model_1.Contact.findOne({ order: [['id', 'DESC']], paranoid: false });

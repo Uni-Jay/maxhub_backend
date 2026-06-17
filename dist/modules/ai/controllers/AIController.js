@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AIController = void 0;
-const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const ResponseFormatter_1 = require("../../../utils/ResponseFormatter");
 const OllamaAIService_1 = __importDefault(require("../services/OllamaAIService"));
 const OllamaProvider_1 = __importDefault(require("../providers/OllamaProvider"));
 function getUser(req) {

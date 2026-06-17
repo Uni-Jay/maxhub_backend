@@ -4,17 +4,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthenticationService = void 0;
-const User_model_1 = require("@models/User.model");
-const Permission_model_1 = require("@models/Permission.model");
-const Session_model_1 = require("@models/Session.model");
-const OTPVerification_model_1 = require("@models/OTPVerification.model");
-const TwoFactorAuth_model_1 = require("@models/TwoFactorAuth.model");
-const DeviceLog_model_1 = require("@models/DeviceLog.model");
+const User_model_1 = require("../models/User.model");
+const Permission_model_1 = require("../models/Permission.model");
+const Session_model_1 = require("../models/Session.model");
+const OTPVerification_model_1 = require("../models/OTPVerification.model");
+const TwoFactorAuth_model_1 = require("../models/TwoFactorAuth.model");
+const DeviceLog_model_1 = require("../models/DeviceLog.model");
 const JWTService_1 = __importDefault(require("./JWTService"));
 const OTPService_1 = __importDefault(require("./OTPService"));
 const PasswordService_1 = __importDefault(require("./PasswordService"));
 const CommunicationService_1 = require("./CommunicationService");
-const ErrorHandler_1 = require("@utils/ErrorHandler");
+const ErrorHandler_1 = require("../utils/ErrorHandler");
 class AuthenticationService {
     async login(payload) {
         const { email, password, deviceId, deviceName, rememberMe } = payload;

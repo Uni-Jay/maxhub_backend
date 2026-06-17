@@ -6,12 +6,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
 const uuid_1 = require("uuid");
-const Permission_model_1 = require("@models/Permission.model");
-const RolePermission_model_1 = require("@models/RolePermission.model");
-const Role_model_1 = require("@models/Role.model");
-const ResponseFormatter_1 = require("@utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
-const AuthMiddleware_1 = __importDefault(require("@middleware/AuthMiddleware"));
+const Permission_model_1 = require("../models/Permission.model");
+const RolePermission_model_1 = require("../models/RolePermission.model");
+const Role_model_1 = require("../models/Role.model");
+const ResponseFormatter_1 = require("../utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
+const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
 const router = (0, express_1.Router)();
 router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { page = 1, limit = 50, module: mod, action, isActive, search } = req.query;

@@ -4,8 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
-const AuthenticationService_1 = __importDefault(require("@services/AuthenticationService"));
-const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const AuthenticationService_1 = __importDefault(require("../services/AuthenticationService"));
+const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 class AuthController {
     static async login(req, res, next) {
         try {

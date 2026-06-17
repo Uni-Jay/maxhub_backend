@@ -2,9 +2,9 @@
 var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DashboardController = void 0;
-const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
-const ResponseFormatter_1 = require("@utils/ResponseFormatter");
-const PermissionCodes_1 = require("@config/PermissionCodes");
+const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
+const ResponseFormatter_1 = require("../utils/ResponseFormatter");
+const PermissionCodes_1 = require("../config/PermissionCodes");
 class DashboardController {
 }
 exports.DashboardController = DashboardController;

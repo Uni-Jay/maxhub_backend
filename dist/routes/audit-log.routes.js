@@ -2,8 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
-const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
-const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
+const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const router = (0, express_1.Router)();
 router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { action, module: mod, search, startDate, endDate } = req.query;
@@ -11,7 +11,7 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
     const limit = parseInt(req.query.limit ?? '20', 10);
     const offset = (page - 1) * limit;
     try {
-        const AuditLog = require('@models/AuditLog.model').default;
+        const AuditLog = require('../models/AuditLog.model').default;
         const where = {};
         if (action && action !== 'All')
             where.action = action;

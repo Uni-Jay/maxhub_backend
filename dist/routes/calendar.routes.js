@@ -3,8 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
 const uuid_1 = require("uuid");
-const ResponseFormatter_1 = require("@utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const ResponseFormatter_1 = require("../utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const router = (0, express_1.Router)();
 const NIGERIAN_HOLIDAYS = [
     { id: 'h1', title: "New Year's Day", date: '2025-01-01', type: 'Holiday', description: 'Nigerian public holiday' },

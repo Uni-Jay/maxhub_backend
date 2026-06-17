@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { PermissionCode } from '@config/PermissionCodes';
-import { RBACService } from '@services/RBACService';
+import { PermissionCode } from '../config/PermissionCodes';
+import { RBACService } from '../services/RBACService';
 import { Sequelize } from 'sequelize';
 export declare class RBACMiddleware {
     private rbacService;

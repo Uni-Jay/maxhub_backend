@@ -2,10 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
-const ResponseFormatter_1 = require("@utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
-const AuthMiddleware_1 = require("@middleware/AuthMiddleware");
-const Opportunity_model_1 = require("@models/Opportunity.model");
+const ResponseFormatter_1 = require("../utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
+const AuthMiddleware_1 = require("../middleware/AuthMiddleware");
+const Opportunity_model_1 = require("../models/Opportunity.model");
 const router = (0, express_1.Router)();
 async function generateOpportunityCode() {
     const last = await Opportunity_model_1.Opportunity.findOne({ order: [['id', 'DESC']], paranoid: false });

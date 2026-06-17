@@ -2,13 +2,13 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
-const ResponseFormatter_1 = require("@utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
-const AuthMiddleware_1 = require("@middleware/AuthMiddleware");
-const PayrollPeriod_model_1 = require("@models/PayrollPeriod.model");
-const EmployeeSalary_model_1 = require("@models/EmployeeSalary.model");
-const SalaryStructure_model_1 = require("@models/SalaryStructure.model");
-const Staff_model_1 = require("@models/Staff.model");
+const ResponseFormatter_1 = require("../utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
+const AuthMiddleware_1 = require("../middleware/AuthMiddleware");
+const PayrollPeriod_model_1 = require("../models/PayrollPeriod.model");
+const EmployeeSalary_model_1 = require("../models/EmployeeSalary.model");
+const SalaryStructure_model_1 = require("../models/SalaryStructure.model");
+const Staff_model_1 = require("../models/Staff.model");
 const router = (0, express_1.Router)();
 function zeroDec(val) {
     return Number(val) || 0;

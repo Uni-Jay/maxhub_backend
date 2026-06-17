@@ -3,11 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
 const uuid_1 = require("uuid");
-const Meeting_model_1 = require("@models/Meeting.model");
-const MeetingParticipant_model_1 = require("@models/MeetingParticipant.model");
-const User_model_1 = require("@models/User.model");
-const ResponseFormatter_1 = require("@utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const Meeting_model_1 = require("../models/Meeting.model");
+const MeetingParticipant_model_1 = require("../models/MeetingParticipant.model");
+const User_model_1 = require("../models/User.model");
+const ResponseFormatter_1 = require("../utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const router = (0, express_1.Router)();
 function makeRoomName(title, code) {
     return `MaxHub-${code}-${title.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 20)}`;

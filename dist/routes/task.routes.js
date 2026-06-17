@@ -2,11 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
-const ResponseFormatter_1 = require("@utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
-const Task_model_1 = require("@models/Task.model");
-const Project_model_1 = require("@models/Project.model");
-const Staff_model_1 = require("@models/Staff.model");
+const ResponseFormatter_1 = require("../utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
+const Task_model_1 = require("../models/Task.model");
+const Project_model_1 = require("../models/Project.model");
+const Staff_model_1 = require("../models/Staff.model");
 const router = (0, express_1.Router)();
 router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const page = req.pagination?.page || 1;
