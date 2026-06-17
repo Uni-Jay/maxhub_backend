@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
+const idOrUuid_1 = require("../utils/idOrUuid");
 const uuid_1 = require("uuid");
 const Permission_model_1 = require("../models/Permission.model");
 const RolePermission_model_1 = require("../models/RolePermission.model");
@@ -45,7 +46,7 @@ router.get('/modules', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req
 }));
 router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const permission = await Permission_model_1.Permission.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!permission)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Permission not found', 404);
@@ -69,7 +70,7 @@ router.post('/', AuthMiddleware_1.default.requirePermission('RBAC.PERMISSION.CRE
     ResponseFormatter_1.ResponseFormatter.success(res, permission, 'Permission created', 201);
 }));
 router.put('/:id', AuthMiddleware_1.default.requirePermission('RBAC.PERMISSION.UPDATE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const permission = await Permission_model_1.Permission.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const permission = await Permission_model_1.Permission.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!permission)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Permission not found', 404);
     const { name, description, isActive } = req.body;
@@ -77,7 +78,7 @@ router.put('/:id', AuthMiddleware_1.default.requirePermission('RBAC.PERMISSION.U
     ResponseFormatter_1.ResponseFormatter.success(res, permission, 'Permission updated');
 }));
 router.delete('/:id', AuthMiddleware_1.default.requirePermission('RBAC.PERMISSION.DELETE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const permission = await Permission_model_1.Permission.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const permission = await Permission_model_1.Permission.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!permission)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Permission not found', 404);
     const assignedCount = await RolePermission_model_1.RolePermission.count({ where: { permissionId: permission.id } });

@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
+const idOrUuid_1 = require("../utils/idOrUuid");
 const uuid_1 = require("uuid");
 const Meeting_model_1 = require("../models/Meeting.model");
 const MeetingParticipant_model_1 = require("../models/MeetingParticipant.model");
@@ -60,7 +61,7 @@ router.get('/analytics/summary', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(
 }));
 router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const meeting = await Meeting_model_1.Meeting.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }, { meetingCode: req.params.id }] },
+        where: { [sequelize_1.Op.or]: [(0, idOrUuid_1.idOrUuidWhere)(req.params.id), { meetingCode: req.params.id }] },
         include: [
             { model: User_model_1.User, as: 'host', attributes: ['id', 'firstName', 'lastName', 'avatar'] },
             {
@@ -97,7 +98,7 @@ router.post('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res)
     ResponseFormatter_1.ResponseFormatter.success(res, meeting, 'Meeting scheduled', 201);
 }));
 router.put('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const meeting = await Meeting_model_1.Meeting.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const meeting = await Meeting_model_1.Meeting.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!meeting)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Meeting not found', 404);
     const { title, description, scheduledAt, durationMinutes, maxParticipants } = req.body;
@@ -105,7 +106,7 @@ router.put('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, re
     ResponseFormatter_1.ResponseFormatter.success(res, meeting, 'Meeting updated');
 }));
 router.patch('/:id/cancel', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const meeting = await Meeting_model_1.Meeting.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const meeting = await Meeting_model_1.Meeting.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!meeting)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Meeting not found', 404);
     await meeting.update({ status: 'Cancelled' });
@@ -113,7 +114,7 @@ router.patch('/:id/cancel', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async
 }));
 router.post('/:id/join', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
-    const meeting = await Meeting_model_1.Meeting.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const meeting = await Meeting_model_1.Meeting.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!meeting)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Meeting not found', 404);
     await meeting.update({ status: 'Live' });
@@ -126,7 +127,7 @@ router.post('/:id/join', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (r
 }));
 router.post('/:id/leave', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
-    const meeting = await Meeting_model_1.Meeting.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const meeting = await Meeting_model_1.Meeting.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!meeting)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Meeting not found', 404);
     const participant = await MeetingParticipant_model_1.MeetingParticipant.findOne({
@@ -141,7 +142,7 @@ router.post('/:id/leave', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Left meeting');
 }));
 router.get('/:id/attendance', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const meeting = await Meeting_model_1.Meeting.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const meeting = await Meeting_model_1.Meeting.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!meeting)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Meeting not found', 404);
     const participants = await MeetingParticipant_model_1.MeetingParticipant.findAll({
@@ -151,7 +152,7 @@ router.get('/:id/attendance', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asy
     ResponseFormatter_1.ResponseFormatter.success(res, participants);
 }));
 router.post('/:id/recording', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const meeting = await Meeting_model_1.Meeting.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const meeting = await Meeting_model_1.Meeting.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!meeting)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Meeting not found', 404);
     const { recordingUrl, cloudinaryPublicId } = req.body;

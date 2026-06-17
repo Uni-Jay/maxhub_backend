@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
+import { idOrUuidWhere } from '@utils/idOrUuid';
 import { v4 as uuidv4 } from 'uuid';
 import { Course } from '@models/Course.model';
 import { CourseModule } from '@models/CourseModule.model';
@@ -48,7 +49,7 @@ router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response)
 // GET /api/courses/:id — single course with modules
 router.get('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const course = await Course.findOne({
-    where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+    where: { ...idOrUuidWhere(req.params.id) },
     include: [
       { model: Staff, as: 'instructor', include: [{ model: User, attributes: ['firstName', 'lastName', 'email', 'avatar'] }] },
       { model: Department, as: 'department', attributes: ['id', 'name'] },
@@ -86,7 +87,7 @@ router.post('/', AuthMiddleware.requirePermission('LMS.COURSE.CREATE.ALL'), Erro
 
 // PUT /api/courses/:id — update course
 router.put('/:id', AuthMiddleware.requirePermission('LMS.COURSE.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const course = await Course.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const course = await Course.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!course) return ResponseFormatter.error(res, 'Course not found', 404);
 
   const allowed = ['title', 'description', 'departmentId', 'instructorId', 'duration', 'fee',
@@ -100,7 +101,7 @@ router.put('/:id', AuthMiddleware.requirePermission('LMS.COURSE.UPDATE.ALL'), Er
 
 // DELETE /api/courses/:id — soft delete
 router.delete('/:id', AuthMiddleware.requirePermission('LMS.COURSE.DELETE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const course = await Course.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const course = await Course.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!course) return ResponseFormatter.error(res, 'Course not found', 404);
   await course.destroy();
   ResponseFormatter.success(res, null, 'Course deleted');
@@ -110,7 +111,7 @@ router.delete('/:id', AuthMiddleware.requirePermission('LMS.COURSE.DELETE.ALL'),
 
 // GET /api/courses/:id/modules
 router.get('/:id/modules', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const course = await Course.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const course = await Course.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!course) return ResponseFormatter.error(res, 'Course not found', 404);
 
   const modules = await CourseModule.findAll({
@@ -123,7 +124,7 @@ router.get('/:id/modules', ErrorMiddleware.asyncHandler(async (req: Request, res
 
 // POST /api/courses/:id/modules — add module
 router.post('/:id/modules', AuthMiddleware.requirePermission('LMS.COURSE.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const course = await Course.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const course = await Course.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!course) return ResponseFormatter.error(res, 'Course not found', 404);
 
   const { title, description, sequence, duration } = req.body;
@@ -139,7 +140,7 @@ router.post('/:id/modules', AuthMiddleware.requirePermission('LMS.COURSE.UPDATE.
 // PUT /api/courses/:courseId/modules/:moduleId
 router.put('/:courseId/modules/:moduleId', AuthMiddleware.requirePermission('LMS.COURSE.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const mod = await CourseModule.findOne({
-    where: { [Op.or]: [{ id: req.params.moduleId }, { uuid: req.params.moduleId }] },
+    where: { ...idOrUuidWhere(req.params.moduleId) },
   });
   if (!mod) return ResponseFormatter.error(res, 'Module not found', 404);
   await mod.update(req.body);
@@ -149,7 +150,7 @@ router.put('/:courseId/modules/:moduleId', AuthMiddleware.requirePermission('LMS
 // DELETE /api/courses/:courseId/modules/:moduleId
 router.delete('/:courseId/modules/:moduleId', AuthMiddleware.requirePermission('LMS.COURSE.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const mod = await CourseModule.findOne({
-    where: { [Op.or]: [{ id: req.params.moduleId }, { uuid: req.params.moduleId }] },
+    where: { ...idOrUuidWhere(req.params.moduleId) },
   });
   if (!mod) return ResponseFormatter.error(res, 'Module not found', 404);
   await mod.destroy();
@@ -361,7 +362,7 @@ router.get('/exams/:examId/leaderboard', AuthMiddleware.verifyToken, ErrorMiddle
 
 // GET /api/courses/:id/exams
 router.get('/:id/exams', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const course = await Course.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const course = await Course.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!course) return ResponseFormatter.error(res, 'Course not found', 404);
   const exams = await Exam.findAll({ where: { courseId: course.id }, include: [{ model: Question, as: 'questions' }] });
   ResponseFormatter.success(res, exams);
@@ -369,7 +370,7 @@ router.get('/:id/exams', ErrorMiddleware.asyncHandler(async (req: Request, res: 
 
 // POST /api/courses/:id/exams — create exam
 router.post('/:id/exams', AuthMiddleware.requirePermission('LMS.EXAM.CREATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const course = await Course.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const course = await Course.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!course) return ResponseFormatter.error(res, 'Course not found', 404);
 
   const { examCode, examName, description, totalQuestions, passingScore, duration, attempts } = req.body;
@@ -387,7 +388,7 @@ router.post('/:id/exams', AuthMiddleware.requirePermission('LMS.EXAM.CREATE.ALL'
 
 // PUT /api/courses/:courseId/exams/:examId
 router.put('/:courseId/exams/:examId', AuthMiddleware.requirePermission('LMS.EXAM.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const exam = await Exam.findOne({ where: { [Op.or]: [{ id: req.params.examId }, { uuid: req.params.examId }] } });
+  const exam = await Exam.findOne({ where: { ...idOrUuidWhere(req.params.examId) } });
   if (!exam) return ResponseFormatter.error(res, 'Exam not found', 404);
   await exam.update(req.body);
   ResponseFormatter.success(res, exam, 'Exam updated');
@@ -395,7 +396,7 @@ router.put('/:courseId/exams/:examId', AuthMiddleware.requirePermission('LMS.EXA
 
 // POST /api/courses/:courseId/exams/:examId/questions — add question
 router.post('/:courseId/exams/:examId/questions', AuthMiddleware.requirePermission('LMS.EXAM.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const exam = await Exam.findOne({ where: { [Op.or]: [{ id: req.params.examId }, { uuid: req.params.examId }] } });
+  const exam = await Exam.findOne({ where: { ...idOrUuidWhere(req.params.examId) } });
   if (!exam) return ResponseFormatter.error(res, 'Exam not found', 404);
 
   const { questionType, questionText, points, sequence, options, correctAnswer, explanation, difficulty } = req.body;
@@ -414,7 +415,7 @@ router.post('/:courseId/exams/:examId/questions', AuthMiddleware.requirePermissi
 
 // GET /api/courses/:courseId/exams/:examId/questions
 router.get('/:courseId/exams/:examId/questions', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const exam = await Exam.findOne({ where: { [Op.or]: [{ id: req.params.examId }, { uuid: req.params.examId }] } });
+  const exam = await Exam.findOne({ where: { ...idOrUuidWhere(req.params.examId) } });
   if (!exam) return ResponseFormatter.error(res, 'Exam not found', 404);
   const questions = await Question.findAll({ where: { examId: exam.id, status: 'Active' }, order: [['sequence', 'ASC']] });
   ResponseFormatter.success(res, questions);
@@ -424,7 +425,7 @@ router.get('/:courseId/exams/:examId/questions', ErrorMiddleware.asyncHandler(as
 
 // GET /api/courses/:id/enrollments
 router.get('/:id/enrollments', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const course = await Course.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const course = await Course.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!course) return ResponseFormatter.error(res, 'Course not found', 404);
   const enrollments = await Enrollment.findAll({
     where: { courseId: course.id },
@@ -438,7 +439,7 @@ router.get('/:id/enrollments', ErrorMiddleware.asyncHandler(async (req: Request,
 
 // GET /api/courses/:courseId/exams/:examId/results
 router.get('/:courseId/exams/:examId/results', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const exam = await Exam.findOne({ where: { [Op.or]: [{ id: req.params.examId }, { uuid: req.params.examId }] } });
+  const exam = await Exam.findOne({ where: { ...idOrUuidWhere(req.params.examId) } });
   if (!exam) return ResponseFormatter.error(res, 'Exam not found', 404);
   const results = await ExamResult.findAll({
     where: { examId: exam.id },

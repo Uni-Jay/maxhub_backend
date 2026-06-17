@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
+import { idOrUuidWhere } from '@utils/idOrUuid';
 import { v4 as uuidv4 } from 'uuid';
 import { Appraisal } from '@models/Appraisal.model';
 import { Staff } from '@models/Staff.model';
@@ -48,7 +49,7 @@ router.get('/stats/overview', ErrorMiddleware.asyncHandler(async (req: Request, 
 // GET /api/appraisals/:id
 router.get('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const appraisal = await Appraisal.findOne({
-    where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+    where: { ...idOrUuidWhere(req.params.id) },
     include: [{ model: Staff, as: 'staff', include: [{ model: User, attributes: ['firstName', 'lastName', 'avatar'] }] }],
   });
   if (!appraisal) return ResponseFormatter.error(res, 'Appraisal not found', 404);
@@ -81,7 +82,7 @@ router.post('/', AuthMiddleware.requirePermission('HR.APPRAISAL.CREATE.ALL'), Er
 
 // PUT /api/appraisals/:id
 router.put('/:id', AuthMiddleware.requirePermission('HR.APPRAISAL.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const appraisal = await Appraisal.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const appraisal = await Appraisal.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!appraisal) return ResponseFormatter.error(res, 'Appraisal not found', 404);
   if (!['Draft', 'InProgress'].includes((appraisal as any).status)) {
     return ResponseFormatter.error(res, 'Only Draft or InProgress appraisals can be edited', 400);
@@ -96,7 +97,7 @@ router.put('/:id', AuthMiddleware.requirePermission('HR.APPRAISAL.UPDATE.ALL'), 
 
 // PATCH /api/appraisals/:id/status
 router.patch('/:id/status', AuthMiddleware.requirePermission('HR.APPRAISAL.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const appraisal = await Appraisal.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const appraisal = await Appraisal.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!appraisal) return ResponseFormatter.error(res, 'Appraisal not found', 404);
 
   const { status } = req.body;
@@ -123,7 +124,7 @@ router.patch('/:id/status', AuthMiddleware.requirePermission('HR.APPRAISAL.UPDAT
 
 // DELETE /api/appraisals/:id
 router.delete('/:id', AuthMiddleware.requirePermission('HR.APPRAISAL.DELETE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const appraisal = await Appraisal.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const appraisal = await Appraisal.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!appraisal) return ResponseFormatter.error(res, 'Appraisal not found', 404);
   await appraisal.destroy();
   ResponseFormatter.success(res, null, 'Appraisal deleted');

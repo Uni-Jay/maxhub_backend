@@ -38,6 +38,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
+const idOrUuid_1 = require("../utils/idOrUuid");
 const uuid_1 = require("uuid");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
@@ -239,7 +240,7 @@ router.post('/conversations/find-or-create', ErrorMiddleware_1.ErrorMiddleware.a
 router.get('/conversations/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
     const conversation = await Conversation_model_1.Conversation.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!conversation)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Conversation not found', 404);
@@ -255,7 +256,7 @@ router.get('/conversations/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(
     ResponseFormatter_1.ResponseFormatter.success(res, { ...conversation.toJSON(), participants });
 }));
 router.patch('/conversations/:id/archive', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const conversation = await Conversation_model_1.Conversation.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const conversation = await Conversation_model_1.Conversation.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!conversation)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Conversation not found', 404);
     await conversation.update({ isArchived: !conversation.isArchived });
@@ -263,7 +264,7 @@ router.patch('/conversations/:id/archive', ErrorMiddleware_1.ErrorMiddleware.asy
 }));
 router.patch('/conversations/:id/mute', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
-    const conversation = await Conversation_model_1.Conversation.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const conversation = await Conversation_model_1.Conversation.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!conversation)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Conversation not found', 404);
     const participant = await ConversationParticipant_model_1.ConversationParticipant.findOne({
@@ -276,7 +277,7 @@ router.patch('/conversations/:id/mute', ErrorMiddleware_1.ErrorMiddleware.asyncH
 }));
 router.delete('/conversations/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
-    const conversation = await Conversation_model_1.Conversation.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const conversation = await Conversation_model_1.Conversation.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!conversation)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Conversation not found', 404);
     await ConversationParticipant_model_1.ConversationParticipant.destroy({
@@ -285,7 +286,7 @@ router.delete('/conversations/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandl
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Left conversation');
 }));
 router.post('/conversations/:id/participants', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const conversation = await Conversation_model_1.Conversation.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const conversation = await Conversation_model_1.Conversation.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!conversation)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Conversation not found', 404);
     const { userIds } = req.body;
@@ -311,7 +312,7 @@ router.post('/conversations/:id/participants', ErrorMiddleware_1.ErrorMiddleware
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Participants added');
 }));
 router.delete('/conversations/:id/participants/:userId', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const conversation = await Conversation_model_1.Conversation.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const conversation = await Conversation_model_1.Conversation.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!conversation)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Conversation not found', 404);
     await ConversationParticipant_model_1.ConversationParticipant.destroy({
@@ -323,7 +324,7 @@ router.get('/conversations/:id/messages', ErrorMiddleware_1.ErrorMiddleware.asyn
     const user = req.user;
     const { page = 1, limit = 50, before } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
-    const conversation = await Conversation_model_1.Conversation.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const conversation = await Conversation_model_1.Conversation.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!conversation)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Conversation not found', 404);
     const isParticipant = await ConversationParticipant_model_1.ConversationParticipant.findOne({
@@ -351,7 +352,7 @@ router.get('/conversations/:id/messages', ErrorMiddleware_1.ErrorMiddleware.asyn
 }));
 router.post('/conversations/:id/messages', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
-    const conversation = await Conversation_model_1.Conversation.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const conversation = await Conversation_model_1.Conversation.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!conversation)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Conversation not found', 404);
     const { messageText, messageType, replyToMessageId, attachmentUrl, attachmentType } = req.body;
@@ -383,7 +384,7 @@ router.post('/conversations/:id/messages', ErrorMiddleware_1.ErrorMiddleware.asy
 router.patch('/conversations/:convId/messages/:msgId', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
     const message = await Message_model_1.Message.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.msgId }, { uuid: req.params.msgId }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.msgId) },
     });
     if (!message)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Message not found', 404);
@@ -408,7 +409,7 @@ router.delete('/conversations/:convId/messages/:msgId', ErrorMiddleware_1.ErrorM
     const user = req.user;
     const { everyone } = req.query;
     const message = await Message_model_1.Message.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.msgId }, { uuid: req.params.msgId }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.msgId) },
     });
     if (!message)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Message not found', 404);
@@ -431,7 +432,7 @@ router.delete('/conversations/:convId/messages/:msgId', ErrorMiddleware_1.ErrorM
 }));
 router.patch('/conversations/:convId/messages/:msgId/pin', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const message = await Message_model_1.Message.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.msgId }, { uuid: req.params.msgId }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.msgId) },
     });
     if (!message)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Message not found', 404);
@@ -450,7 +451,7 @@ router.patch('/conversations/:convId/messages/:msgId/react', ErrorMiddleware_1.E
     if (!emoji)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'emoji is required', 400);
     const message = await Message_model_1.Message.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.msgId }, { uuid: req.params.msgId }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.msgId) },
     });
     if (!message)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Message not found', 404);
@@ -481,7 +482,7 @@ router.post('/conversations/:convId/messages/:msgId/forward', ErrorMiddleware_1.
         return ResponseFormatter_1.ResponseFormatter.error(res, 'targetConversationIds array required', 400);
     }
     const original = await Message_model_1.Message.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.msgId }, { uuid: req.params.msgId }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.msgId) },
     });
     if (!original)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Message not found', 404);
@@ -510,7 +511,7 @@ router.post('/conversations/:convId/messages/:msgId/forward', ErrorMiddleware_1.
 router.post('/conversations/:convId/read', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
     const conversation = await Conversation_model_1.Conversation.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.convId }, { uuid: req.params.convId }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.convId) },
     });
     if (!conversation)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Conversation not found', 404);
@@ -534,7 +535,7 @@ router.post('/conversations/:convId/read', ErrorMiddleware_1.ErrorMiddleware.asy
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Marked as read');
 }));
 router.get('/conversations/:id/pinned', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const conversation = await Conversation_model_1.Conversation.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const conversation = await Conversation_model_1.Conversation.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!conversation)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Conversation not found', 404);
     const pinned = await Message_model_1.Message.findAll({
@@ -546,7 +547,7 @@ router.get('/conversations/:id/pinned', ErrorMiddleware_1.ErrorMiddleware.asyncH
 }));
 router.get('/conversations/:id/media', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { type } = req.query;
-    const conversation = await Conversation_model_1.Conversation.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const conversation = await Conversation_model_1.Conversation.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!conversation)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Conversation not found', 404);
     const typeFilter = {};

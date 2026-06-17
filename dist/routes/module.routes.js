@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
+const idOrUuid_1 = require("../utils/idOrUuid");
 const uuid_1 = require("uuid");
 const Module_model_1 = require("../models/Module.model");
 const UserModulePermission_model_1 = require("../models/UserModulePermission.model");
@@ -67,7 +68,7 @@ router.post('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res)
     ResponseFormatter_1.ResponseFormatter.success(res, mod, 'Module created', 201);
 }));
 router.patch('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const mod = await Module_model_1.AppModule.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }, { code: req.params.id }] } });
+    const mod = await Module_model_1.AppModule.findOne({ where: { [sequelize_1.Op.or]: [(0, idOrUuid_1.idOrUuidWhere)(req.params.id), { code: req.params.id }] } });
     if (!mod)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Module not found', 404);
     const { name, description, icon, isActive, isDefault, displayOrder } = req.body;
@@ -75,7 +76,7 @@ router.patch('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, 
     ResponseFormatter_1.ResponseFormatter.success(res, mod, 'Module updated');
 }));
 router.delete('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const mod = await Module_model_1.AppModule.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }, { code: req.params.id }] } });
+    const mod = await Module_model_1.AppModule.findOne({ where: { [sequelize_1.Op.or]: [(0, idOrUuid_1.idOrUuidWhere)(req.params.id), { code: req.params.id }] } });
     if (!mod)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Module not found', 404);
     if (mod.isDefault)

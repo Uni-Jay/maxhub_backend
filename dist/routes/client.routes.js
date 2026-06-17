@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const sequelize_1 = require("sequelize");
+const idOrUuid_1 = require("../utils/idOrUuid");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
 const Client_model_1 = require("../models/Client.model");
 const ClientDocument_model_1 = require("../models/ClientDocument.model");
@@ -62,7 +63,7 @@ router.get('/stats', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_1.Err
 }));
 router.get('/:id', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const client = await Client_model_1.Client.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!client)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Client not found');

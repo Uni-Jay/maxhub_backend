@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
+import { idOrUuidWhere } from '@utils/idOrUuid';
 import { v4 as uuidv4 } from 'uuid';
 import { JobApplication } from '@models/JobApplication.model';
 import { JobPosting } from '@models/JobPosting.model';
@@ -34,7 +35,7 @@ router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response)
 // GET /api/job-applications/:id
 router.get('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const application = await JobApplication.findOne({
-    where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+    where: { ...idOrUuidWhere(req.params.id) },
     include: [{ model: JobPosting, as: 'jobPosting' }],
   });
   if (!application) return ResponseFormatter.error(res, 'Application not found', 404);
@@ -66,7 +67,7 @@ router.post('/', AuthMiddleware.requirePermission('rec.application.create.all'),
 
 // PUT /api/job-applications/:id
 router.put('/:id', AuthMiddleware.requirePermission('rec.application.update.all'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const application = await JobApplication.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const application = await JobApplication.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!application) return ResponseFormatter.error(res, 'Application not found', 404);
 
   const allowed = ['applicantName', 'applicantPhone', 'resumeUrl', 'coverLetterUrl', 'source', 'notes'];
@@ -78,7 +79,7 @@ router.put('/:id', AuthMiddleware.requirePermission('rec.application.update.all'
 
 // PATCH /api/job-applications/:id/status
 router.patch('/:id/status', AuthMiddleware.requirePermission('rec.application.update.all'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const application = await JobApplication.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const application = await JobApplication.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!application) return ResponseFormatter.error(res, 'Application not found', 404);
 
   const { status, notes } = req.body;
@@ -102,7 +103,7 @@ router.patch('/:id/status', AuthMiddleware.requirePermission('rec.application.up
 
 // DELETE /api/job-applications/:id
 router.delete('/:id', AuthMiddleware.requirePermission('rec.application.delete.all'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const application = await JobApplication.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const application = await JobApplication.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!application) return ResponseFormatter.error(res, 'Application not found', 404);
   await application.destroy();
   ResponseFormatter.success(res, null, 'Application deleted');

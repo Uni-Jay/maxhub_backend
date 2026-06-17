@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
+const idOrUuid_1 = require("../utils/idOrUuid");
 const uuid_1 = require("uuid");
 const Warehouse_model_1 = require("../models/Warehouse.model");
 const WarehouseStock_model_1 = require("../models/WarehouseStock.model");
@@ -37,7 +38,7 @@ router.get('/stats/overview', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asy
 }));
 router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const warehouse = await Warehouse_model_1.Warehouse.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!warehouse)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Warehouse not found', 404);
@@ -68,7 +69,7 @@ router.post('/', AuthMiddleware_1.default.requirePermission('INV.WAREHOUSE.CREAT
     ResponseFormatter_1.ResponseFormatter.success(res, warehouse, 'Warehouse created', 201);
 }));
 router.put('/:id', AuthMiddleware_1.default.requirePermission('INV.WAREHOUSE.UPDATE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const warehouse = await Warehouse_model_1.Warehouse.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const warehouse = await Warehouse_model_1.Warehouse.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!warehouse)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Warehouse not found', 404);
     const allowed = ['warehouseName', 'locationId', 'address', 'city', 'state', 'country', 'managerUserId', 'capacity', 'isActive'];
@@ -79,14 +80,14 @@ router.put('/:id', AuthMiddleware_1.default.requirePermission('INV.WAREHOUSE.UPD
     ResponseFormatter_1.ResponseFormatter.success(res, warehouse, 'Warehouse updated');
 }));
 router.delete('/:id', AuthMiddleware_1.default.requirePermission('INV.WAREHOUSE.DELETE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const warehouse = await Warehouse_model_1.Warehouse.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const warehouse = await Warehouse_model_1.Warehouse.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!warehouse)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Warehouse not found', 404);
     await warehouse.destroy();
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Warehouse deleted');
 }));
 router.get('/:id/stock', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const warehouse = await Warehouse_model_1.Warehouse.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const warehouse = await Warehouse_model_1.Warehouse.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!warehouse)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Warehouse not found', 404);
     const stock = await WarehouseStock_model_1.WarehouseStock.findAll({
@@ -97,7 +98,7 @@ router.get('/:id/stock', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (r
     ResponseFormatter_1.ResponseFormatter.success(res, stock);
 }));
 router.post('/:id/stock', AuthMiddleware_1.default.requirePermission('INV.WAREHOUSE.UPDATE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const warehouse = await Warehouse_model_1.Warehouse.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const warehouse = await Warehouse_model_1.Warehouse.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!warehouse)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Warehouse not found', 404);
     const { inventoryItemId, quantity, reorderLevel } = req.body;

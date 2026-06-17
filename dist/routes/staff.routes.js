@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
+const idOrUuid_1 = require("../utils/idOrUuid");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
@@ -59,7 +60,7 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
 }));
 router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const staff = await Staff_model_1.Staff.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
         include: [
             { model: Department_model_1.Department, as: 'department', attributes: ['id', 'name', 'code'] },
             { model: Designation_model_1.Designation, as: 'designation', attributes: ['id', 'name'] },
@@ -193,7 +194,7 @@ router.post('/', AuthMiddleware_1.default.requirePermission('org.staff.create.al
 }));
 router.patch('/:id', AuthMiddleware_1.default.requirePermission('org.staff.update.all', 'org.staff.update.own'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const staff = await Staff_model_1.Staff.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!staff)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Staff member not found');
@@ -238,7 +239,7 @@ router.patch('/:id', AuthMiddleware_1.default.requirePermission('org.staff.updat
 }));
 router.delete('/:id', AuthMiddleware_1.default.requirePermission('org.staff.delete.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const staff = await Staff_model_1.Staff.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!staff)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Staff member not found');
@@ -247,7 +248,7 @@ router.delete('/:id', AuthMiddleware_1.default.requirePermission('org.staff.dele
 }));
 router.post('/:id/documents/upload', AuthMiddleware_1.default.requirePermission('org.staff.update.all', 'org.staff.update.own'), multer_1.upload.single('file'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const staff = await Staff_model_1.Staff.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!staff)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Staff member not found');
@@ -274,7 +275,7 @@ router.post('/:id/documents/upload', AuthMiddleware_1.default.requirePermission(
 }));
 router.get('/:id/departments', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const staff = await Staff_model_1.Staff.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
         include: [
             {
                 model: Department_model_1.Department,
@@ -291,7 +292,7 @@ router.get('/:id/departments', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(as
 }));
 router.post('/:id/departments', AuthMiddleware_1.default.requirePermission('org.staff.update.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const staff = await Staff_model_1.Staff.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!staff)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Staff member not found');
@@ -320,7 +321,7 @@ router.post('/:id/departments', AuthMiddleware_1.default.requirePermission('org.
 }));
 router.delete('/:id/departments/:departmentId', AuthMiddleware_1.default.requirePermission('org.staff.update.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const staff = await Staff_model_1.Staff.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!staff)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Staff member not found');
@@ -337,7 +338,7 @@ router.delete('/:id/departments/:departmentId', AuthMiddleware_1.default.require
 }));
 router.get('/:id/qualifications', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const staff = await Staff_model_1.Staff.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!staff)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Staff member not found');
@@ -345,7 +346,7 @@ router.get('/:id/qualifications', ErrorMiddleware_1.ErrorMiddleware.asyncHandler
 }));
 router.get('/:id/skills', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const staff = await Staff_model_1.Staff.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!staff)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Staff member not found');
@@ -353,7 +354,7 @@ router.get('/:id/skills', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (
 }));
 router.get('/:id/documents', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const staff = await Staff_model_1.Staff.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
         attributes: ['idDocument', 'utilityBillDocument', 'certificateDocument', 'signatureImage'],
     });
     if (!staff)

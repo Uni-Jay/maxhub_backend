@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
+const idOrUuid_1 = require("../utils/idOrUuid");
 const JobPosting_model_1 = require("../models/JobPosting.model");
 const JobSyncLog_model_1 = require("../models/JobSyncLog.model");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
@@ -39,7 +40,7 @@ router.get('/', AuthMiddleware_1.default.requirePermission('rec.posting.read.all
     ResponseFormatter_1.ResponseFormatter.paginated(res, rows, count, Number(page), Number(limit));
 }));
 router.patch('/:id/retry', AuthMiddleware_1.default.requirePermission('rec.posting.update.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const posting = await JobPosting_model_1.JobPosting.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const posting = await JobPosting_model_1.JobPosting.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!posting)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Job posting not found', 404);
     if (!posting.businessUnit)
@@ -49,7 +50,7 @@ router.patch('/:id/retry', AuthMiddleware_1.default.requirePermission('rec.posti
     ResponseFormatter_1.ResponseFormatter.success(res, posting, 'Retry attempted');
 }));
 router.get('/:id/logs', AuthMiddleware_1.default.requirePermission('rec.posting.read.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const posting = await JobPosting_model_1.JobPosting.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const posting = await JobPosting_model_1.JobPosting.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!posting)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Job posting not found', 404);
     const logs = await JobSyncLog_model_1.JobSyncLog.findAll({

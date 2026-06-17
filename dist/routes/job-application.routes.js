@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
+const idOrUuid_1 = require("../utils/idOrUuid");
 const uuid_1 = require("uuid");
 const JobApplication_model_1 = require("../models/JobApplication.model");
 const JobPosting_model_1 = require("../models/JobPosting.model");
@@ -35,7 +36,7 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
 }));
 router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const application = await JobApplication_model_1.JobApplication.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
         include: [{ model: JobPosting_model_1.JobPosting, as: 'jobPosting' }],
     });
     if (!application)
@@ -64,7 +65,7 @@ router.post('/', AuthMiddleware_1.default.requirePermission('rec.application.cre
     ResponseFormatter_1.ResponseFormatter.success(res, application, 'Application submitted', 201);
 }));
 router.put('/:id', AuthMiddleware_1.default.requirePermission('rec.application.update.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const application = await JobApplication_model_1.JobApplication.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const application = await JobApplication_model_1.JobApplication.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!application)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Application not found', 404);
     const allowed = ['applicantName', 'applicantPhone', 'resumeUrl', 'coverLetterUrl', 'source', 'notes'];
@@ -75,7 +76,7 @@ router.put('/:id', AuthMiddleware_1.default.requirePermission('rec.application.u
     ResponseFormatter_1.ResponseFormatter.success(res, application, 'Application updated');
 }));
 router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('rec.application.update.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const application = await JobApplication_model_1.JobApplication.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const application = await JobApplication_model_1.JobApplication.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!application)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Application not found', 404);
     const { status, notes } = req.body;
@@ -95,7 +96,7 @@ router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('rec.appl
     ResponseFormatter_1.ResponseFormatter.success(res, application, 'Status updated');
 }));
 router.delete('/:id', AuthMiddleware_1.default.requirePermission('rec.application.delete.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const application = await JobApplication_model_1.JobApplication.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const application = await JobApplication_model_1.JobApplication.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!application)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Application not found', 404);
     await application.destroy();

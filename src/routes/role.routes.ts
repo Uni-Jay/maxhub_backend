@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
+import { idOrUuidWhere } from '@utils/idOrUuid';
 import { v4 as uuidv4 } from 'uuid';
 import { Role } from '@models/Role.model';
 import { Permission } from '@models/Permission.model';
@@ -35,7 +36,7 @@ router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response)
 // GET /api/admin/roles/:id
 router.get('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const role = await Role.findOne({
-    where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+    where: { ...idOrUuidWhere(req.params.id) },
   });
   if (!role) return ResponseFormatter.error(res, 'Role not found', 404);
 
@@ -63,7 +64,7 @@ router.post('/', AuthMiddleware.requirePermission('RBAC.ROLE.CREATE.ALL'), Error
 
 // PUT /api/admin/roles/:id
 router.put('/:id', AuthMiddleware.requirePermission('RBAC.ROLE.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const role = await Role.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const role = await Role.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!role) return ResponseFormatter.error(res, 'Role not found', 404);
   if ((role as any).isSystemRole) return ResponseFormatter.error(res, 'Cannot edit system roles', 403);
 
@@ -74,7 +75,7 @@ router.put('/:id', AuthMiddleware.requirePermission('RBAC.ROLE.UPDATE.ALL'), Err
 
 // DELETE /api/admin/roles/:id
 router.delete('/:id', AuthMiddleware.requirePermission('RBAC.ROLE.DELETE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const role = await Role.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const role = await Role.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!role) return ResponseFormatter.error(res, 'Role not found', 404);
   if ((role as any).isSystemRole) return ResponseFormatter.error(res, 'Cannot delete system roles', 403);
 
@@ -87,7 +88,7 @@ router.delete('/:id', AuthMiddleware.requirePermission('RBAC.ROLE.DELETE.ALL'), 
 
 // POST /api/admin/roles/:id/permissions — assign permissions
 router.post('/:id/permissions', AuthMiddleware.requirePermission('RBAC.ROLE.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const role = await Role.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const role = await Role.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!role) return ResponseFormatter.error(res, 'Role not found', 404);
 
   const { permissionIds } = req.body;
@@ -104,7 +105,7 @@ router.post('/:id/permissions', AuthMiddleware.requirePermission('RBAC.ROLE.UPDA
 
 // DELETE /api/admin/roles/:id/permissions/:permissionId
 router.delete('/:id/permissions/:permissionId', AuthMiddleware.requirePermission('RBAC.ROLE.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const role = await Role.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const role = await Role.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!role) return ResponseFormatter.error(res, 'Role not found', 404);
 
   await RolePermission.destroy({ where: { roleId: (role as any).id, permissionId: req.params.permissionId } });
@@ -113,7 +114,7 @@ router.delete('/:id/permissions/:permissionId', AuthMiddleware.requirePermission
 
 // GET /api/admin/roles/:id/users
 router.get('/:id/users', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const role = await Role.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const role = await Role.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!role) return ResponseFormatter.error(res, 'Role not found', 404);
 
   const userRoles = await UserRole.findAll({

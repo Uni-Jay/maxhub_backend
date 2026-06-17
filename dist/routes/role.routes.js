@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const sequelize_1 = require("sequelize");
+const idOrUuid_1 = require("../utils/idOrUuid");
 const uuid_1 = require("uuid");
 const Role_model_1 = require("../models/Role.model");
 const Permission_model_1 = require("../models/Permission.model");
@@ -31,7 +31,7 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
 }));
 router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const role = await Role_model_1.Role.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!role)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Role not found', 404);
@@ -54,7 +54,7 @@ router.post('/', AuthMiddleware_1.default.requirePermission('RBAC.ROLE.CREATE.AL
     ResponseFormatter_1.ResponseFormatter.success(res, role, 'Role created', 201);
 }));
 router.put('/:id', AuthMiddleware_1.default.requirePermission('RBAC.ROLE.UPDATE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const role = await Role_model_1.Role.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const role = await Role_model_1.Role.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!role)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Role not found', 404);
     if (role.isSystemRole)
@@ -64,7 +64,7 @@ router.put('/:id', AuthMiddleware_1.default.requirePermission('RBAC.ROLE.UPDATE.
     ResponseFormatter_1.ResponseFormatter.success(res, role, 'Role updated');
 }));
 router.delete('/:id', AuthMiddleware_1.default.requirePermission('RBAC.ROLE.DELETE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const role = await Role_model_1.Role.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const role = await Role_model_1.Role.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!role)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Role not found', 404);
     if (role.isSystemRole)
@@ -76,7 +76,7 @@ router.delete('/:id', AuthMiddleware_1.default.requirePermission('RBAC.ROLE.DELE
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Role deleted');
 }));
 router.post('/:id/permissions', AuthMiddleware_1.default.requirePermission('RBAC.ROLE.UPDATE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const role = await Role_model_1.Role.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const role = await Role_model_1.Role.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!role)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Role not found', 404);
     const { permissionIds } = req.body;
@@ -89,14 +89,14 @@ router.post('/:id/permissions', AuthMiddleware_1.default.requirePermission('RBAC
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Permissions assigned');
 }));
 router.delete('/:id/permissions/:permissionId', AuthMiddleware_1.default.requirePermission('RBAC.ROLE.UPDATE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const role = await Role_model_1.Role.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const role = await Role_model_1.Role.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!role)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Role not found', 404);
     await RolePermission_model_1.RolePermission.destroy({ where: { roleId: role.id, permissionId: req.params.permissionId } });
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Permission revoked');
 }));
 router.get('/:id/users', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const role = await Role_model_1.Role.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const role = await Role_model_1.Role.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!role)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Role not found', 404);
     const userRoles = await UserRole_model_1.UserRole.findAll({

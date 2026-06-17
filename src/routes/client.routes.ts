@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import express from 'express';
 import { Op } from 'sequelize';
+import { idOrUuidWhere } from '@utils/idOrUuid';
 import AuthMiddleware from '../middleware/AuthMiddleware';
 import { Client } from '../models/Client.model';
 import { ClientDocument } from '../models/ClientDocument.model';
@@ -85,7 +86,7 @@ router.get(
   AuthMiddleware.verifyToken,
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const client = await Client.findOne({
-      where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } as any,
+      where: { ...idOrUuidWhere(req.params.id) } as any,
     });
     if (!client) return ResponseFormatter.notFound(res, 'Client not found');
     ResponseFormatter.success(res, client.toJSON());

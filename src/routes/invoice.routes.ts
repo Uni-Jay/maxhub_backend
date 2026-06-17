@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
+import { idOrUuidWhere } from '@utils/idOrUuid';
 import { v4 as uuidv4 } from 'uuid';
 import { Invoice } from '@models/Invoice.model';
 import { Payment } from '@models/Payment.model';
@@ -42,7 +43,7 @@ router.get('/stats/overview', ErrorMiddleware.asyncHandler(async (req: Request, 
 // GET /api/invoices/:id
 router.get('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const invoice = await Invoice.findOne({
-    where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+    where: { ...idOrUuidWhere(req.params.id) },
   });
   if (!invoice) return ResponseFormatter.error(res, 'Invoice not found', 404);
 
@@ -72,7 +73,7 @@ router.post('/', AuthMiddleware.requirePermission('fin.invoice.create.all', 'acc
 
 // PUT /api/invoices/:id
 router.put('/:id', AuthMiddleware.requirePermission('fin.invoice.update.all', 'acc.invoice.update.all'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const invoice = await Invoice.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const invoice = await Invoice.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!invoice) return ResponseFormatter.error(res, 'Invoice not found', 404);
   if ((invoice as any).status !== 'Draft') return ResponseFormatter.error(res, 'Only Draft invoices can be edited', 400);
 
@@ -85,7 +86,7 @@ router.put('/:id', AuthMiddleware.requirePermission('fin.invoice.update.all', 'a
 
 // PATCH /api/invoices/:id/status
 router.patch('/:id/status', AuthMiddleware.requirePermission('fin.invoice.update.all', 'acc.invoice.update.all'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const invoice = await Invoice.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const invoice = await Invoice.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!invoice) return ResponseFormatter.error(res, 'Invoice not found', 404);
 
   const { status } = req.body;
@@ -109,7 +110,7 @@ router.patch('/:id/status', AuthMiddleware.requirePermission('fin.invoice.update
 
 // DELETE /api/invoices/:id
 router.delete('/:id', AuthMiddleware.requirePermission('fin.invoice.delete.all', 'acc.invoice.delete.all'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const invoice = await Invoice.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const invoice = await Invoice.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!invoice) return ResponseFormatter.error(res, 'Invoice not found', 404);
   if ((invoice as any).status !== 'Draft') return ResponseFormatter.error(res, 'Only Draft invoices can be deleted', 400);
   await invoice.destroy();
@@ -118,7 +119,7 @@ router.delete('/:id', AuthMiddleware.requirePermission('fin.invoice.delete.all',
 
 // POST /api/invoices/:id/payments
 router.post('/:id/payments', AuthMiddleware.requirePermission('fin.invoice.update.all', 'acc.invoice.update.all'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const invoice = await Invoice.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const invoice = await Invoice.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!invoice) return ResponseFormatter.error(res, 'Invoice not found', 404);
   if (['Paid', 'Cancelled'].includes((invoice as any).status)) {
     return ResponseFormatter.error(res, 'Invoice is already paid or cancelled', 400);

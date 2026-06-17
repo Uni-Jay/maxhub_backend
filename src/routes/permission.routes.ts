@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Op, Sequelize } from 'sequelize';
+import { idOrUuidWhere } from '@utils/idOrUuid';
 import { v4 as uuidv4 } from 'uuid';
 import { Permission } from '@models/Permission.model';
 import { RolePermission } from '@models/RolePermission.model';
@@ -47,7 +48,7 @@ router.get('/modules', ErrorMiddleware.asyncHandler(async (req: Request, res: Re
 // GET /api/admin/permissions/:id
 router.get('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const permission = await Permission.findOne({
-    where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+    where: { ...idOrUuidWhere(req.params.id) },
   });
   if (!permission) return ResponseFormatter.error(res, 'Permission not found', 404);
 
@@ -77,7 +78,7 @@ router.post('/', AuthMiddleware.requirePermission('RBAC.PERMISSION.CREATE.ALL'),
 
 // PUT /api/admin/permissions/:id
 router.put('/:id', AuthMiddleware.requirePermission('RBAC.PERMISSION.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const permission = await Permission.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const permission = await Permission.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!permission) return ResponseFormatter.error(res, 'Permission not found', 404);
 
   const { name, description, isActive } = req.body;
@@ -87,7 +88,7 @@ router.put('/:id', AuthMiddleware.requirePermission('RBAC.PERMISSION.UPDATE.ALL'
 
 // DELETE /api/admin/permissions/:id
 router.delete('/:id', AuthMiddleware.requirePermission('RBAC.PERMISSION.DELETE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const permission = await Permission.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const permission = await Permission.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!permission) return ResponseFormatter.error(res, 'Permission not found', 404);
 
   const assignedCount = await RolePermission.count({ where: { permissionId: (permission as any).id } });

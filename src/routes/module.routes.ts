@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
+import { idOrUuidWhere } from '@utils/idOrUuid';
 import { v4 as uuidv4 } from 'uuid';
 import { AppModule } from '@models/Module.model';
 import { UserModulePermission } from '@models/UserModulePermission.model';
@@ -73,7 +74,7 @@ router.post('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response
 
 // PATCH /api/modules/:id
 router.patch('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const mod = await AppModule.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }, { code: req.params.id }] } });
+  const mod = await AppModule.findOne({ where: { [Op.or]: [idOrUuidWhere(req.params.id), { code: req.params.id }] } });
   if (!mod) return ResponseFormatter.error(res, 'Module not found', 404);
 
   const { name, description, icon, isActive, isDefault, displayOrder } = req.body;
@@ -83,7 +84,7 @@ router.patch('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Resp
 
 // DELETE /api/modules/:id
 router.delete('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const mod = await AppModule.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }, { code: req.params.id }] } });
+  const mod = await AppModule.findOne({ where: { [Op.or]: [idOrUuidWhere(req.params.id), { code: req.params.id }] } });
   if (!mod) return ResponseFormatter.error(res, 'Module not found', 404);
   if ((mod as any).isDefault) return ResponseFormatter.error(res, 'Cannot delete a default module', 400);
 

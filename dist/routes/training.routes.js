@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
+const idOrUuid_1 = require("../utils/idOrUuid");
 const uuid_1 = require("uuid");
 const TrainingProgram_model_1 = require("../models/TrainingProgram.model");
 const TrainingAttendance_model_1 = require("../models/TrainingAttendance.model");
@@ -41,7 +42,7 @@ router.get('/stats/overview', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asy
 }));
 router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const program = await TrainingProgram_model_1.TrainingProgram.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!program)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Training program not found', 404);
@@ -67,7 +68,7 @@ router.post('/', AuthMiddleware_1.default.requirePermission('HR.TRAINING.CREATE.
     ResponseFormatter_1.ResponseFormatter.success(res, program, 'Training program created', 201);
 }));
 router.put('/:id', AuthMiddleware_1.default.requirePermission('HR.TRAINING.UPDATE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const program = await TrainingProgram_model_1.TrainingProgram.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const program = await TrainingProgram_model_1.TrainingProgram.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!program)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Training program not found', 404);
     const allowed = ['trainingName', 'description', 'trainingType', 'duration', 'durationUnit', 'provider', 'location', 'startDate', 'endDate', 'budget'];
@@ -78,7 +79,7 @@ router.put('/:id', AuthMiddleware_1.default.requirePermission('HR.TRAINING.UPDAT
     ResponseFormatter_1.ResponseFormatter.success(res, program, 'Training program updated');
 }));
 router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('HR.TRAINING.UPDATE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const program = await TrainingProgram_model_1.TrainingProgram.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const program = await TrainingProgram_model_1.TrainingProgram.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!program)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Training program not found', 404);
     const { status } = req.body;
@@ -96,14 +97,14 @@ router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('HR.TRAIN
     ResponseFormatter_1.ResponseFormatter.success(res, program, 'Status updated');
 }));
 router.delete('/:id', AuthMiddleware_1.default.requirePermission('HR.TRAINING.DELETE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const program = await TrainingProgram_model_1.TrainingProgram.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const program = await TrainingProgram_model_1.TrainingProgram.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!program)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Training program not found', 404);
     await program.destroy();
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Training program deleted');
 }));
 router.get('/:id/attendance', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const program = await TrainingProgram_model_1.TrainingProgram.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const program = await TrainingProgram_model_1.TrainingProgram.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!program)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Training program not found', 404);
     const attendance = await TrainingAttendance_model_1.TrainingAttendance.findAll({
@@ -114,7 +115,7 @@ router.get('/:id/attendance', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asy
     ResponseFormatter_1.ResponseFormatter.success(res, attendance);
 }));
 router.post('/:id/attendance', AuthMiddleware_1.default.requirePermission('HR.TRAINING.UPDATE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const program = await TrainingProgram_model_1.TrainingProgram.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const program = await TrainingProgram_model_1.TrainingProgram.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!program)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Training program not found', 404);
     const { staffId, attendanceDate, status, notes } = req.body;

@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
+import { idOrUuidWhere } from '@utils/idOrUuid';
 import { v4 as uuidv4 } from 'uuid';
 import { TrainingProgram } from '@models/TrainingProgram.model';
 import { TrainingAttendance } from '@models/TrainingAttendance.model';
@@ -43,7 +44,7 @@ router.get('/stats/overview', ErrorMiddleware.asyncHandler(async (req: Request, 
 // GET /api/training/:id
 router.get('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const program = await TrainingProgram.findOne({
-    where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+    where: { ...idOrUuidWhere(req.params.id) },
   });
   if (!program) return ResponseFormatter.error(res, 'Training program not found', 404);
 
@@ -78,7 +79,7 @@ router.post('/', AuthMiddleware.requirePermission('HR.TRAINING.CREATE.ALL'), Err
 
 // PUT /api/training/:id
 router.put('/:id', AuthMiddleware.requirePermission('HR.TRAINING.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const program = await TrainingProgram.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const program = await TrainingProgram.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!program) return ResponseFormatter.error(res, 'Training program not found', 404);
 
   const allowed = ['trainingName', 'description', 'trainingType', 'duration', 'durationUnit', 'provider', 'location', 'startDate', 'endDate', 'budget'];
@@ -90,7 +91,7 @@ router.put('/:id', AuthMiddleware.requirePermission('HR.TRAINING.UPDATE.ALL'), E
 
 // PATCH /api/training/:id/status
 router.patch('/:id/status', AuthMiddleware.requirePermission('HR.TRAINING.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const program = await TrainingProgram.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const program = await TrainingProgram.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!program) return ResponseFormatter.error(res, 'Training program not found', 404);
 
   const { status } = req.body;
@@ -112,7 +113,7 @@ router.patch('/:id/status', AuthMiddleware.requirePermission('HR.TRAINING.UPDATE
 
 // DELETE /api/training/:id
 router.delete('/:id', AuthMiddleware.requirePermission('HR.TRAINING.DELETE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const program = await TrainingProgram.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const program = await TrainingProgram.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!program) return ResponseFormatter.error(res, 'Training program not found', 404);
   await program.destroy();
   ResponseFormatter.success(res, null, 'Training program deleted');
@@ -120,7 +121,7 @@ router.delete('/:id', AuthMiddleware.requirePermission('HR.TRAINING.DELETE.ALL')
 
 // GET /api/training/:id/attendance
 router.get('/:id/attendance', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const program = await TrainingProgram.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const program = await TrainingProgram.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!program) return ResponseFormatter.error(res, 'Training program not found', 404);
 
   const attendance = await TrainingAttendance.findAll({
@@ -133,7 +134,7 @@ router.get('/:id/attendance', ErrorMiddleware.asyncHandler(async (req: Request, 
 
 // POST /api/training/:id/attendance
 router.post('/:id/attendance', AuthMiddleware.requirePermission('HR.TRAINING.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const program = await TrainingProgram.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const program = await TrainingProgram.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!program) return ResponseFormatter.error(res, 'Training program not found', 404);
 
   const { staffId, attendanceDate, status, notes } = req.body;

@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
+const idOrUuid_1 = require("../utils/idOrUuid");
 const uuid_1 = require("uuid");
 const Call_model_1 = require("../models/Call.model");
 const User_model_1 = require("../models/User.model");
@@ -61,7 +62,7 @@ router.get('/history', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req
 }));
 router.patch('/:id/answer', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const call = await Call_model_1.Call.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!call)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Call not found', 404);
@@ -70,7 +71,7 @@ router.patch('/:id/answer', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async
 }));
 router.patch('/:id/decline', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const call = await Call_model_1.Call.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!call)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Call not found', 404);
@@ -79,7 +80,7 @@ router.patch('/:id/decline', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asyn
 }));
 router.patch('/:id/end', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const call = await Call_model_1.Call.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!call)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Call not found', 404);

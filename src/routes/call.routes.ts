@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
+import { idOrUuidWhere } from '@utils/idOrUuid';
 import { v4 as uuidv4 } from 'uuid';
 import { Call } from '@models/Call.model';
 import { User } from '@models/User.model';
@@ -77,7 +78,7 @@ router.get('/history', ErrorMiddleware.asyncHandler(async (req: Request, res: Re
 // PATCH /api/calls/:id/answer
 router.patch('/:id/answer', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const call = await Call.findOne({
-    where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+    where: { ...idOrUuidWhere(req.params.id) },
   });
   if (!call) return ResponseFormatter.error(res, 'Call not found', 404);
   await call.update({ status: 'Active', startedAt: new Date() } as any);
@@ -87,7 +88,7 @@ router.patch('/:id/answer', ErrorMiddleware.asyncHandler(async (req: Request, re
 // PATCH /api/calls/:id/decline
 router.patch('/:id/decline', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const call = await Call.findOne({
-    where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+    where: { ...idOrUuidWhere(req.params.id) },
   });
   if (!call) return ResponseFormatter.error(res, 'Call not found', 404);
   await call.update({ status: 'Declined', endedAt: new Date() } as any);
@@ -97,7 +98,7 @@ router.patch('/:id/decline', ErrorMiddleware.asyncHandler(async (req: Request, r
 // PATCH /api/calls/:id/end
 router.patch('/:id/end', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const call = await Call.findOne({
-    where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+    where: { ...idOrUuidWhere(req.params.id) },
   });
   if (!call) return ResponseFormatter.error(res, 'Call not found', 404);
   const endedAt = new Date();

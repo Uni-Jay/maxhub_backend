@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
+import { idOrUuidWhere } from '@utils/idOrUuid';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import AuthMiddleware from '@middleware/AuthMiddleware';
@@ -63,7 +64,7 @@ router.get(
   '/:id',
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const staff = await Staff.findOne({
-      where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+      where: { ...idOrUuidWhere(req.params.id) },
       include: [
         { model: Department, as: 'department', attributes: ['id', 'name', 'code'] },
         { model: Designation, as: 'designation', attributes: ['id', 'name'] },
@@ -250,7 +251,7 @@ router.patch(
   AuthMiddleware.requirePermission('org.staff.update.all', 'org.staff.update.own'),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const staff = await Staff.findOne({
-      where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+      where: { ...idOrUuidWhere(req.params.id) },
     });
     if (!staff) return ResponseFormatter.notFound(res, 'Staff member not found');
 
@@ -300,7 +301,7 @@ router.delete(
   AuthMiddleware.requirePermission('org.staff.delete.all'),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const staff = await Staff.findOne({
-      where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+      where: { ...idOrUuidWhere(req.params.id) },
     });
     if (!staff) return ResponseFormatter.notFound(res, 'Staff member not found');
     await staff.destroy();
@@ -316,7 +317,7 @@ router.post(
   upload.single('file'),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const staff = await Staff.findOne({
-      where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+      where: { ...idOrUuidWhere(req.params.id) },
     });
     if (!staff) return ResponseFormatter.notFound(res, 'Staff member not found');
     if (!req.file) return ResponseFormatter.error(res, 'No file uploaded', 400);
@@ -351,7 +352,7 @@ router.get(
   '/:id/departments',
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const staff = await Staff.findOne({
-      where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+      where: { ...idOrUuidWhere(req.params.id) },
       include: [
         {
           model: Department,
@@ -375,7 +376,7 @@ router.post(
   AuthMiddleware.requirePermission('org.staff.update.all'),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const staff = await Staff.findOne({
-      where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+      where: { ...idOrUuidWhere(req.params.id) },
     });
     if (!staff) return ResponseFormatter.notFound(res, 'Staff member not found');
 
@@ -418,7 +419,7 @@ router.delete(
   AuthMiddleware.requirePermission('org.staff.update.all'),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const staff = await Staff.findOne({
-      where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+      where: { ...idOrUuidWhere(req.params.id) },
     });
     if (!staff) return ResponseFormatter.notFound(res, 'Staff member not found');
 
@@ -441,7 +442,7 @@ router.get(
   '/:id/qualifications',
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const staff = await Staff.findOne({
-      where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+      where: { ...idOrUuidWhere(req.params.id) },
     });
     if (!staff) return ResponseFormatter.notFound(res, 'Staff member not found');
     ResponseFormatter.success(res, []);
@@ -453,7 +454,7 @@ router.get(
   '/:id/skills',
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const staff = await Staff.findOne({
-      where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+      where: { ...idOrUuidWhere(req.params.id) },
     });
     if (!staff) return ResponseFormatter.notFound(res, 'Staff member not found');
     ResponseFormatter.success(res, []);
@@ -465,7 +466,7 @@ router.get(
   '/:id/documents',
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const staff = await Staff.findOne({
-      where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+      where: { ...idOrUuidWhere(req.params.id) },
       attributes: ['idDocument', 'utilityBillDocument', 'certificateDocument', 'signatureImage'],
     });
     if (!staff) return ResponseFormatter.notFound(res, 'Staff member not found');

@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
+import { idOrUuidWhere } from '@utils/idOrUuid';
 import { v4 as uuidv4 } from 'uuid';
 import { Warehouse } from '@models/Warehouse.model';
 import { WarehouseStock } from '@models/WarehouseStock.model';
@@ -39,7 +40,7 @@ router.get('/stats/overview', ErrorMiddleware.asyncHandler(async (req: Request, 
 // GET /api/warehouse/:id — warehouse with stock summary
 router.get('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const warehouse = await Warehouse.findOne({
-    where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+    where: { ...idOrUuidWhere(req.params.id) },
   });
   if (!warehouse) return ResponseFormatter.error(res, 'Warehouse not found', 404);
 
@@ -77,7 +78,7 @@ router.post('/', AuthMiddleware.requirePermission('INV.WAREHOUSE.CREATE.ALL'), E
 
 // PUT /api/warehouse/:id
 router.put('/:id', AuthMiddleware.requirePermission('INV.WAREHOUSE.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const warehouse = await Warehouse.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const warehouse = await Warehouse.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!warehouse) return ResponseFormatter.error(res, 'Warehouse not found', 404);
 
   const allowed = ['warehouseName', 'locationId', 'address', 'city', 'state', 'country', 'managerUserId', 'capacity', 'isActive'];
@@ -89,7 +90,7 @@ router.put('/:id', AuthMiddleware.requirePermission('INV.WAREHOUSE.UPDATE.ALL'),
 
 // DELETE /api/warehouse/:id
 router.delete('/:id', AuthMiddleware.requirePermission('INV.WAREHOUSE.DELETE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const warehouse = await Warehouse.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const warehouse = await Warehouse.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!warehouse) return ResponseFormatter.error(res, 'Warehouse not found', 404);
   await warehouse.destroy();
   ResponseFormatter.success(res, null, 'Warehouse deleted');
@@ -97,7 +98,7 @@ router.delete('/:id', AuthMiddleware.requirePermission('INV.WAREHOUSE.DELETE.ALL
 
 // GET /api/warehouse/:id/stock
 router.get('/:id/stock', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const warehouse = await Warehouse.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const warehouse = await Warehouse.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!warehouse) return ResponseFormatter.error(res, 'Warehouse not found', 404);
 
   const stock = await WarehouseStock.findAll({
@@ -110,7 +111,7 @@ router.get('/:id/stock', ErrorMiddleware.asyncHandler(async (req: Request, res: 
 
 // POST /api/warehouse/:id/stock — upsert stock entry
 router.post('/:id/stock', AuthMiddleware.requirePermission('INV.WAREHOUSE.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const warehouse = await Warehouse.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const warehouse = await Warehouse.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!warehouse) return ResponseFormatter.error(res, 'Warehouse not found', 404);
 
   const { inventoryItemId, quantity, reorderLevel } = req.body;

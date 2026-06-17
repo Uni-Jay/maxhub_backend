@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
+const idOrUuid_1 = require("../utils/idOrUuid");
 const uuid_1 = require("uuid");
 const Unit_model_1 = require("../models/Unit.model");
 const Branch_model_1 = require("../models/Branch.model");
@@ -45,7 +46,7 @@ router.get('/', AuthMiddleware_1.default.requirePermission('org.unit.read.all', 
 }));
 router.get('/:id', AuthMiddleware_1.default.requirePermission('org.unit.read.all', 'org.unit.read.own_branch'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const unit = await Unit_model_1.Unit.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
         include: [
             { model: Branch_model_1.Branch, as: 'branch', attributes: ['id', 'uuid', 'branchCode', 'branchName'], required: false },
             { model: User_model_1.User, as: 'head', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
@@ -74,7 +75,7 @@ router.post('/', AuthMiddleware_1.default.requirePermission('org.unit.create.all
 }));
 router.patch('/:id', AuthMiddleware_1.default.requirePermission('org.unit.update.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const unit = await Unit_model_1.Unit.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!unit)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Unit not found');
@@ -89,7 +90,7 @@ router.patch('/:id', AuthMiddleware_1.default.requirePermission('org.unit.update
 }));
 router.delete('/:id', AuthMiddleware_1.default.requirePermission('org.unit.delete.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const unit = await Unit_model_1.Unit.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!unit)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Unit not found');

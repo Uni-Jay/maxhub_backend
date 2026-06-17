@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
+const idOrUuid_1 = require("../utils/idOrUuid");
 const uuid_1 = require("uuid");
 const Branch_model_1 = require("../models/Branch.model");
 const User_model_1 = require("../models/User.model");
@@ -44,7 +45,7 @@ router.get('/', AuthMiddleware_1.default.requirePermission('org.branch.read.all'
 }));
 router.get('/:id', AuthMiddleware_1.default.requirePermission('org.branch.read.all', 'org.branch.read.own_branch'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const branch = await Branch_model_1.Branch.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
         include: [
             { model: User_model_1.User, as: 'manager', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
             { model: Department_model_1.Department, as: 'departments', attributes: ['id', 'uuid', 'code', 'name', 'status'], required: false },
@@ -82,7 +83,7 @@ router.post('/', AuthMiddleware_1.default.requirePermission('org.branch.create.a
 }));
 router.patch('/:id', AuthMiddleware_1.default.requirePermission('org.branch.update.all', 'org.branch.update.own_branch'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const branch = await Branch_model_1.Branch.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!branch)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Branch not found');
@@ -97,7 +98,7 @@ router.patch('/:id', AuthMiddleware_1.default.requirePermission('org.branch.upda
 }));
 router.delete('/:id', AuthMiddleware_1.default.requirePermission('org.branch.delete.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const branch = await Branch_model_1.Branch.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!branch)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Branch not found');

@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
+import { idOrUuidWhere } from '@utils/idOrUuid';
 import { v4 as uuidv4 } from 'uuid';
 import { JobPosting } from '@models/JobPosting.model';
 import { JobApplication } from '@models/JobApplication.model';
@@ -58,7 +59,7 @@ router.get('/stats/overview', ErrorMiddleware.asyncHandler(async (req: Request, 
 // GET /api/job-postings/:id
 router.get('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const posting = await JobPosting.findOne({
-    where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+    where: { ...idOrUuidWhere(req.params.id) },
     include: [
       { model: Department, as: 'department', attributes: ['id', 'name'] },
       { model: Designation, as: 'designation', attributes: ['id', 'name'] },
@@ -101,7 +102,7 @@ router.post('/', AuthMiddleware.requirePermission('rec.posting.create.all'), Err
 
 // PUT /api/job-postings/:id
 router.put('/:id', AuthMiddleware.requirePermission('rec.posting.update.all'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const posting = await JobPosting.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const posting = await JobPosting.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!posting) return ResponseFormatter.error(res, 'Job posting not found', 404);
 
   const allowed = ['title', 'description', 'noOfPositions', 'jobType', 'salaryMin', 'salaryMax', 'location',
@@ -119,7 +120,7 @@ router.put('/:id', AuthMiddleware.requirePermission('rec.posting.update.all'), E
 
 // PATCH /api/job-postings/:id/status
 router.patch('/:id/status', AuthMiddleware.requirePermission('rec.posting.update.all'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const posting = await JobPosting.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const posting = await JobPosting.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!posting) return ResponseFormatter.error(res, 'Job posting not found', 404);
 
   const { status } = req.body;
@@ -152,7 +153,7 @@ router.patch('/:id/status', AuthMiddleware.requirePermission('rec.posting.update
 
 // DELETE /api/job-postings/:id
 router.delete('/:id', AuthMiddleware.requirePermission('rec.posting.delete.all'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const posting = await JobPosting.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const posting = await JobPosting.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!posting) return ResponseFormatter.error(res, 'Job posting not found', 404);
   if ((posting as any).status !== 'Draft') return ResponseFormatter.error(res, 'Only Draft postings can be deleted', 400);
 

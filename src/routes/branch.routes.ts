@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
+import { idOrUuidWhere } from '@utils/idOrUuid';
 import { v4 as uuidv4 } from 'uuid';
 import { Branch } from '@models/Branch.model';
 import { User } from '@models/User.model';
@@ -53,7 +54,7 @@ router.get(
   AuthMiddleware.requirePermission('org.branch.read.all', 'org.branch.read.own_branch'),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const branch = await Branch.findOne({
-      where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+      where: { ...idOrUuidWhere(req.params.id) },
       include: [
         { model: User, as: 'manager', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
         { model: Department, as: 'departments', attributes: ['id', 'uuid', 'code', 'name', 'status'], required: false },
@@ -108,7 +109,7 @@ router.patch(
   AuthMiddleware.requirePermission('org.branch.update.all', 'org.branch.update.own_branch'),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const branch = await Branch.findOne({
-      where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+      where: { ...idOrUuidWhere(req.params.id) },
     });
 
     if (!branch) return ResponseFormatter.notFound(res, 'Branch not found');
@@ -130,7 +131,7 @@ router.delete(
   AuthMiddleware.requirePermission('org.branch.delete.all'),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const branch = await Branch.findOne({
-      where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+      where: { ...idOrUuidWhere(req.params.id) },
     });
 
     if (!branch) return ResponseFormatter.notFound(res, 'Branch not found');

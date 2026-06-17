@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
+import { idOrUuidWhere } from '@utils/idOrUuid';
 import { JobPosting } from '@models/JobPosting.model';
 import { JobSyncLog } from '@models/JobSyncLog.model';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
@@ -41,7 +42,7 @@ router.get('/', AuthMiddleware.requirePermission('rec.posting.read.all'), ErrorM
 
 // PATCH /api/job-sync/:id/retry
 router.patch('/:id/retry', AuthMiddleware.requirePermission('rec.posting.update.all'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const posting = await JobPosting.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const posting = await JobPosting.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!posting) return ResponseFormatter.error(res, 'Job posting not found', 404);
   if (!posting.businessUnit) return ResponseFormatter.error(res, 'This posting has no business unit assigned', 400);
 
@@ -52,7 +53,7 @@ router.patch('/:id/retry', AuthMiddleware.requirePermission('rec.posting.update.
 
 // GET /api/job-sync/:id/logs
 router.get('/:id/logs', AuthMiddleware.requirePermission('rec.posting.read.all'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const posting = await JobPosting.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const posting = await JobPosting.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!posting) return ResponseFormatter.error(res, 'Job posting not found', 404);
 
   const logs = await JobSyncLog.findAll({

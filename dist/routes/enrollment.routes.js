@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const sequelize_1 = require("sequelize");
+const idOrUuid_1 = require("../utils/idOrUuid");
 const uuid_1 = require("uuid");
 const Enrollment_model_1 = require("../models/Enrollment.model");
 const Course_model_1 = require("../models/Course.model");
@@ -75,7 +75,7 @@ router.get('/my', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res
 }));
 router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const enrollment = await Enrollment_model_1.Enrollment.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
         include: [
             { model: Course_model_1.Course, as: 'course' },
             { model: Staff_model_1.Staff, as: 'staff', include: [{ model: User_model_1.User, attributes: ['firstName', 'lastName', 'email'] }] },
@@ -86,7 +86,7 @@ router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, re
     ResponseFormatter_1.ResponseFormatter.success(res, enrollment);
 }));
 router.patch('/:id/progress', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const enrollment = await Enrollment_model_1.Enrollment.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const enrollment = await Enrollment_model_1.Enrollment.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!enrollment)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Enrollment not found', 404);
     const pct = Math.min(100, Math.max(0, Number(req.body.progressPercentage)));
@@ -102,7 +102,7 @@ router.patch('/:id/progress', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asy
     ResponseFormatter_1.ResponseFormatter.success(res, enrollment, 'Progress updated');
 }));
 router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('LMS.ENROLLMENT.UPDATE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const enrollment = await Enrollment_model_1.Enrollment.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const enrollment = await Enrollment_model_1.Enrollment.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!enrollment)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Enrollment not found', 404);
     const { status, notes } = req.body;
@@ -112,10 +112,10 @@ router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('LMS.ENRO
     ResponseFormatter_1.ResponseFormatter.success(res, enrollment, 'Status updated');
 }));
 router.post('/:id/exams/:examId/start', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const enrollment = await Enrollment_model_1.Enrollment.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const enrollment = await Enrollment_model_1.Enrollment.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!enrollment)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Enrollment not found', 404);
-    const exam = await Exam_model_1.Exam.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.examId }, { uuid: req.params.examId }], status: 'Published' } });
+    const exam = await Exam_model_1.Exam.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.examId), status: 'Published' } });
     if (!exam)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Exam not found or not published', 404);
     const attemptCount = await ExamResult_model_1.ExamResult.count({ where: { examId: exam.id, enrollmentId: enrollment.id } });
@@ -138,7 +138,7 @@ router.post('/:id/exams/:examId/start', ErrorMiddleware_1.ErrorMiddleware.asyncH
     ResponseFormatter_1.ResponseFormatter.success(res, { result, questions: safeQs, duration: exam.duration }, 'Exam started', 201);
 }));
 router.post('/:id/exams/:examId/submit', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const enrollment = await Enrollment_model_1.Enrollment.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const enrollment = await Enrollment_model_1.Enrollment.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!enrollment)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Enrollment not found', 404);
     const exam = await Exam_model_1.Exam.findByPk(req.params.examId);

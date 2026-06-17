@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
+import { idOrUuidWhere } from '@utils/idOrUuid';
 import { v4 as uuidv4 } from 'uuid';
 import { Meeting } from '@models/Meeting.model';
 import { MeetingParticipant } from '@models/MeetingParticipant.model';
@@ -73,7 +74,7 @@ router.get('/analytics/summary', ErrorMiddleware.asyncHandler(async (req: Reques
 // GET /api/meetings/:id
 router.get('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const meeting = await Meeting.findOne({
-    where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }, { meetingCode: req.params.id }] },
+    where: { [Op.or]: [idOrUuidWhere(req.params.id), { meetingCode: req.params.id }] },
     include: [
       { model: User, as: 'host', attributes: ['id', 'firstName', 'lastName', 'avatar'] },
       {
@@ -118,7 +119,7 @@ router.post('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response
 
 // PUT /api/meetings/:id
 router.put('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const meeting = await Meeting.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const meeting = await Meeting.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!meeting) return ResponseFormatter.error(res, 'Meeting not found', 404);
   const { title, description, scheduledAt, durationMinutes, maxParticipants } = req.body;
   await meeting.update({ title, description, scheduledAt, durationMinutes, maxParticipants } as any);
@@ -127,7 +128,7 @@ router.put('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Respon
 
 // PATCH /api/meetings/:id/cancel
 router.patch('/:id/cancel', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const meeting = await Meeting.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const meeting = await Meeting.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!meeting) return ResponseFormatter.error(res, 'Meeting not found', 404);
   await meeting.update({ status: 'Cancelled' } as any);
   ResponseFormatter.success(res, meeting, 'Meeting cancelled');
@@ -136,7 +137,7 @@ router.patch('/:id/cancel', ErrorMiddleware.asyncHandler(async (req: Request, re
 // POST /api/meetings/:id/join — record join time + set Live
 router.post('/:id/join', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
-  const meeting = await Meeting.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const meeting = await Meeting.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!meeting) return ResponseFormatter.error(res, 'Meeting not found', 404);
 
   await meeting.update({ status: 'Live' } as any);
@@ -153,7 +154,7 @@ router.post('/:id/join', ErrorMiddleware.asyncHandler(async (req: Request, res: 
 // POST /api/meetings/:id/leave — record leave time + duration
 router.post('/:id/leave', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
-  const meeting = await Meeting.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const meeting = await Meeting.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!meeting) return ResponseFormatter.error(res, 'Meeting not found', 404);
 
   const participant = await MeetingParticipant.findOne({
@@ -171,7 +172,7 @@ router.post('/:id/leave', ErrorMiddleware.asyncHandler(async (req: Request, res:
 
 // GET /api/meetings/:id/attendance
 router.get('/:id/attendance', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const meeting = await Meeting.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const meeting = await Meeting.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!meeting) return ResponseFormatter.error(res, 'Meeting not found', 404);
 
   const participants = await MeetingParticipant.findAll({
@@ -183,7 +184,7 @@ router.get('/:id/attendance', ErrorMiddleware.asyncHandler(async (req: Request, 
 
 // POST /api/meetings/:id/recording
 router.post('/:id/recording', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const meeting = await Meeting.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const meeting = await Meeting.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!meeting) return ResponseFormatter.error(res, 'Meeting not found', 404);
   const { recordingUrl, cloudinaryPublicId } = req.body;
   await meeting.update({ recordingUrl, cloudinaryPublicId, status: 'Ended' } as any);

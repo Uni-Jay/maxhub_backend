@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
+const idOrUuid_1 = require("../utils/idOrUuid");
 const uuid_1 = require("uuid");
 const JobPosting_model_1 = require("../models/JobPosting.model");
 const JobApplication_model_1 = require("../models/JobApplication.model");
@@ -56,7 +57,7 @@ router.get('/stats/overview', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asy
 }));
 router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const posting = await JobPosting_model_1.JobPosting.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
         include: [
             { model: Department_model_1.Department, as: 'department', attributes: ['id', 'name'] },
             { model: Designation_model_1.Designation, as: 'designation', attributes: ['id', 'name'] },
@@ -89,7 +90,7 @@ router.post('/', AuthMiddleware_1.default.requirePermission('rec.posting.create.
     ResponseFormatter_1.ResponseFormatter.success(res, posting, 'Job posting created', 201);
 }));
 router.put('/:id', AuthMiddleware_1.default.requirePermission('rec.posting.update.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const posting = await JobPosting_model_1.JobPosting.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const posting = await JobPosting_model_1.JobPosting.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!posting)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Job posting not found', 404);
     const allowed = ['title', 'description', 'noOfPositions', 'jobType', 'salaryMin', 'salaryMax', 'location',
@@ -104,7 +105,7 @@ router.put('/:id', AuthMiddleware_1.default.requirePermission('rec.posting.updat
     ResponseFormatter_1.ResponseFormatter.success(res, posting, 'Job posting updated');
 }));
 router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('rec.posting.update.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const posting = await JobPosting_model_1.JobPosting.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const posting = await JobPosting_model_1.JobPosting.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!posting)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Job posting not found', 404);
     const { status } = req.body;
@@ -132,7 +133,7 @@ router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('rec.post
     ResponseFormatter_1.ResponseFormatter.success(res, posting, 'Status updated');
 }));
 router.delete('/:id', AuthMiddleware_1.default.requirePermission('rec.posting.delete.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const posting = await JobPosting_model_1.JobPosting.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const posting = await JobPosting_model_1.JobPosting.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!posting)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Job posting not found', 404);
     if (posting.status !== 'Draft')

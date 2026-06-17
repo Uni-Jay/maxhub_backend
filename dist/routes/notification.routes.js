@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const sequelize_1 = require("sequelize");
+const idOrUuid_1 = require("../utils/idOrUuid");
 const uuid_1 = require("uuid");
 const Notification_model_1 = require("../models/Notification.model");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
@@ -35,7 +35,7 @@ router.get('/unread-count', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async
 router.patch('/:id/read', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
     const notification = await Notification_model_1.Notification.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }], recipientUserId: user.id },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id), recipientUserId: user.id },
     });
     if (!notification)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Notification not found', 404);
@@ -52,7 +52,7 @@ router.post('/mark-all-read', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asy
 router.delete('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
     const notification = await Notification_model_1.Notification.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }], recipientUserId: user.id },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id), recipientUserId: user.id },
     });
     if (!notification)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Notification not found', 404);

@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const sequelize_1 = require("sequelize");
+const idOrUuid_1 = require("../utils/idOrUuid");
 const uuid_1 = require("uuid");
 const Invoice_model_1 = require("../models/Invoice.model");
 const Payment_model_1 = require("../models/Payment.model");
@@ -39,7 +39,7 @@ router.get('/stats/overview', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asy
 }));
 router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const invoice = await Invoice_model_1.Invoice.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!invoice)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Invoice not found', 404);
@@ -63,7 +63,7 @@ router.post('/', AuthMiddleware_1.default.requirePermission('fin.invoice.create.
     ResponseFormatter_1.ResponseFormatter.success(res, invoice, 'Invoice created', 201);
 }));
 router.put('/:id', AuthMiddleware_1.default.requirePermission('fin.invoice.update.all', 'acc.invoice.update.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const invoice = await Invoice_model_1.Invoice.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const invoice = await Invoice_model_1.Invoice.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!invoice)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Invoice not found', 404);
     if (invoice.status !== 'Draft')
@@ -76,7 +76,7 @@ router.put('/:id', AuthMiddleware_1.default.requirePermission('fin.invoice.updat
     ResponseFormatter_1.ResponseFormatter.success(res, invoice, 'Invoice updated');
 }));
 router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('fin.invoice.update.all', 'acc.invoice.update.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const invoice = await Invoice_model_1.Invoice.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const invoice = await Invoice_model_1.Invoice.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!invoice)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Invoice not found', 404);
     const { status } = req.body;
@@ -96,7 +96,7 @@ router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('fin.invo
     ResponseFormatter_1.ResponseFormatter.success(res, invoice, 'Status updated');
 }));
 router.delete('/:id', AuthMiddleware_1.default.requirePermission('fin.invoice.delete.all', 'acc.invoice.delete.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const invoice = await Invoice_model_1.Invoice.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const invoice = await Invoice_model_1.Invoice.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!invoice)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Invoice not found', 404);
     if (invoice.status !== 'Draft')
@@ -105,7 +105,7 @@ router.delete('/:id', AuthMiddleware_1.default.requirePermission('fin.invoice.de
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Invoice deleted');
 }));
 router.post('/:id/payments', AuthMiddleware_1.default.requirePermission('fin.invoice.update.all', 'acc.invoice.update.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const invoice = await Invoice_model_1.Invoice.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const invoice = await Invoice_model_1.Invoice.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!invoice)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Invoice not found', 404);
     if (['Paid', 'Cancelled'].includes(invoice.status)) {

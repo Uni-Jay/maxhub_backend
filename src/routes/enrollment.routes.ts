@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
+import { idOrUuidWhere } from '@utils/idOrUuid';
 import { v4 as uuidv4 } from 'uuid';
 import { Enrollment } from '@models/Enrollment.model';
 import { Course } from '@models/Course.model';
@@ -77,7 +78,7 @@ router.get('/my', ErrorMiddleware.asyncHandler(async (req: Request, res: Respons
 // GET /api/enrollments/:id
 router.get('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const enrollment = await Enrollment.findOne({
-    where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+    where: { ...idOrUuidWhere(req.params.id) },
     include: [
       { model: Course, as: 'course' },
       { model: Staff, as: 'staff', include: [{ model: User, attributes: ['firstName', 'lastName', 'email'] }] },
@@ -89,7 +90,7 @@ router.get('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Respon
 
 // PATCH /api/enrollments/:id/progress
 router.patch('/:id/progress', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const enrollment = await Enrollment.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const enrollment = await Enrollment.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!enrollment) return ResponseFormatter.error(res, 'Enrollment not found', 404);
 
   const pct = Math.min(100, Math.max(0, Number(req.body.progressPercentage)));
@@ -103,7 +104,7 @@ router.patch('/:id/progress', ErrorMiddleware.asyncHandler(async (req: Request, 
 
 // PATCH /api/enrollments/:id/status
 router.patch('/:id/status', AuthMiddleware.requirePermission('LMS.ENROLLMENT.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const enrollment = await Enrollment.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const enrollment = await Enrollment.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!enrollment) return ResponseFormatter.error(res, 'Enrollment not found', 404);
   const { status, notes } = req.body;
   if (!['Enrolled', 'InProgress', 'Completed', 'Failed', 'Dropped', 'OnHold'].includes(status)) return ResponseFormatter.error(res, 'Invalid status', 400);
@@ -113,10 +114,10 @@ router.patch('/:id/status', AuthMiddleware.requirePermission('LMS.ENROLLMENT.UPD
 
 // POST /api/enrollments/:id/exams/:examId/start — start CBT exam
 router.post('/:id/exams/:examId/start', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const enrollment = await Enrollment.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const enrollment = await Enrollment.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!enrollment) return ResponseFormatter.error(res, 'Enrollment not found', 404);
 
-  const exam = await Exam.findOne({ where: { [Op.or]: [{ id: req.params.examId }, { uuid: req.params.examId }], status: 'Published' } });
+  const exam = await Exam.findOne({ where: { ...idOrUuidWhere(req.params.examId), status: 'Published' } });
   if (!exam) return ResponseFormatter.error(res, 'Exam not found or not published', 404);
 
   const attemptCount = await ExamResult.count({ where: { examId: exam.id, enrollmentId: enrollment.id } });
@@ -144,7 +145,7 @@ router.post('/:id/exams/:examId/start', ErrorMiddleware.asyncHandler(async (req:
 
 // POST /api/enrollments/:id/exams/:examId/submit — submit answers
 router.post('/:id/exams/:examId/submit', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const enrollment = await Enrollment.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const enrollment = await Enrollment.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!enrollment) return ResponseFormatter.error(res, 'Enrollment not found', 404);
 
   const exam = await Exam.findByPk(req.params.examId);

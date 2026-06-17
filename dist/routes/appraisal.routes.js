@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
+const idOrUuid_1 = require("../utils/idOrUuid");
 const uuid_1 = require("uuid");
 const Appraisal_model_1 = require("../models/Appraisal.model");
 const Staff_model_1 = require("../models/Staff.model");
@@ -46,7 +47,7 @@ router.get('/stats/overview', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asy
 }));
 router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const appraisal = await Appraisal_model_1.Appraisal.findOne({
-        where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
         include: [{ model: Staff_model_1.Staff, as: 'staff', include: [{ model: User_model_1.User, attributes: ['firstName', 'lastName', 'avatar'] }] }],
     });
     if (!appraisal)
@@ -72,7 +73,7 @@ router.post('/', AuthMiddleware_1.default.requirePermission('HR.APPRAISAL.CREATE
     ResponseFormatter_1.ResponseFormatter.success(res, appraisal, 'Appraisal created', 201);
 }));
 router.put('/:id', AuthMiddleware_1.default.requirePermission('HR.APPRAISAL.UPDATE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const appraisal = await Appraisal_model_1.Appraisal.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const appraisal = await Appraisal_model_1.Appraisal.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!appraisal)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Appraisal not found', 404);
     if (!['Draft', 'InProgress'].includes(appraisal.status)) {
@@ -86,7 +87,7 @@ router.put('/:id', AuthMiddleware_1.default.requirePermission('HR.APPRAISAL.UPDA
     ResponseFormatter_1.ResponseFormatter.success(res, appraisal, 'Appraisal updated');
 }));
 router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('HR.APPRAISAL.UPDATE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const appraisal = await Appraisal_model_1.Appraisal.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const appraisal = await Appraisal_model_1.Appraisal.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!appraisal)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Appraisal not found', 404);
     const { status } = req.body;
@@ -112,7 +113,7 @@ router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('HR.APPRA
     ResponseFormatter_1.ResponseFormatter.success(res, appraisal, 'Appraisal status updated');
 }));
 router.delete('/:id', AuthMiddleware_1.default.requirePermission('HR.APPRAISAL.DELETE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const appraisal = await Appraisal_model_1.Appraisal.findOne({ where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+    const appraisal = await Appraisal_model_1.Appraisal.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!appraisal)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Appraisal not found', 404);
     await appraisal.destroy();

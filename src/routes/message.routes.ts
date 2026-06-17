@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
+import { idOrUuidWhere } from '@utils/idOrUuid';
 import { v4 as uuidv4 } from 'uuid';
 import multer from 'multer';
 import path from 'path';
@@ -257,7 +258,7 @@ router.post('/conversations/find-or-create', ErrorMiddleware.asyncHandler(async 
 router.get('/conversations/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
   const conversation = await Conversation.findOne({
-    where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
+    where: { ...idOrUuidWhere(req.params.id) },
   });
   if (!conversation) return ResponseFormatter.error(res, 'Conversation not found', 404);
 
@@ -276,7 +277,7 @@ router.get('/conversations/:id', ErrorMiddleware.asyncHandler(async (req: Reques
 
 // PATCH /api/messages/conversations/:id/archive
 router.patch('/conversations/:id/archive', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const conversation = await Conversation.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const conversation = await Conversation.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!conversation) return ResponseFormatter.error(res, 'Conversation not found', 404);
   await conversation.update({ isArchived: !(conversation as any).isArchived });
   ResponseFormatter.success(res, conversation, 'Archive status toggled');
@@ -285,7 +286,7 @@ router.patch('/conversations/:id/archive', ErrorMiddleware.asyncHandler(async (r
 // PATCH /api/messages/conversations/:id/mute
 router.patch('/conversations/:id/mute', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
-  const conversation = await Conversation.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const conversation = await Conversation.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!conversation) return ResponseFormatter.error(res, 'Conversation not found', 404);
 
   const participant = await ConversationParticipant.findOne({
@@ -300,7 +301,7 @@ router.patch('/conversations/:id/mute', ErrorMiddleware.asyncHandler(async (req:
 // DELETE /api/messages/conversations/:id — leave / delete conversation
 router.delete('/conversations/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
-  const conversation = await Conversation.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const conversation = await Conversation.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!conversation) return ResponseFormatter.error(res, 'Conversation not found', 404);
 
   await ConversationParticipant.destroy({
@@ -311,7 +312,7 @@ router.delete('/conversations/:id', ErrorMiddleware.asyncHandler(async (req: Req
 
 // POST /api/messages/conversations/:id/participants
 router.post('/conversations/:id/participants', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const conversation = await Conversation.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const conversation = await Conversation.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!conversation) return ResponseFormatter.error(res, 'Conversation not found', 404);
 
   const { userIds } = req.body;
@@ -343,7 +344,7 @@ router.post('/conversations/:id/participants', ErrorMiddleware.asyncHandler(asyn
 
 // DELETE /api/messages/conversations/:id/participants/:userId
 router.delete('/conversations/:id/participants/:userId', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const conversation = await Conversation.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const conversation = await Conversation.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!conversation) return ResponseFormatter.error(res, 'Conversation not found', 404);
 
   await ConversationParticipant.destroy({
@@ -362,7 +363,7 @@ router.get('/conversations/:id/messages', ErrorMiddleware.asyncHandler(async (re
   const { page = 1, limit = 50, before } = req.query;
   const offset = (Number(page) - 1) * Number(limit);
 
-  const conversation = await Conversation.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const conversation = await Conversation.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!conversation) return ResponseFormatter.error(res, 'Conversation not found', 404);
 
   const isParticipant = await ConversationParticipant.findOne({
@@ -393,7 +394,7 @@ router.get('/conversations/:id/messages', ErrorMiddleware.asyncHandler(async (re
 // POST /api/messages/conversations/:id/messages — send message
 router.post('/conversations/:id/messages', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
-  const conversation = await Conversation.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const conversation = await Conversation.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!conversation) return ResponseFormatter.error(res, 'Conversation not found', 404);
 
   const { messageText, messageType, replyToMessageId, attachmentUrl, attachmentType } = req.body;
@@ -432,7 +433,7 @@ router.post('/conversations/:id/messages', ErrorMiddleware.asyncHandler(async (r
 router.patch('/conversations/:convId/messages/:msgId', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
   const message = await Message.findOne({
-    where: { [Op.or]: [{ id: req.params.msgId }, { uuid: req.params.msgId }] },
+    where: { ...idOrUuidWhere(req.params.msgId) },
   });
   if (!message) return ResponseFormatter.error(res, 'Message not found', 404);
   if ((message as any).senderUserId !== user.id) return ResponseFormatter.error(res, 'Can only edit your own messages', 403);
@@ -460,7 +461,7 @@ router.delete('/conversations/:convId/messages/:msgId', ErrorMiddleware.asyncHan
   const user = (req as any).user;
   const { everyone } = req.query;
   const message = await Message.findOne({
-    where: { [Op.or]: [{ id: req.params.msgId }, { uuid: req.params.msgId }] },
+    where: { ...idOrUuidWhere(req.params.msgId) },
   });
   if (!message) return ResponseFormatter.error(res, 'Message not found', 404);
 
@@ -483,7 +484,7 @@ router.delete('/conversations/:convId/messages/:msgId', ErrorMiddleware.asyncHan
 // PATCH /api/messages/conversations/:convId/messages/:msgId/pin
 router.patch('/conversations/:convId/messages/:msgId/pin', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const message = await Message.findOne({
-    where: { [Op.or]: [{ id: req.params.msgId }, { uuid: req.params.msgId }] },
+    where: { ...idOrUuidWhere(req.params.msgId) },
   });
   if (!message) return ResponseFormatter.error(res, 'Message not found', 404);
   const newPinned = !(message as any).isPinned;
@@ -505,7 +506,7 @@ router.patch('/conversations/:convId/messages/:msgId/react', ErrorMiddleware.asy
   if (!emoji) return ResponseFormatter.error(res, 'emoji is required', 400);
 
   const message = await Message.findOne({
-    where: { [Op.or]: [{ id: req.params.msgId }, { uuid: req.params.msgId }] },
+    where: { ...idOrUuidWhere(req.params.msgId) },
   });
   if (!message) return ResponseFormatter.error(res, 'Message not found', 404);
 
@@ -541,7 +542,7 @@ router.post('/conversations/:convId/messages/:msgId/forward', ErrorMiddleware.as
   }
 
   const original = await Message.findOne({
-    where: { [Op.or]: [{ id: req.params.msgId }, { uuid: req.params.msgId }] },
+    where: { ...idOrUuidWhere(req.params.msgId) },
   });
   if (!original) return ResponseFormatter.error(res, 'Message not found', 404);
 
@@ -576,7 +577,7 @@ router.post('/conversations/:convId/messages/:msgId/forward', ErrorMiddleware.as
 router.post('/conversations/:convId/read', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
   const conversation = await Conversation.findOne({
-    where: { [Op.or]: [{ id: req.params.convId }, { uuid: req.params.convId }] },
+    where: { ...idOrUuidWhere(req.params.convId) },
   });
   if (!conversation) return ResponseFormatter.error(res, 'Conversation not found', 404);
 
@@ -608,7 +609,7 @@ router.post('/conversations/:convId/read', ErrorMiddleware.asyncHandler(async (r
 
 // GET /api/messages/conversations/:id/pinned — get pinned messages
 router.get('/conversations/:id/pinned', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const conversation = await Conversation.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const conversation = await Conversation.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!conversation) return ResponseFormatter.error(res, 'Conversation not found', 404);
 
   const pinned = await Message.findAll({
@@ -622,7 +623,7 @@ router.get('/conversations/:id/pinned', ErrorMiddleware.asyncHandler(async (req:
 // GET /api/messages/conversations/:id/media — shared files and images
 router.get('/conversations/:id/media', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const { type } = req.query;
-  const conversation = await Conversation.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
+  const conversation = await Conversation.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!conversation) return ResponseFormatter.error(res, 'Conversation not found', 404);
 
   const typeFilter: any = {};
