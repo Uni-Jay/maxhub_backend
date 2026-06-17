@@ -1,8 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
+import AuthMiddleware from '@middleware/AuthMiddleware';
 
 const router = Router();
+
+// All system-settings routes are superadmin-only
+router.use(AuthMiddleware.requireRole('superadmin'));
 
 let settingsStore: Record<string, any> = {
   company: {

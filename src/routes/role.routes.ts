@@ -12,6 +12,9 @@ import AuthMiddleware from '@middleware/AuthMiddleware';
 
 const router = Router();
 
+// All role management routes are superadmin-only
+router.use(AuthMiddleware.requireRole('superadmin'));
+
 // GET /api/admin/roles
 router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const roles = await Role.findAll({

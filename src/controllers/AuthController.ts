@@ -244,9 +244,44 @@ export class AuthController {
         return;
       }
 
-      // TODO: Implement 2FA disable logic with password verification
-
+      await AuthenticationService.disable2FA(BigInt(userId), password);
       ResponseFormatter.success(res, null, '2FA disabled');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Enable email-based 2FA
+   * POST /api/auth/2fa/enable
+   */
+  static async enable2FA(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        ResponseFormatter.unauthorized(res, 'Authentication required');
+        return;
+      }
+      await AuthenticationService.enable2FA(BigInt(userId));
+      ResponseFormatter.success(res, null, '2FA enabled via email');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Resend login OTP during MFA step
+   * POST /api/auth/2fa/send-login-otp
+   */
+  static async sendLoginOTP(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { sessionId } = req.body;
+      if (!sessionId) {
+        ResponseFormatter.error(res, 'sessionId is required', 400);
+        return;
+      }
+      await AuthenticationService.sendLoginOTP(sessionId);
+      ResponseFormatter.success(res, null, 'Verification code sent');
     } catch (error) {
       next(error);
     }

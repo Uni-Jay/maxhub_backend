@@ -122,6 +122,9 @@ function setupRoutes(app: any): void {
   // Audit Logs
   apiRouter.use('/audit-logs', require('./audit-log.routes').default);
 
+  // Module Management (superadmin-only, enforced inside module.routes.ts)
+  apiRouter.use('/modules', require('./module.routes').default);
+
   // System Settings
   apiRouter.use('/settings', require('./settings.routes').default);
 

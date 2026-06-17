@@ -194,6 +194,39 @@ router.post(
 );
 
 /**
+ * @route   POST /api/auth/2fa/enable
+ * @desc    Enable email-based 2FA for current user
+ * @access  Private
+ */
+router.post(
+  '/2fa/enable',
+  AuthMiddleware.verifyToken,
+  ErrorMiddleware.asyncHandler(AuthController.enable2FA)
+);
+
+/**
+ * @route   POST /api/auth/2fa/send-login-otp
+ * @desc    Resend login OTP during MFA step (public — caller provides sessionId)
+ * @access  Public
+ * @body    { sessionId }
+ */
+router.post(
+  '/2fa/send-login-otp',
+  ErrorMiddleware.asyncHandler(AuthController.sendLoginOTP)
+);
+
+/**
+ * @route   POST /api/auth/2fa/verify-login-otp
+ * @desc    Verify login OTP and issue tokens (alias for verify-login)
+ * @access  Public
+ * @body    { sessionId, otpCode }
+ */
+router.post(
+  '/2fa/verify-login-otp',
+  ErrorMiddleware.asyncHandler(AuthController.verify2FALogin)
+);
+
+/**
  * SESSION MANAGEMENT ROUTES
  * Requires valid JWT token
  */

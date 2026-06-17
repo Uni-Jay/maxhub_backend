@@ -1,4 +1,8 @@
 import { DataTypes, Model, Sequelize } from 'sequelize';
+import { Conversation } from './Conversation.model';
+import { ConversationParticipant } from './ConversationParticipant.model';
+import { Message } from './Message.model';
+import { MessageRead } from './MessageRead.model';
 import { Branch } from './Branch.model';
 import { Unit } from './Unit.model';
 import { User } from './User.model';
@@ -44,6 +48,8 @@ import { StudentEnrollment } from './StudentEnrollment.model';
 import { StudentResult } from './StudentResult.model';
 import { StudentAttendance } from './StudentAttendance.model';
 import { ClassSchedule } from './ClassSchedule.model';
+import { AppModule } from './Module.model';
+import { UserModulePermission } from './UserModulePermission.model';
 
 /**
  * Initialize all Sequelize model associations
@@ -295,5 +301,25 @@ export class AssociationManager {
     Call.belongsTo(User, { foreignKey: 'calleeUserId', as: 'callee' });
     User.hasMany(Call, { foreignKey: 'callerUserId', as: 'outgoingCalls' });
     User.hasMany(Call, { foreignKey: 'calleeUserId', as: 'incomingCalls' });
+
+    // ======== MESSAGING ========
+    Conversation.hasMany(Message, { foreignKey: 'conversationId', as: 'messages' });
+    Message.belongsTo(Conversation, { foreignKey: 'conversationId', as: 'conversation' });
+    Message.belongsTo(User, { foreignKey: 'senderUserId', as: 'sender' });
+    User.hasMany(Message, { foreignKey: 'senderUserId', as: 'sentMessages' });
+    Message.belongsTo(Message, { foreignKey: 'replyToMessageId', as: 'replyTo' });
+    Message.hasMany(MessageRead, { foreignKey: 'messageId', as: 'reads' });
+    MessageRead.belongsTo(Message, { foreignKey: 'messageId' });
+    MessageRead.belongsTo(User, { foreignKey: 'userId' });
+    Conversation.hasMany(ConversationParticipant, { foreignKey: 'conversationId', as: 'participants' });
+    ConversationParticipant.belongsTo(Conversation, { foreignKey: 'conversationId' });
+    ConversationParticipant.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+    User.hasMany(ConversationParticipant, { foreignKey: 'userId', as: 'conversationParticipations' });
+
+    // ======== MODULE PERMISSIONS ========
+    User.hasMany(UserModulePermission, { foreignKey: 'userId', as: 'modulePermissions' });
+    UserModulePermission.belongsTo(User, { foreignKey: 'userId' });
+    AppModule.hasMany(UserModulePermission, { foreignKey: 'moduleCode', sourceKey: 'code', as: 'userOverrides' });
+    UserModulePermission.belongsTo(AppModule, { foreignKey: 'moduleCode', targetKey: 'code', as: 'module' });
   }
 }

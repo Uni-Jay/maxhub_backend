@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import { Sequelize } from 'sequelize';
 import * as dotenv from 'dotenv';
+import { initChatSocket } from './socket/ChatSocket';
 
 // Allow BigInt values to serialize in JSON responses (IDs, counts, etc.)
 (BigInt.prototype as unknown as { toJSON(): number }).toJSON = function () {
@@ -134,6 +135,9 @@ import { ClassSchedule } from '@models/ClassSchedule.model';
 import { Meeting } from '@models/Meeting.model';
 import { MeetingParticipant } from '@models/MeetingParticipant.model';
 import { Call } from '@models/Call.model';
+// Module permission models
+import { AppModule } from '@models/Module.model';
+import { UserModulePermission } from '@models/UserModulePermission.model';
 
 // Import middleware
 import { AuthMiddleware } from '@middleware/AuthMiddleware';
@@ -391,6 +395,10 @@ class AppBootstrapper {
     MeetingParticipant.initModel(this.sequelize);
     Call.initModel(this.sequelize);
 
+    // Module permission models
+    AppModule.initModel(this.sequelize);
+    UserModulePermission.initModel(this.sequelize);
+
     console.log('✅ 100+ models initialized');
   }
 
@@ -459,6 +467,12 @@ class AppBootstrapper {
       // to handle large JWT tokens containing roles/permissions arrays
       const port = process.env.PORT || 3000;
       const server = http.createServer({ maxHeaderSize: 65536 }, this.app);
+
+      // Initialize Socket.IO chat server
+      const io = initChatSocket(server);
+      this.app.set('io', io);
+      console.log('✅ Socket.IO chat server initialized');
+
       server.listen(port, () => {
         console.log(`
 ╔════════════════════════════════════════╗

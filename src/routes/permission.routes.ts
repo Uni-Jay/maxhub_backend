@@ -10,6 +10,9 @@ import AuthMiddleware from '@middleware/AuthMiddleware';
 
 const router = Router();
 
+// All permission management routes are superadmin-only
+router.use(AuthMiddleware.requireRole('superadmin'));
+
 // GET /api/admin/permissions
 router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const { page = 1, limit = 50, module: mod, action, isActive, search } = req.query;

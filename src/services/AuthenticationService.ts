@@ -123,7 +123,9 @@ export class AuthenticationService {
       where: { userId: user.id, isEnabled: true },
     });
 
-    const requiresMFA = !!twoFactorAuth;
+    // Honour ENABLE_2FA_LOGIN=false env var for test/staging bypass
+    const mfaLoginEnabled = process.env.ENABLE_2FA_LOGIN !== 'false';
+    const requiresMFA = mfaLoginEnabled && !!twoFactorAuth;
 
     // Generate tokens
     const accessToken = JWTService.generateAccessToken(authenticatedUser);
@@ -691,6 +693,94 @@ export class AuthenticationService {
     });
 
     return { backupCodes };
+  }
+
+  /**
+   * Enable email-based 2FA directly (no TOTP setup required)
+   */
+  async enable2FA(userId: bigint): Promise<void> {
+    const user = await User.findByPk(userId);
+    if (!user) throw new NotFoundError('User not found');
+
+    // Deactivate any existing 2FA records first
+    await TwoFactorAuth.update(
+      { isEnabled: false } as any,
+      { where: { userId } }
+    );
+
+    await TwoFactorAuth.findOrCreate({
+      where: { userId, method: 'EMAIL' },
+      defaults: {
+        userId,
+        method: 'EMAIL',
+        isEnabled: true,
+        isVerified: true,
+        verifiedAt: new Date(),
+      } as any,
+    }).then(async ([record, created]) => {
+      if (!created) {
+        await record.update({ isEnabled: true, isVerified: true, verifiedAt: new Date() });
+      }
+    });
+  }
+
+  /**
+   * Disable 2FA with password verification
+   */
+  async disable2FA(userId: bigint, password?: string): Promise<void> {
+    const user = await User.findByPk(userId);
+    if (!user) throw new NotFoundError('User not found');
+
+    if (password) {
+      const isValid = await PasswordService.verifyPassword(password, user.passwordHash);
+      if (!isValid) throw new UnauthorizedError('Incorrect password');
+    }
+
+    await TwoFactorAuth.update(
+      { isEnabled: false } as any,
+      { where: { userId } }
+    );
+  }
+
+  /**
+   * Resend login OTP for an in-progress MFA session
+   */
+  async sendLoginOTP(sessionId: string): Promise<void> {
+    const session = await Session.findOne({ where: { uuid: sessionId } });
+    if (!session || session.expiresAt < new Date()) {
+      throw new UnauthorizedError('Session expired. Please login again.');
+    }
+
+    const user = await User.findByPk(session.userId);
+    if (!user) throw new NotFoundError('User not found');
+
+    const twoFA = await TwoFactorAuth.findOne({ where: { userId: user.id, isEnabled: true } });
+    if (!twoFA || twoFA.method !== 'EMAIL') {
+      throw new ValidationError('Email OTP not configured', [] as any);
+    }
+
+    // Invalidate previous OTPs and create a fresh one
+    await OTPVerification.update(
+      { isUsed: true, usedAt: new Date() },
+      { where: { userId: user.id, type: '2FA', isUsed: false } }
+    );
+
+    const otpCode = OTPService.generateOTPCode();
+    const otpHash = await OTPService.hashOTP(otpCode);
+
+    await OTPVerification.create({
+      userId: user.id,
+      email: user.email,
+      otpCode,
+      otpHash,
+      type: '2FA',
+      expiresAt: OTPService.getOTPExpirationTime(),
+      isUsed: false,
+      attempts: 0,
+    });
+
+    await sendOTPEmail({ to: user.email, firstName: user.firstName, otpCode, type: '2FA' })
+      .catch(err => console.error('[Auth] 2FA resend OTP failed:', err));
   }
 }
 
