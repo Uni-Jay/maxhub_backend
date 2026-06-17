@@ -21,6 +21,12 @@ interface JobPostingAttributes {
     closingDate: Date;
     createdById: bigint;
     status: 'Draft' | 'Open' | 'Closed' | 'OnHold' | 'Filled';
+    businessUnit?: 'KS' | 'VM' | 'BM';
+    syncStatus: 'Pending' | 'Synced' | 'Failed';
+    externalJobId?: string;
+    syncAttempts: number;
+    lastSyncedAt?: Date;
+    lastSyncError?: string;
     deletedAt?: Date;
 }
 interface JobPostingCreationAttributes extends Optional<JobPostingAttributes, 'id' | 'uuid'> {
@@ -47,6 +53,12 @@ export declare class JobPosting extends Model<JobPostingAttributes, JobPostingCr
     closingDate: Date;
     createdById: bigint;
     status: 'Draft' | 'Open' | 'Closed' | 'OnHold' | 'Filled';
+    businessUnit?: 'KS' | 'VM' | 'BM';
+    syncStatus: 'Pending' | 'Synced' | 'Failed';
+    externalJobId?: string;
+    syncAttempts: number;
+    lastSyncedAt?: Date;
+    lastSyncError?: string;
     deletedAt?: Date;
     readonly createdAt: Date;
     readonly updatedAt: Date;

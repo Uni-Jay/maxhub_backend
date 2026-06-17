@@ -46,6 +46,7 @@ function setupRoutes(app) {
     apiRouter.use('/enrollments', require('./enrollment.routes').default);
     apiRouter.use('/job-postings', require('./job-posting.routes').default);
     apiRouter.use('/job-applications', require('./job-application.routes').default);
+    apiRouter.use('/job-sync', require('./job-sync.routes').default);
     apiRouter.use('/payroll', require('./payroll.routes').default);
     apiRouter.use('/invoices', require('./invoice.routes').default);
     apiRouter.use('/inventory', require('./inventory.routes').default);

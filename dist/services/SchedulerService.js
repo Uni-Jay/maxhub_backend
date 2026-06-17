@@ -10,6 +10,7 @@ const Client_model_1 = require("../models/Client.model");
 const Staff_model_1 = require("../models/Staff.model");
 const CommunicationLog_model_1 = require("../models/CommunicationLog.model");
 const CommunicationService_1 = require("./CommunicationService");
+const JobSyncService_1 = __importDefault(require("./JobSyncService"));
 const COMPANY_NAME = process.env.COMPANY_NAME || 'MaxHub';
 const CHANNELS = ['Email', 'SMS', 'WhatsApp'];
 function todayMMDD() {
@@ -132,9 +133,23 @@ function scheduleBirthdayMessages() {
     }, { timezone: 'Africa/Lagos' });
     console.log('[Scheduler] Birthday job scheduled (daily at 7:00 AM)');
 }
+function scheduleJobSyncRetry() {
+    node_cron_1.default.schedule('*/15 * * * *', async () => {
+        console.log('[Scheduler] Running job posting sync retry...');
+        try {
+            const { attempted } = await JobSyncService_1.default.retryPendingAndFailed();
+            console.log(`[Scheduler] Job sync retry done — ${attempted} posting(s) attempted`);
+        }
+        catch (err) {
+            console.error('[Scheduler] Job sync retry failed:', err);
+        }
+    }, { timezone: 'Africa/Lagos' });
+    console.log('[Scheduler] Job sync retry scheduled (every 15 minutes)');
+}
 function startScheduler() {
     scheduleWeeklyMessages();
     scheduleBirthdayMessages();
+    scheduleJobSyncRetry();
     console.log('[Scheduler] All jobs started');
 }
 //# sourceMappingURL=SchedulerService.js.map

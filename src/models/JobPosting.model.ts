@@ -23,6 +23,12 @@ interface JobPostingAttributes {
   closingDate: Date;
   createdById: bigint;
   status: 'Draft' | 'Open' | 'Closed' | 'OnHold' | 'Filled';
+  businessUnit?: 'KS' | 'VM' | 'BM';
+  syncStatus: 'Pending' | 'Synced' | 'Failed';
+  externalJobId?: string;
+  syncAttempts: number;
+  lastSyncedAt?: Date;
+  lastSyncError?: string;
   deletedAt?: Date;
 }
 
@@ -51,6 +57,12 @@ export class JobPosting extends Model<JobPostingAttributes, JobPostingCreationAt
   public closingDate!: Date;
   public createdById!: bigint;
   public status!: 'Draft' | 'Open' | 'Closed' | 'OnHold' | 'Filled';
+  public businessUnit?: 'KS' | 'VM' | 'BM';
+  public syncStatus!: 'Pending' | 'Synced' | 'Failed';
+  public externalJobId?: string;
+  public syncAttempts!: number;
+  public lastSyncedAt?: Date;
+  public lastSyncError?: string;
   public deletedAt?: Date;
 
   public readonly createdAt!: Date;
@@ -80,6 +92,12 @@ export class JobPosting extends Model<JobPostingAttributes, JobPostingCreationAt
         closingDate: { type: DataTypes.DATE, allowNull: false, comment: 'Application closing date' },
         createdById: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'Created by user' },
         status: { type: DataTypes.ENUM('Draft', 'Open', 'Closed', 'OnHold', 'Filled'), defaultValue: 'Draft' },
+        businessUnit: { type: DataTypes.ENUM('KS', 'VM', 'BM'), allowNull: true, comment: 'Business unit this posting belongs to (Kurios SAT / VisaMax Travels / BeadMax)' },
+        syncStatus: { type: DataTypes.ENUM('Pending', 'Synced', 'Failed'), allowNull: false, defaultValue: 'Pending', comment: 'External job-portal sync status' },
+        externalJobId: { type: DataTypes.STRING(255), allowNull: true, comment: 'ID assigned by the destination business unit site after first successful sync' },
+        syncAttempts: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+        lastSyncedAt: { type: DataTypes.DATE, allowNull: true },
+        lastSyncError: { type: DataTypes.TEXT, allowNull: true },
         deletedAt: { type: DataTypes.DATE, allowNull: true, comment: 'Soft delete timestamp' },
       },
       {
@@ -90,6 +108,7 @@ export class JobPosting extends Model<JobPostingAttributes, JobPostingCreationAt
           { fields: ['departmentId'], name: 'idx_job_postings_departmentId' },
           { fields: ['closingDate'], name: 'idx_job_postings_closingDate' },
           { fields: ['uuid'], name: 'idx_job_postings_uuid' },
+          { fields: ['syncStatus'], name: 'idx_job_postings_syncStatus' },
         ],
         comment: 'Job postings'
       }

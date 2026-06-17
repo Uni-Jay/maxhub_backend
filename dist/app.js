@@ -84,6 +84,7 @@ const PayrollPeriod_model_1 = require("./models/PayrollPeriod.model");
 const EmployeeSalary_model_1 = require("./models/EmployeeSalary.model");
 const Course_model_1 = require("./models/Course.model");
 const JobPosting_model_1 = require("./models/JobPosting.model");
+const JobSyncLog_model_1 = require("./models/JobSyncLog.model");
 const JobApplication_model_1 = require("./models/JobApplication.model");
 const Interview_model_1 = require("./models/Interview.model");
 const JobOffer_model_1 = require("./models/JobOffer.model");
@@ -252,6 +253,7 @@ class AppBootstrapper {
         Assignment_model_1.Assignment.initModel(this.sequelize);
         Submission_model_1.Submission.initModel(this.sequelize);
         JobPosting_model_1.JobPosting.initModel(this.sequelize);
+        JobSyncLog_model_1.JobSyncLog.initModel(this.sequelize);
         JobApplication_model_1.JobApplication.initModel(this.sequelize);
         Interview_model_1.Interview.initModel(this.sequelize);
         JobOffer_model_1.JobOffer.initModel(this.sequelize);

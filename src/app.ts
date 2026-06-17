@@ -50,6 +50,7 @@ import { PayrollPeriod } from '@models/PayrollPeriod.model';
 import { EmployeeSalary } from '@models/EmployeeSalary.model';
 import { Course } from '@models/Course.model';
 import { JobPosting } from '@models/JobPosting.model';
+import { JobSyncLog } from '@models/JobSyncLog.model';
 // Extended recruitment models
 import { JobApplication } from '@models/JobApplication.model';
 import { Interview } from '@models/Interview.model';
@@ -293,6 +294,7 @@ class AppBootstrapper {
 
     // Recruitment models
     JobPosting.initModel(this.sequelize);
+    JobSyncLog.initModel(this.sequelize);
     JobApplication.initModel(this.sequelize);
     Interview.initModel(this.sequelize);
     JobOffer.initModel(this.sequelize);

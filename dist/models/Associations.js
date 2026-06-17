@@ -67,6 +67,7 @@ const WarehouseStock_model_1 = require("./WarehouseStock.model");
 const Supplier_model_1 = require("./Supplier.model");
 const PurchaseOrder_model_1 = require("./PurchaseOrder.model");
 const JobApplication_model_1 = require("./JobApplication.model");
+const JobSyncLog_model_1 = require("./JobSyncLog.model");
 class AssociationManager {
     static initializeAssociations(sequelize) {
         User_model_1.User.hasMany(Session_model_1.Session, { foreignKey: 'userId', as: 'sessions' });
@@ -190,6 +191,8 @@ class AssociationManager {
         JobPosting_model_1.JobPosting.belongsTo(Designation_model_1.Designation, { foreignKey: 'designationId', as: 'designation' });
         JobPosting_model_1.JobPosting.belongsTo(User_model_1.User, { foreignKey: 'createdById', as: 'createdBy' });
         JobApplication_model_1.JobApplication.belongsTo(JobPosting_model_1.JobPosting, { foreignKey: 'jobPostingId', as: 'jobPosting' });
+        JobPosting_model_1.JobPosting.hasMany(JobSyncLog_model_1.JobSyncLog, { foreignKey: 'jobPostingId', as: 'syncLogs' });
+        JobSyncLog_model_1.JobSyncLog.belongsTo(JobPosting_model_1.JobPosting, { foreignKey: 'jobPostingId', as: 'jobPosting' });
         Appraisal_model_1.Appraisal.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId', as: 'staff' });
         TrainingAttendance_model_1.TrainingAttendance.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId', as: 'staff' });
         EmployeeSalary_model_1.EmployeeSalary.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId', as: 'staff' });

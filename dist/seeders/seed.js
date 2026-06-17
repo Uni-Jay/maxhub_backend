@@ -82,6 +82,7 @@ const Certificate_model_1 = require("../models/Certificate.model");
 const Assignment_model_1 = require("../models/Assignment.model");
 const Submission_model_1 = require("../models/Submission.model");
 const JobPosting_model_1 = require("../models/JobPosting.model");
+const JobSyncLog_model_1 = require("../models/JobSyncLog.model");
 const JobApplication_model_1 = require("../models/JobApplication.model");
 const Interview_model_1 = require("../models/Interview.model");
 const JobOffer_model_1 = require("../models/JobOffer.model");
@@ -267,6 +268,7 @@ async function main() {
     Assignment_model_1.Assignment.initModel(sequelize);
     Submission_model_1.Submission.initModel(sequelize);
     JobPosting_model_1.JobPosting.initModel(sequelize);
+    JobSyncLog_model_1.JobSyncLog.initModel(sequelize);
     JobApplication_model_1.JobApplication.initModel(sequelize);
     Interview_model_1.Interview.initModel(sequelize);
     JobOffer_model_1.JobOffer.initModel(sequelize);

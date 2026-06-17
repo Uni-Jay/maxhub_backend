@@ -8,6 +8,9 @@ import { Designation } from '@models/Designation.model';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import AuthMiddleware from '@middleware/AuthMiddleware';
+import JobSyncService from '@services/JobSyncService';
+
+const BUSINESS_UNITS = ['KS', 'VM', 'BM'];
 
 const router = Router();
 
@@ -74,10 +77,14 @@ router.get('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Respon
 // POST /api/job-postings
 router.post('/', AuthMiddleware.requirePermission('rec.posting.create.all'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const { title, departmentId, designationId, noOfPositions, jobType, postedDate, closingDate,
-    description, salaryMin, salaryMax, currency, location, requiredExperience, qualifications, skills, benefits } = req.body;
+    description, salaryMin, salaryMax, currency, location, requiredExperience, qualifications, skills, benefits,
+    businessUnit } = req.body;
 
   if (!title || !departmentId || !designationId || !noOfPositions || !jobType || !postedDate || !closingDate) {
     return ResponseFormatter.error(res, 'title, departmentId, designationId, noOfPositions, jobType, postedDate, closingDate are required', 400);
+  }
+  if (!businessUnit || !BUSINESS_UNITS.includes(businessUnit)) {
+    return ResponseFormatter.error(res, `businessUnit is required and must be one of: ${BUSINESS_UNITS.join(', ')}`, 400);
   }
 
   const count = await JobPosting.count();
@@ -86,7 +93,7 @@ router.post('/', AuthMiddleware.requirePermission('rec.posting.create.all'), Err
   const posting = await JobPosting.create({
     uuid: uuidv4(), jobCode, title, departmentId, designationId, noOfPositions, jobType,
     postedDate, closingDate, description, salaryMin, salaryMax, currency: currency || 'NGN',
-    location, requiredExperience, qualifications, skills, benefits,
+    location, requiredExperience, qualifications, skills, benefits, businessUnit,
     status: 'Draft', createdById: (req as any).user.id,
   } as any);
   ResponseFormatter.success(res, posting, 'Job posting created', 201);
@@ -98,10 +105,15 @@ router.put('/:id', AuthMiddleware.requirePermission('rec.posting.update.all'), E
   if (!posting) return ResponseFormatter.error(res, 'Job posting not found', 404);
 
   const allowed = ['title', 'description', 'noOfPositions', 'jobType', 'salaryMin', 'salaryMax', 'location',
-    'requiredExperience', 'qualifications', 'skills', 'benefits', 'closingDate'];
+    'requiredExperience', 'qualifications', 'skills', 'benefits', 'closingDate', 'businessUnit'];
   const updates: any = {};
   allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
   await posting.update(updates);
+
+  if (posting.externalJobId) {
+    JobSyncService.syncUpdate(posting).catch(err => console.error('[JobSync] update failed:', err));
+  }
+
   ResponseFormatter.success(res, posting, 'Job posting updated');
 }));
 
@@ -126,6 +138,15 @@ router.patch('/:id/status', AuthMiddleware.requirePermission('rec.posting.update
   }
 
   await posting.update({ status });
+
+  if (posting.businessUnit) {
+    if (!posting.externalJobId) {
+      JobSyncService.syncCreate(posting).catch(err => console.error('[JobSync] create failed:', err));
+    } else {
+      JobSyncService.syncUpdate(posting).catch(err => console.error('[JobSync] update failed:', err));
+    }
+  }
+
   ResponseFormatter.success(res, posting, 'Status updated');
 }));
 
@@ -134,6 +155,11 @@ router.delete('/:id', AuthMiddleware.requirePermission('rec.posting.delete.all')
   const posting = await JobPosting.findOne({ where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] } });
   if (!posting) return ResponseFormatter.error(res, 'Job posting not found', 404);
   if ((posting as any).status !== 'Draft') return ResponseFormatter.error(res, 'Only Draft postings can be deleted', 400);
+
+  if (posting.externalJobId) {
+    JobSyncService.syncDelete(posting).catch(err => console.error('[JobSync] delete failed:', err));
+  }
+
   await posting.destroy();
   ResponseFormatter.success(res, null, 'Job posting deleted');
 }));

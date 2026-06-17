@@ -72,6 +72,7 @@ function setupRoutes(app: any): void {
   // Recruitment routes
   apiRouter.use('/job-postings', require('./job-posting.routes').default);
   apiRouter.use('/job-applications', require('./job-application.routes').default);
+  apiRouter.use('/job-sync', require('./job-sync.routes').default);
 
   // Payroll & Accounting routes
   apiRouter.use('/payroll', require('./payroll.routes').default);

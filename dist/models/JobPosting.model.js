@@ -27,6 +27,12 @@ class JobPosting extends sequelize_1.Model {
             closingDate: { type: sequelize_1.DataTypes.DATE, allowNull: false, comment: 'Application closing date' },
             createdById: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'Created by user' },
             status: { type: sequelize_1.DataTypes.ENUM('Draft', 'Open', 'Closed', 'OnHold', 'Filled'), defaultValue: 'Draft' },
+            businessUnit: { type: sequelize_1.DataTypes.ENUM('KS', 'VM', 'BM'), allowNull: true, comment: 'Business unit this posting belongs to (Kurios SAT / VisaMax Travels / BeadMax)' },
+            syncStatus: { type: sequelize_1.DataTypes.ENUM('Pending', 'Synced', 'Failed'), allowNull: false, defaultValue: 'Pending', comment: 'External job-portal sync status' },
+            externalJobId: { type: sequelize_1.DataTypes.STRING(255), allowNull: true, comment: 'ID assigned by the destination business unit site after first successful sync' },
+            syncAttempts: { type: sequelize_1.DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+            lastSyncedAt: { type: sequelize_1.DataTypes.DATE, allowNull: true },
+            lastSyncError: { type: sequelize_1.DataTypes.TEXT, allowNull: true },
             deletedAt: { type: sequelize_1.DataTypes.DATE, allowNull: true, comment: 'Soft delete timestamp' },
         }, {
             sequelize, tableName: 'job_postings', timestamps: true, paranoid: true, underscored: false, freezeTableName: true,
@@ -36,6 +42,7 @@ class JobPosting extends sequelize_1.Model {
                 { fields: ['departmentId'], name: 'idx_job_postings_departmentId' },
                 { fields: ['closingDate'], name: 'idx_job_postings_closingDate' },
                 { fields: ['uuid'], name: 'idx_job_postings_uuid' },
+                { fields: ['syncStatus'], name: 'idx_job_postings_syncStatus' },
             ],
             comment: 'Job postings'
         });

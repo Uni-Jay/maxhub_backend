@@ -4,6 +4,7 @@ import { Client } from '../models/Client.model';
 import { Staff } from '../models/Staff.model';
 import { CommunicationLog } from '../models/CommunicationLog.model';
 import { sendMessage, buildWeeklyMessage, buildBirthdayMessage, sendBirthdayEmail } from './CommunicationService';
+import JobSyncService from './JobSyncService';
 
 const COMPANY_NAME = process.env.COMPANY_NAME || 'MaxHub';
 const CHANNELS = ['Email', 'SMS', 'WhatsApp'] as const;
@@ -160,8 +161,26 @@ function scheduleBirthdayMessages(): void {
   console.log('[Scheduler] Birthday job scheduled (daily at 7:00 AM)');
 }
 
+/**
+ * Retry job postings whose external portal sync is still Pending or Failed — every 15 minutes
+ */
+function scheduleJobSyncRetry(): void {
+  cron.schedule('*/15 * * * *', async () => {
+    console.log('[Scheduler] Running job posting sync retry...');
+    try {
+      const { attempted } = await JobSyncService.retryPendingAndFailed();
+      console.log(`[Scheduler] Job sync retry done — ${attempted} posting(s) attempted`);
+    } catch (err) {
+      console.error('[Scheduler] Job sync retry failed:', err);
+    }
+  }, { timezone: 'Africa/Lagos' });
+
+  console.log('[Scheduler] Job sync retry scheduled (every 15 minutes)');
+}
+
 export function startScheduler(): void {
   scheduleWeeklyMessages();
   scheduleBirthdayMessages();
+  scheduleJobSyncRetry();
   console.log('[Scheduler] All jobs started');
 }

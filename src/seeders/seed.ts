@@ -61,6 +61,7 @@ import { Certificate } from '../models/Certificate.model';
 import { Assignment } from '../models/Assignment.model';
 import { Submission } from '../models/Submission.model';
 import { JobPosting } from '../models/JobPosting.model';
+import { JobSyncLog } from '../models/JobSyncLog.model';
 import { JobApplication } from '../models/JobApplication.model';
 import { Interview } from '../models/Interview.model';
 import { JobOffer } from '../models/JobOffer.model';
@@ -271,6 +272,7 @@ async function main() {
   Assignment.initModel(sequelize);
   Submission.initModel(sequelize);
   JobPosting.initModel(sequelize);
+  JobSyncLog.initModel(sequelize);
   JobApplication.initModel(sequelize);
   Interview.initModel(sequelize);
   JobOffer.initModel(sequelize);

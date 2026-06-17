@@ -13,6 +13,8 @@ const Designation_model_1 = require("../models/Designation.model");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
+const JobSyncService_1 = __importDefault(require("../services/JobSyncService"));
+const BUSINESS_UNITS = ['KS', 'VM', 'BM'];
 const router = (0, express_1.Router)();
 router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { page = 1, limit = 12, status, departmentId, jobType, search } = req.query;
@@ -69,16 +71,19 @@ router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, re
     ResponseFormatter_1.ResponseFormatter.success(res, { ...posting.toJSON(), applicationCount, recentApplications });
 }));
 router.post('/', AuthMiddleware_1.default.requirePermission('rec.posting.create.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const { title, departmentId, designationId, noOfPositions, jobType, postedDate, closingDate, description, salaryMin, salaryMax, currency, location, requiredExperience, qualifications, skills, benefits } = req.body;
+    const { title, departmentId, designationId, noOfPositions, jobType, postedDate, closingDate, description, salaryMin, salaryMax, currency, location, requiredExperience, qualifications, skills, benefits, businessUnit } = req.body;
     if (!title || !departmentId || !designationId || !noOfPositions || !jobType || !postedDate || !closingDate) {
         return ResponseFormatter_1.ResponseFormatter.error(res, 'title, departmentId, designationId, noOfPositions, jobType, postedDate, closingDate are required', 400);
+    }
+    if (!businessUnit || !BUSINESS_UNITS.includes(businessUnit)) {
+        return ResponseFormatter_1.ResponseFormatter.error(res, `businessUnit is required and must be one of: ${BUSINESS_UNITS.join(', ')}`, 400);
     }
     const count = await JobPosting_model_1.JobPosting.count();
     const jobCode = `JOB-${String(count + 1).padStart(6, '0')}`;
     const posting = await JobPosting_model_1.JobPosting.create({
         uuid: (0, uuid_1.v4)(), jobCode, title, departmentId, designationId, noOfPositions, jobType,
         postedDate, closingDate, description, salaryMin, salaryMax, currency: currency || 'NGN',
-        location, requiredExperience, qualifications, skills, benefits,
+        location, requiredExperience, qualifications, skills, benefits, businessUnit,
         status: 'Draft', createdById: req.user.id,
     });
     ResponseFormatter_1.ResponseFormatter.success(res, posting, 'Job posting created', 201);
@@ -88,11 +93,14 @@ router.put('/:id', AuthMiddleware_1.default.requirePermission('rec.posting.updat
     if (!posting)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Job posting not found', 404);
     const allowed = ['title', 'description', 'noOfPositions', 'jobType', 'salaryMin', 'salaryMax', 'location',
-        'requiredExperience', 'qualifications', 'skills', 'benefits', 'closingDate'];
+        'requiredExperience', 'qualifications', 'skills', 'benefits', 'closingDate', 'businessUnit'];
     const updates = {};
     allowed.forEach(k => { if (req.body[k] !== undefined)
         updates[k] = req.body[k]; });
     await posting.update(updates);
+    if (posting.externalJobId) {
+        JobSyncService_1.default.syncUpdate(posting).catch(err => console.error('[JobSync] update failed:', err));
+    }
     ResponseFormatter_1.ResponseFormatter.success(res, posting, 'Job posting updated');
 }));
 router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('rec.posting.update.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
@@ -113,6 +121,14 @@ router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('rec.post
         return ResponseFormatter_1.ResponseFormatter.error(res, `Cannot transition from ${current} to ${status}`, 400);
     }
     await posting.update({ status });
+    if (posting.businessUnit) {
+        if (!posting.externalJobId) {
+            JobSyncService_1.default.syncCreate(posting).catch(err => console.error('[JobSync] create failed:', err));
+        }
+        else {
+            JobSyncService_1.default.syncUpdate(posting).catch(err => console.error('[JobSync] update failed:', err));
+        }
+    }
     ResponseFormatter_1.ResponseFormatter.success(res, posting, 'Status updated');
 }));
 router.delete('/:id', AuthMiddleware_1.default.requirePermission('rec.posting.delete.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
@@ -121,6 +137,9 @@ router.delete('/:id', AuthMiddleware_1.default.requirePermission('rec.posting.de
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Job posting not found', 404);
     if (posting.status !== 'Draft')
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Only Draft postings can be deleted', 400);
+    if (posting.externalJobId) {
+        JobSyncService_1.default.syncDelete(posting).catch(err => console.error('[JobSync] delete failed:', err));
+    }
     await posting.destroy();
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Job posting deleted');
 }));
