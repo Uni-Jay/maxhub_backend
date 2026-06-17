@@ -341,10 +341,19 @@ class AppBootstrapper {
             console.log('📡 Connecting to database...');
             await this.sequelize.authenticate();
             console.log('✅ Database connected');
-            if (process.env.NODE_ENV === 'development') {
-                console.log('🔄 Syncing database schema...');
-                await this.sequelize.sync({ alter: process.env.DB_FORCE_SYNC === 'true' });
+            const dbSync = process.env.DB_SYNC || (process.env.NODE_ENV === 'development' ? 'alter' : 'none');
+            if (dbSync === 'alter') {
+                console.log('🔄 Syncing database schema (alter)...');
+                await this.sequelize.sync({ alter: true });
                 console.log('✅ Database synced');
+            }
+            else if (dbSync === 'force' && process.env.NODE_ENV !== 'production') {
+                console.log('🔄 Syncing database schema (force)...');
+                await this.sequelize.sync({ force: true });
+                console.log('✅ Database synced (force)');
+            }
+            else {
+                console.log('ℹ️  Database sync skipped (DB_SYNC=none)');
             }
             (0, SchedulerService_1.startScheduler)();
             const port = process.env.PORT || 3000;
