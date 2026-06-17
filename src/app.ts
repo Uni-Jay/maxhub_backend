@@ -436,11 +436,16 @@ class AppBootstrapper {
       console.log('✅ Database connected');
 
       // Sync models
-      // DB_SYNC=alter  → alter existing tables (safe for adding columns)
+      // DB_SYNC=create → CREATE TABLE IF NOT EXISTS (safe, creates missing tables only)
+      // DB_SYNC=alter  → alter existing tables — BROKEN on PostgreSQL for unique columns
       // DB_SYNC=force  → drop and recreate (destructive — dev only)
       // DB_SYNC=none   → skip sync entirely
-      const dbSync = process.env.DB_SYNC || (process.env.NODE_ENV === 'development' ? 'alter' : 'none');
-      if (dbSync === 'alter') {
+      const dbSync = process.env.DB_SYNC || 'none';
+      if (dbSync === 'create') {
+        console.log('🔄 Syncing database schema (create missing tables)...');
+        await this.sequelize.sync();
+        console.log('✅ Database synced');
+      } else if (dbSync === 'alter') {
         console.log('🔄 Syncing database schema (alter)...');
         await this.sequelize.sync({ alter: true });
         console.log('✅ Database synced');

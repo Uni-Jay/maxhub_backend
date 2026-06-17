@@ -337,8 +337,13 @@ class AppBootstrapper {
             console.log('📡 Connecting to database...');
             await this.sequelize.authenticate();
             console.log('✅ Database connected');
-            const dbSync = process.env.DB_SYNC || (process.env.NODE_ENV === 'development' ? 'alter' : 'none');
-            if (dbSync === 'alter') {
+            const dbSync = process.env.DB_SYNC || 'none';
+            if (dbSync === 'create') {
+                console.log('🔄 Syncing database schema (create missing tables)...');
+                await this.sequelize.sync();
+                console.log('✅ Database synced');
+            }
+            else if (dbSync === 'alter') {
                 console.log('🔄 Syncing database schema (alter)...');
                 await this.sequelize.sync({ alter: true });
                 console.log('✅ Database synced');
