@@ -50,6 +50,21 @@ import { StudentAttendance } from './StudentAttendance.model';
 import { ClassSchedule } from './ClassSchedule.model';
 import { AppModule } from './Module.model';
 import { UserModulePermission } from './UserModulePermission.model';
+import { Enrollment } from './Enrollment.model';
+import { CourseModule } from './CourseModule.model';
+import { CourseContent } from './CourseContent.model';
+import { Exam } from './Exam.model';
+import { Question } from './Question.model';
+import { ExamResult } from './ExamResult.model';
+import { Certificate } from './Certificate.model';
+import { Appraisal } from './Appraisal.model';
+import { TrainingAttendance } from './TrainingAttendance.model';
+import { InventoryCategory } from './InventoryCategory.model';
+import { InventoryItem } from './InventoryItem.model';
+import { WarehouseStock } from './WarehouseStock.model';
+import { Supplier } from './Supplier.model';
+import { PurchaseOrder } from './PurchaseOrder.model';
+import { JobApplication } from './JobApplication.model';
 
 /**
  * Initialize all Sequelize model associations
@@ -239,6 +254,15 @@ export class AssociationManager {
     Course.belongsTo(Staff, { foreignKey: 'instructorId', as: 'instructor' });
     Course.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
     Course.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+    Course.hasMany(CourseModule, { foreignKey: 'courseId', as: 'modules' });
+    Course.hasMany(Exam, { foreignKey: 'courseId', as: 'exams' });
+    CourseModule.hasMany(CourseContent, { foreignKey: 'moduleId', as: 'contents' });
+    Exam.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
+    Exam.hasMany(Question, { foreignKey: 'examId', as: 'questions' });
+    Enrollment.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
+    Enrollment.belongsTo(Staff, { foreignKey: 'staffId', as: 'staff' });
+    ExamResult.belongsTo(Enrollment, { foreignKey: 'enrollmentId', as: 'enrollment' });
+    Certificate.belongsTo(Enrollment, { foreignKey: 'enrollmentId', as: 'enrollment' });
 
     // ======== RECRUITMENT ========
 
@@ -246,6 +270,20 @@ export class AssociationManager {
     JobPosting.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
     JobPosting.belongsTo(Designation, { foreignKey: 'designationId', as: 'designation' });
     JobPosting.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+    JobApplication.belongsTo(JobPosting, { foreignKey: 'jobPostingId', as: 'jobPosting' });
+
+    // ======== PERFORMANCE & TRAINING ========
+    Appraisal.belongsTo(Staff, { foreignKey: 'staffId', as: 'staff' });
+    TrainingAttendance.belongsTo(Staff, { foreignKey: 'staffId', as: 'staff' });
+
+    // ======== PAYROLL ========
+    EmployeeSalary.belongsTo(Staff, { foreignKey: 'staffId', as: 'staff' });
+    EmployeeSalary.belongsTo(PayrollPeriod, { foreignKey: 'payrollPeriodId', as: 'payrollPeriod' });
+
+    // ======== INVENTORY ========
+    InventoryItem.belongsTo(InventoryCategory, { foreignKey: 'categoryId', as: 'category' });
+    WarehouseStock.belongsTo(InventoryItem, { foreignKey: 'itemId', as: 'item' });
+    PurchaseOrder.belongsTo(Supplier, { foreignKey: 'supplierId', as: 'supplier' });
 
     // ======== STUDENT MANAGEMENT SYSTEM ========
 
