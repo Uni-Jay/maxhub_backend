@@ -30,7 +30,7 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
         where,
         include: [
             { model: Department_model_1.Department, as: 'department', attributes: ['id', 'name'] },
-            { model: Designation_model_1.Designation, as: 'designation', attributes: ['id', 'title'] },
+            { model: Designation_model_1.Designation, as: 'designation', attributes: ['id', 'name'] },
         ],
         order: [['postedDate', 'DESC']],
         limit: Number(limit), offset,
@@ -57,7 +57,7 @@ router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, re
         where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
         include: [
             { model: Department_model_1.Department, as: 'department', attributes: ['id', 'name'] },
-            { model: Designation_model_1.Designation, as: 'designation', attributes: ['id', 'title'] },
+            { model: Designation_model_1.Designation, as: 'designation', attributes: ['id', 'name'] },
         ],
     });
     if (!posting)

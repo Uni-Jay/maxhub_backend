@@ -44,7 +44,7 @@ router.get(
       where,
       include: [
         { model: Department, attributes: ['id', 'name', 'code'], required: false },
-        { model: Designation, attributes: ['id', 'title'], required: false },
+        { model: Designation, attributes: ['id', 'name'], required: false },
         { model: Branch, as: 'branch', attributes: ['id', 'uuid', 'branchCode', 'branchName'], required: false },
         { model: Unit, as: 'unit', attributes: ['id', 'uuid', 'code', 'name'], required: false },
       ],
@@ -66,7 +66,7 @@ router.get(
       where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
       include: [
         { model: Department, attributes: ['id', 'name', 'code'] },
-        { model: Designation, attributes: ['id', 'title'] },
+        { model: Designation, attributes: ['id', 'name'] },
         { model: Branch, as: 'branch', attributes: ['id', 'uuid', 'branchCode', 'branchName'], required: false },
         { model: Unit, as: 'unit', attributes: ['id', 'uuid', 'code', 'name'], required: false },
         {

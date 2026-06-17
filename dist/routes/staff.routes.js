@@ -46,7 +46,7 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
         where,
         include: [
             { model: Department_model_1.Department, attributes: ['id', 'name', 'code'], required: false },
-            { model: Designation_model_1.Designation, attributes: ['id', 'title'], required: false },
+            { model: Designation_model_1.Designation, attributes: ['id', 'name'], required: false },
             { model: Branch_model_1.Branch, as: 'branch', attributes: ['id', 'uuid', 'branchCode', 'branchName'], required: false },
             { model: Unit_model_1.Unit, as: 'unit', attributes: ['id', 'uuid', 'code', 'name'], required: false },
         ],
@@ -62,7 +62,7 @@ router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, re
         where: { [sequelize_1.Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
         include: [
             { model: Department_model_1.Department, attributes: ['id', 'name', 'code'] },
-            { model: Designation_model_1.Designation, attributes: ['id', 'title'] },
+            { model: Designation_model_1.Designation, attributes: ['id', 'name'] },
             { model: Branch_model_1.Branch, as: 'branch', attributes: ['id', 'uuid', 'branchCode', 'branchName'], required: false },
             { model: Unit_model_1.Unit, as: 'unit', attributes: ['id', 'uuid', 'code', 'name'], required: false },
             {

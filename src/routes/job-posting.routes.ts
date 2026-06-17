@@ -25,7 +25,7 @@ router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response)
     where,
     include: [
       { model: Department, as: 'department', attributes: ['id', 'name'] },
-      { model: Designation, as: 'designation', attributes: ['id', 'title'] },
+      { model: Designation, as: 'designation', attributes: ['id', 'name'] },
     ],
     order: [['postedDate', 'DESC']],
     limit: Number(limit), offset,
@@ -58,7 +58,7 @@ router.get('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Respon
     where: { [Op.or]: [{ id: req.params.id }, { uuid: req.params.id }] },
     include: [
       { model: Department, as: 'department', attributes: ['id', 'name'] },
-      { model: Designation, as: 'designation', attributes: ['id', 'title'] },
+      { model: Designation, as: 'designation', attributes: ['id', 'name'] },
     ],
   });
   if (!posting) return ResponseFormatter.error(res, 'Job posting not found', 404);

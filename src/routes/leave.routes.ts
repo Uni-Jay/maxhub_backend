@@ -137,7 +137,7 @@ router.get(
         year,
       },
       include: [
-        { model: LeaveType, as: 'leaveType', attributes: ['id', 'name', 'color'], required: false },
+        { model: LeaveType, as: 'leaveType', attributes: ['id', 'name', 'code'], required: false },
       ],
     });
 

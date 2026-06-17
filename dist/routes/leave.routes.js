@@ -109,7 +109,7 @@ router.get('/balance', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req
             year,
         },
         include: [
-            { model: LeaveType_model_1.LeaveType, as: 'leaveType', attributes: ['id', 'name', 'color'], required: false },
+            { model: LeaveType_model_1.LeaveType, as: 'leaveType', attributes: ['id', 'name', 'code'], required: false },
         ],
     });
     const plain = balances.map(b => b.toJSON());
