@@ -180,11 +180,11 @@ export class AssociationManager {
 
     // LeaveBalance associations
     LeaveBalance.belongsTo(Staff, { foreignKey: 'staffId' });
-    LeaveBalance.belongsTo(LeaveType, { foreignKey: 'leaveTypeId' });
+    LeaveBalance.belongsTo(LeaveType, { foreignKey: 'leaveTypeId', as: 'leaveType' });
 
     // LeaveRequest associations
-    LeaveRequest.belongsTo(Staff, { foreignKey: 'staffId' });
-    LeaveRequest.belongsTo(LeaveType, { foreignKey: 'leaveTypeId' });
+    LeaveRequest.belongsTo(Staff, { foreignKey: 'staffId', as: 'staff' });
+    LeaveRequest.belongsTo(LeaveType, { foreignKey: 'leaveTypeId', as: 'leaveType' });
     LeaveRequest.belongsTo(User, { foreignKey: 'approverUserId', as: 'approver' });
 
     // ======== PROJECTS & TASKS ========

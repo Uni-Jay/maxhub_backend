@@ -18,7 +18,7 @@ router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response)
   const where: any = {};
   if (status) where.status = status;
   if (trainingType) where.trainingType = trainingType;
-  if (search) where.trainingName = { [Op.like]: `%${search}%` };
+  if (search) where.trainingName = { [Op.iLike]: `%${search}%` };
 
   const { count, rows } = await TrainingProgram.findAndCountAll({
     where, order: [['startDate', 'DESC']], limit: Number(limit), offset,

@@ -19,7 +19,7 @@ router.get(
       const AuditLog = require('@models/AuditLog.model').default;
       const where: any = {};
       if (action && action !== 'All') where.action = action;
-      if (mod) where.module = { [Op.like]: `%${mod}%` };
+      if (mod) where.module = { [Op.iLike]: `%${mod}%` };
       if (startDate) where.createdAt = { ...(where.createdAt ?? {}), [Op.gte]: new Date(startDate) };
       if (endDate) where.createdAt = { ...(where.createdAt ?? {}), [Op.lte]: new Date(endDate) };
 

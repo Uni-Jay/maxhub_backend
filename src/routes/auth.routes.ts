@@ -3,6 +3,7 @@ import AuthController from '@controllers/AuthController';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import { AuthMiddleware } from '@middleware/AuthMiddleware';
 import { RBACMiddleware } from '@middleware/RBACMiddleware';
+import { ResponseFormatter } from '@utils/ResponseFormatter';
 
 const router = Router();
 
@@ -252,6 +253,54 @@ router.post(
   '/sessions/:sessionId/revoke',
   AuthMiddleware.verifyToken,
   ErrorMiddleware.asyncHandler(AuthController.revokeSession)
+);
+
+/**
+ * @route   POST /api/auth/admin/unlock-all
+ * @desc    Superadmin utility — resets loginAttempts and clears lockedUntil for all users
+ * @access  Private (superadmin only)
+ */
+router.post(
+  '/admin/unlock-all',
+  AuthMiddleware.verifyToken,
+  AuthMiddleware.requireRole('superadmin'),
+  ErrorMiddleware.asyncHandler(async (_req, res) => {
+    const { User } = await import('@models/User.model');
+    const { Op } = await import('sequelize');
+    const count = await User.update(
+      { loginAttempts: 0, lockedUntil: null as any },
+      { where: { loginAttempts: { [Op.gt]: 0 } } }
+    );
+    ResponseFormatter.success(res, { unlocked: count[0] }, `${count[0]} account(s) unlocked`);
+  })
+);
+
+/**
+ * @route   POST /api/auth/admin/reset-demo-passwords
+ * @desc    Resets all demo account passwords back to Demo@12345!
+ * @access  Private (superadmin only)
+ */
+router.post(
+  '/admin/reset-demo-passwords',
+  AuthMiddleware.verifyToken,
+  AuthMiddleware.requireRole('superadmin'),
+  ErrorMiddleware.asyncHandler(async (_req, res) => {
+    const { User } = await import('@models/User.model');
+    const bcrypt = await import('bcrypt');
+    const DEMO_PASSWORD = 'Demo@12345!';
+    const hash = await bcrypt.hash(DEMO_PASSWORD, 12);
+    const demoEmails = [
+      'admin@maxhub.com', 'hr@maxhub.com', 'hod@maxhub.com',
+      'staff@maxhub.com', 'accountant@maxhub.com', 'instructor@maxhub.com',
+      'receptionist@maxhub.com', 'student@maxhub.com',
+    ];
+    const { Op } = await import('sequelize');
+    const count = await User.update(
+      { passwordHash: hash, loginAttempts: 0, lockedUntil: null as any, status: 'Active' },
+      { where: { email: { [Op.in]: demoEmails } } }
+    );
+    ResponseFormatter.success(res, { updated: count[0] }, `${count[0]} demo account(s) reset to Demo@12345!`);
+  })
 );
 
 export default router;

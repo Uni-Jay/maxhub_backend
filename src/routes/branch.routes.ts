@@ -26,9 +26,9 @@ router.get(
     if (req.query.search) {
       const s = `%${req.query.search}%`;
       where[Op.or as unknown as string] = [
-        { branchName: { [Op.like]: s } },
-        { branchCode: { [Op.like]: s } },
-        { city: { [Op.like]: s } },
+        { branchName: { [Op.iLike]: s } },
+        { branchCode: { [Op.iLike]: s } },
+        { city: { [Op.iLike]: s } },
       ];
     }
 

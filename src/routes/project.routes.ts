@@ -23,8 +23,8 @@ router.get(
     if (req.query.departmentId) where.departmentId = BigInt(req.query.departmentId as string);
     if (req.query.search) {
       where[Op.or as unknown as string] = [
-        { name: { [Op.like]: `%${req.query.search}%` } },
-        { projectCode: { [Op.like]: `%${req.query.search}%` } },
+        { name: { [Op.iLike]: `%${req.query.search}%` } },
+        { projectCode: { [Op.iLike]: `%${req.query.search}%` } },
       ];
     }
 

@@ -18,8 +18,8 @@ router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response)
   if (status) where.status = status;
   if (jobPostingId) where.jobPostingId = jobPostingId;
   if (search) where[Op.or] = [
-    { applicantName: { [Op.like]: `%${search}%` } },
-    { applicantEmail: { [Op.like]: `%${search}%` } },
+    { applicantName: { [Op.iLike]: `%${search}%` } },
+    { applicantEmail: { [Op.iLike]: `%${search}%` } },
   ];
 
   const { count, rows } = await JobApplication.findAndCountAll({

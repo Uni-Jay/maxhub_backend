@@ -10,7 +10,7 @@ interface PermissionAttributes {
   module: string;
   resource: string;
   action: string;
-  scope: 'all' | 'own' | 'own_department' | 'own_warehouse';
+  scope: string;
   isActive: boolean;
   deletedAt?: Date;
 }
@@ -27,7 +27,7 @@ export class Permission extends Model<PermissionAttributes, PermissionCreationAt
   public module!: string;
   public resource!: string;
   public action!: string;
-  public scope!: 'all' | 'own' | 'own_department';
+  public scope!: string;
   public isActive!: boolean;
   public deletedAt?: Date;
 
@@ -83,10 +83,10 @@ export class Permission extends Model<PermissionAttributes, PermissionCreationAt
           comment: 'Action type (create, read, update, delete, approve, etc.)',
         },
         scope: {
-          type: DataTypes.ENUM('all', 'own', 'own_department', 'own_warehouse'),
+          type: DataTypes.STRING(50),
           defaultValue: 'all',
           allowNull: false,
-          comment: 'Permission scope: all records, own records, or own department only',
+          comment: 'Permission scope: all, own, own_department, own_warehouse, own_branch, or custom action scope',
         },
         isActive: {
           type: DataTypes.BOOLEAN,

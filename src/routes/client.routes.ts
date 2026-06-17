@@ -37,10 +37,10 @@ router.get(
     if (assignedStaffId) where.assignedStaffId = BigInt(assignedStaffId);
     if (search) {
       (where as any)[Op.or as unknown as string] = [
-        { fullName: { [Op.like]: `%${search}%` } },
-        { email: { [Op.like]: `%${search}%` } },
-        { phone: { [Op.like]: `%${search}%` } },
-        { clientId: { [Op.like]: `%${search}%` } },
+        { fullName: { [Op.iLike]: `%${search}%` } },
+        { email: { [Op.iLike]: `%${search}%` } },
+        { phone: { [Op.iLike]: `%${search}%` } },
+        { clientId: { [Op.iLike]: `%${search}%` } },
       ];
     }
 

@@ -26,7 +26,7 @@ router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response)
   const offset = (Number(page) - 1) * Number(limit);
 
   const where: any = {};
-  if (search) where.title = { [Op.like]: `%${search}%` };
+  if (search) where.title = { [Op.iLike]: `%${search}%` };
   if (status) where.status = status;
   if (departmentId) where.departmentId = departmentId;
   if (instructorId) where.instructorId = instructorId;
@@ -157,6 +157,207 @@ router.delete('/:courseId/modules/:moduleId', AuthMiddleware.requirePermission('
 }));
 
 // ─── EXAMS ────────────────────────────────────────────────────────────────────
+
+// GET /api/courses/student/exams — all exams for the current user's enrolled courses
+router.get('/student/exams', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id;
+  if (!userId) return ResponseFormatter.error(res, 'Unauthorized', 401);
+
+  // Get enrollments for this user via their Staff record
+  const staffRecord = await Staff.findOne({ where: { userId }, attributes: ['id'] });
+  if (!staffRecord) return ResponseFormatter.success(res, [], 'No exams found');
+  const enrollments = await Enrollment.findAll({
+    where: { staffId: (staffRecord as any).id },
+    attributes: ['id', 'courseId', 'status'],
+  });
+
+  const courseIds = [...new Set(enrollments.map((e: any) => e.courseId))];
+  if (courseIds.length === 0) {
+    return ResponseFormatter.success(res, [], 'No exams found');
+  }
+
+  const exams = await Exam.findAll({
+    where: { courseId: { [Op.in]: courseIds }, status: { [Op.in]: ['Published', 'Draft'] } },
+    include: [{ model: Course, as: 'course', attributes: ['id', 'courseCode', 'courseName'] }],
+    order: [['createdAt', 'DESC']],
+  });
+
+  // Get exam results for this user
+  const examIds = exams.map(e => e.id);
+  const results = examIds.length > 0 ? await ExamResult.findAll({
+    where: { examId: { [Op.in]: examIds } },
+    order: [['attemptNumber', 'DESC']],
+  }) : [];
+
+  const resultMap: Record<string, any[]> = {};
+  results.forEach((r: any) => {
+    const key = String(r.examId);
+    if (!resultMap[key]) resultMap[key] = [];
+    resultMap[key].push(r);
+  });
+
+  const now = new Date();
+  const output = exams.map(exam => {
+    const myResults = resultMap[String(exam.id)] ?? [];
+    const bestResult = myResults.sort((a: any, b: any) => b.score - a.score)[0];
+    const attemptCount = myResults.length;
+    let status: string;
+    if (attemptCount >= exam.attempts) {
+      status = bestResult?.score >= exam.passingScore ? 'completed' : 'missed';
+    } else if (attemptCount > 0) {
+      status = 'completed';
+    } else {
+      status = exam.status === 'Published' ? 'available' : 'upcoming';
+    }
+    return {
+      id: Number(exam.id),
+      title: exam.examName,
+      course: (exam as any).course?.courseName ?? 'Unknown Course',
+      duration: `${exam.duration} min`,
+      questions: exam.totalQuestions,
+      date: exam.createdAt?.toISOString?.()?.slice(0, 10) ?? '',
+      status,
+      score: bestResult ? Number(bestResult.score) : undefined,
+      maxScore: 100,
+      attempts: attemptCount,
+      maxAttempts: exam.attempts,
+      examCode: exam.examCode,
+      passingScore: exam.passingScore,
+    };
+  });
+
+  ResponseFormatter.success(res, output, 'Exams retrieved');
+}));
+
+// ─── STUDENT SELF-SERVICE ──────────────────────────────────────────────────────
+
+// GET /api/courses/student/enrollments
+router.get('/student/enrollments', AuthMiddleware.verifyToken, ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id;
+  if (!userId) return ResponseFormatter.error(res, 'Unauthorized', 401);
+
+  const staff = await Staff.findOne({ where: { userId }, attributes: ['id'] });
+  if (!staff) return ResponseFormatter.success(res, [], 'No enrollments found');
+
+  const enrollments = await Enrollment.findAll({
+    where: { staffId: staff.id },
+    include: [{ model: Course, as: 'course', attributes: ['id', 'uuid', 'courseCode', 'courseName', 'description', 'duration', 'instructor', 'thumbnail', 'status'] }],
+    order: [['enrollmentDate', 'DESC']],
+  });
+
+  const result = enrollments.map((e: any) => ({
+    id: Number(e.id),
+    courseId: Number(e.courseId),
+    title: e.course?.courseName ?? 'Unknown Course',
+    instructor: e.course?.instructor ?? '',
+    progress: Number(e.progressPercentage) ?? 0,
+    totalLessons: 0,
+    doneLessons: 0,
+    enrolledDate: e.enrollmentDate?.toISOString?.()?.slice(0, 10) ?? '',
+    completedDate: e.completionDate?.toISOString?.()?.slice(0, 10) ?? null,
+    status: e.status,
+    thumbnail: e.course?.thumbnail ?? null,
+  }));
+
+  ResponseFormatter.success(res, result, 'Enrollments retrieved');
+}));
+
+// GET /api/courses/student/certificates
+router.get('/student/certificates', AuthMiddleware.verifyToken, ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id;
+  if (!userId) return ResponseFormatter.error(res, 'Unauthorized', 401);
+
+  const staff = await Staff.findOne({ where: { userId }, attributes: ['id'] });
+  if (!staff) return ResponseFormatter.success(res, [], 'No certificates found');
+
+  const enrollments = await Enrollment.findAll({
+    where: { staffId: staff.id },
+    attributes: ['id'],
+  });
+  const enrollmentIds = enrollments.map(e => e.id);
+  if (enrollmentIds.length === 0) return ResponseFormatter.success(res, [], 'No certificates found');
+
+  const certs = await Certificate.findAll({
+    where: { enrollmentId: { [Op.in]: enrollmentIds }, status: 'Issued' },
+    include: [{
+      model: Enrollment,
+      as: 'enrollment',
+      include: [{ model: Course, as: 'course', attributes: ['courseName', 'instructor'] }],
+    }],
+    order: [['issuedDate', 'DESC']],
+  });
+
+  const result = certs.map((c: any) => ({
+    id: Number(c.id),
+    credentialId: c.certificateCode,
+    title: c.certificateName || 'Certificate of Completion',
+    course: c.enrollment?.course?.courseName ?? 'Unknown Course',
+    instructor: c.enrollment?.course?.instructor ?? '',
+    issueDate: c.issuedDate?.toISOString?.()?.slice(0, 10) ?? '',
+    status: c.status,
+    certificateUrl: c.certificateUrl ?? null,
+    verificationCode: c.verificationCode,
+  }));
+
+  ResponseFormatter.success(res, result, 'Certificates retrieved');
+}));
+
+// GET /api/courses/exams/:examId/leaderboard
+router.get('/exams/:examId/leaderboard', AuthMiddleware.verifyToken, ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const { examId } = req.params;
+  const exam = await Exam.findOne({ where: { [Op.or]: [{ id: examId }, { uuid: examId }] } });
+  if (!exam) return ResponseFormatter.error(res, 'Exam not found', 404);
+
+  const results = await ExamResult.findAll({
+    where: { examId: exam.id, status: { [Op.in]: ['Passed', 'Failed', 'Submitted'] } },
+    include: [{
+      model: Enrollment,
+      as: 'enrollment',
+      include: [{ model: Staff, as: 'staff', attributes: ['id', 'firstName', 'lastName'] }],
+    }],
+    order: [['score', 'DESC']],
+  });
+
+  const ranked = results.map((r: any, idx: number) => {
+    const staff = r.enrollment?.staff;
+    const name = staff ? `${staff.firstName ?? ''} ${staff.lastName ?? ''}`.trim() : `Student #${r.enrollmentId}`;
+    const secs = r.completedAt && r.startedAt
+      ? Math.round((new Date(r.completedAt).getTime() - new Date(r.startedAt).getTime()) / 1000)
+      : 0;
+    const mins = Math.floor(secs / 60);
+    const sec2 = secs % 60;
+    return {
+      id: Number(r.id),
+      rank: idx + 1,
+      name,
+      score: Number(r.correctAnswers ?? 0),
+      maxScore: Number(r.totalQuestions ?? 0),
+      percentage: Number(r.score),
+      status: r.status === 'Passed' ? 'Pass' : 'Fail',
+      timeTaken: `${String(mins).padStart(2, '0')}:${String(sec2).padStart(2, '0')}`,
+      timeTakenSecs: secs,
+    };
+  });
+
+  const myEnrollment = await (async () => {
+    const userId = (req as any).user?.id;
+    if (!userId) return null;
+    const staff = await Staff.findOne({ where: { userId }, attributes: ['id'] });
+    if (!staff) return null;
+    const enr = await Enrollment.findOne({ where: { staffId: staff.id, courseId: exam.courseId } });
+    return enr ? results.find((r: any) => String(r.enrollmentId) === String(enr.id)) : null;
+  })();
+
+  ResponseFormatter.success(res, {
+    exam: { id: Number(exam.id), title: exam.examName, date: exam.createdAt, passingScore: exam.passingScore },
+    rankings: ranked,
+    myResult: myEnrollment ? {
+      score: Number((myEnrollment as any).score),
+      status: (myEnrollment as any).status,
+      answers: (myEnrollment as any).answers ?? null,
+    } : null,
+  }, 'Leaderboard retrieved');
+}));
 
 // GET /api/courses/:id/exams
 router.get('/:id/exams', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {

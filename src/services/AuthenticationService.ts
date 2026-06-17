@@ -293,11 +293,13 @@ export class AuthenticationService {
   /**
    * Logout and revoke session
    */
-  async logout(sessionId: string): Promise<void> {
-    const session = await Session.findOne({ where: { uuid: sessionId } });
-
-    if (session) {
-      await session.destroy();
+  async logout(sessionId?: string, refreshToken?: string): Promise<void> {
+    if (sessionId) {
+      const session = await Session.findOne({ where: { uuid: sessionId } });
+      if (session) await session.destroy();
+    } else if (refreshToken) {
+      const session = await Session.findOne({ where: { refreshToken } });
+      if (session) await session.destroy();
     }
   }
 

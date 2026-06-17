@@ -106,9 +106,9 @@ export class StudentService {
     const userWhere: Record<string, unknown> = {};
     if (filters.search) {
       userWhere[Op.or as any] = [
-        { firstName: { [Op.like]: `%${filters.search}%` } },
-        { lastName: { [Op.like]: `%${filters.search}%` } },
-        { email: { [Op.like]: `%${filters.search}%` } },
+        { firstName: { [Op.iLike]: `%${filters.search}%` } },
+        { lastName: { [Op.iLike]: `%${filters.search}%` } },
+        { email: { [Op.iLike]: `%${filters.search}%` } },
       ];
     }
 

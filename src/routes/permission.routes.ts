@@ -23,8 +23,8 @@ router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response)
   if (action) where.action = action;
   if (isActive !== undefined) where.isActive = isActive === 'true';
   if (search) where[Op.or] = [
-    { name: { [Op.like]: `%${search}%` } },
-    { code: { [Op.like]: `%${search}%` } },
+    { name: { [Op.iLike]: `%${search}%` } },
+    { code: { [Op.iLike]: `%${search}%` } },
   ];
 
   const { count, rows } = await Permission.findAndCountAll({

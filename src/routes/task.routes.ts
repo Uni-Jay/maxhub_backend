@@ -22,8 +22,8 @@ router.get(
     if (req.query.assigneeId) where.assigneeId = BigInt(req.query.assigneeId as string);
     if (req.query.search) {
       where[Op.or as unknown as string] = [
-        { title: { [Op.like]: `%${req.query.search}%` } },
-        { taskCode: { [Op.like]: `%${req.query.search}%` } },
+        { title: { [Op.iLike]: `%${req.query.search}%` } },
+        { taskCode: { [Op.iLike]: `%${req.query.search}%` } },
       ];
     }
 

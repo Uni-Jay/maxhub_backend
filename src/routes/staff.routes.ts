@@ -33,10 +33,10 @@ router.get(
     if (req.query.search) {
       const s = `%${req.query.search}%`;
       where[Op.or as unknown as string] = [
-        { firstName: { [Op.like]: s } },
-        { lastName: { [Op.like]: s } },
-        { email: { [Op.like]: s } },
-        { employeeId: { [Op.like]: s } },
+        { firstName: { [Op.iLike]: s } },
+        { lastName: { [Op.iLike]: s } },
+        { email: { [Op.iLike]: s } },
+        { employeeId: { [Op.iLike]: s } },
       ];
     }
 
@@ -234,7 +234,7 @@ router.post(
       department: (dept as any)?.name || undefined,
     }).catch(err => console.error('[Staff] Welcome email failed:', err));
 
-    ResponseFormatter.success(res, staff.toJSON(), 'Staff member created successfully', 201);
+    ResponseFormatter.success(res, { ...staff.toJSON(), temporaryPassword }, 'Staff member created successfully', 201);
   })
 );
 

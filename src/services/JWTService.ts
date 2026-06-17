@@ -28,12 +28,16 @@ export class JWTService {
    * Generate access token (short-lived)
    */
   generateAccessToken(user: AuthenticatedUser): string {
+    // Admin-level roles bypass all permission checks in requirePermission middleware,
+    // so embedding their (potentially huge) permissions array only inflates the JWT.
+    const ADMIN_CODES = new Set(['superadmin', 'admin', 'headofadmin', 'super_admin', 'head_of_admin']);
+    const isAdmin = user.roles.some((r) => ADMIN_CODES.has(r.toLowerCase().replace(/[^a-z_]/g, '')));
     const payload = {
       id: user.id,
       uuid: user.uuid,
       email: user.email,
       roles: user.roles,
-      permissions: user.permissions,
+      permissions: isAdmin ? [] : user.permissions,
     };
 
     return jwt.sign(payload, this.accessTokenSecret, {

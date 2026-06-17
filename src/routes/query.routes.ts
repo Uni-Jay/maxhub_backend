@@ -27,8 +27,8 @@ router.get(
     if (departmentId) where.departmentId = BigInt(departmentId);
     if (search) {
       (where as any)[Op.or as unknown as string] = [
-        { title: { [Op.like]: `%${search}%` } },
-        { description: { [Op.like]: `%${search}%` } },
+        { title: { [Op.iLike]: `%${search}%` } },
+        { description: { [Op.iLike]: `%${search}%` } },
       ];
     }
 

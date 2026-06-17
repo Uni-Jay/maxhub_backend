@@ -43,8 +43,8 @@ router.get(
 
     if (search) {
       where[Op.or as any] = [
-        { categoryName: { [Op.like]: `%${search}%` } },
-        { categoryCode: { [Op.like]: `%${search}%` } },
+        { categoryName: { [Op.iLike]: `%${search}%` } },
+        { categoryCode: { [Op.iLike]: `%${search}%` } },
       ];
     }
 
@@ -260,10 +260,10 @@ router.get(
 
     if (search) {
       where[Op.or as any] = [
-        { itemName: { [Op.like]: `%${search}%` } },
-        { itemCode: { [Op.like]: `%${search}%` } },
-        { sku:      { [Op.like]: `%${search}%` } },
-        { description: { [Op.like]: `%${search}%` } },
+        { itemName: { [Op.iLike]: `%${search}%` } },
+        { itemCode: { [Op.iLike]: `%${search}%` } },
+        { sku:      { [Op.iLike]: `%${search}%` } },
+        { description: { [Op.iLike]: `%${search}%` } },
       ];
     }
 
@@ -459,6 +459,172 @@ router.delete(
 // ════════════════════════════════════════════════════════════════════════════
 // STOCK ROUTES
 // ════════════════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════════════════
+// DASHBOARD ROUTE
+// ════════════════════════════════════════════════════════════════════════════
+
+// ─── GET /inventory/dashboard ─────────────────────────────────────────────────
+router.get(
+  '/dashboard',
+  AuthMiddleware.verifyToken,
+  ErrorMiddleware.asyncHandler(async (_req: Request, res: Response) => {
+    const [totalItems, activeItems] = await Promise.all([
+      InventoryItem.count(),
+      InventoryItem.count({ where: { status: 'Active' } }),
+    ]);
+
+    const stockAgg = await WarehouseStock.findAll({
+      attributes: [
+        [fn('SUM', col('quantity')), 'totalQty'],
+        [fn('COUNT', col('id')), 'stockRecords'],
+      ],
+      raw: true,
+    }) as any[];
+
+    const totalQty = Number((stockAgg[0] as any)?.totalQty ?? 0);
+
+    const itemsForValue = await InventoryItem.findAll({ attributes: ['id', 'unitCost'] });
+    const stockRows = await WarehouseStock.findAll({ attributes: ['itemId', [fn('SUM', col('quantity')), 'qty']], group: ['itemId'], raw: true }) as any[];
+    const stockQtyMap: Record<string, number> = {};
+    for (const r of stockRows) stockQtyMap[String(r.itemId)] = Number(r.qty) || 0;
+    const totalValue = itemsForValue.reduce((sum, item) => sum + (stockQtyMap[String(item.id)] || 0) * Number(item.unitCost), 0);
+
+    const lowStockItems = (await InventoryItem.findAll({ where: { status: 'Active' } })).filter(item => {
+      const qty = stockQtyMap[String(item.id)] || 0;
+      return qty < Number(item.reorderLevel);
+    });
+
+    return ResponseFormatter.success(res, {
+      totalItems,
+      activeItems,
+      totalQty,
+      totalValue,
+      lowStockCount: lowStockItems.length,
+      outOfStockCount: lowStockItems.filter(i => (stockQtyMap[String(i.id)] || 0) === 0).length,
+    }, 'Dashboard stats retrieved');
+  })
+);
+
+// ════════════════════════════════════════════════════════════════════════════
+// SUPPLIER ROUTES
+// ════════════════════════════════════════════════════════════════════════════
+
+import { Supplier } from '@models/Supplier.model';
+import { PurchaseOrder } from '@models/PurchaseOrder.model';
+
+// ─── GET /inventory/suppliers ─────────────────────────────────────────────────
+router.get(
+  '/suppliers',
+  AuthMiddleware.verifyToken,
+  ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+    const { search, status } = req.query as Record<string, string>;
+    const where: Record<string, any> = {};
+    if (status) where.status = status;
+    if (search) {
+      where[Op.or as any] = [
+        { supplierName: { [Op.iLike]: `%${search}%` } },
+        { contactPerson: { [Op.iLike]: `%${search}%` } },
+        { email: { [Op.iLike]: `%${search}%` } },
+      ];
+    }
+    const suppliers = await Supplier.findAll({ where, order: [['supplierName', 'ASC']] });
+    return ResponseFormatter.success(res, suppliers, 'Suppliers retrieved');
+  })
+);
+
+// ─── POST /inventory/suppliers ────────────────────────────────────────────────
+router.post(
+  '/suppliers',
+  AuthMiddleware.verifyToken,
+  ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+    const { supplierName, contactPerson, phone, email, address, city, state, country, paymentTerms, rating, notes } = req.body;
+    if (!supplierName) return ResponseFormatter.error(res, 'supplierName is required', 400);
+    const last = await Supplier.findOne({ order: [['id', 'DESC']], paranoid: false });
+    const code = `SUP-${String(last ? Number(last.id) + 1 : 1).padStart(5, '0')}`;
+    const supplier = await Supplier.create({ supplierCode: code, supplierName, contactPerson, phone, email, address, city, state, country, paymentTerms, rating, notes, status: 'Active' } as any);
+    return ResponseFormatter.success(res, supplier, 'Supplier created', 201);
+  })
+);
+
+// ─── PUT /inventory/suppliers/:id ─────────────────────────────────────────────
+router.put(
+  '/suppliers/:id',
+  AuthMiddleware.verifyToken,
+  ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+    const supplier = await Supplier.findByPk(req.params.id);
+    if (!supplier) return ResponseFormatter.notFound(res, 'Supplier not found');
+    await supplier.update(req.body);
+    return ResponseFormatter.success(res, supplier, 'Supplier updated');
+  })
+);
+
+// ─── DELETE /inventory/suppliers/:id ──────────────────────────────────────────
+router.delete(
+  '/suppliers/:id',
+  AuthMiddleware.verifyToken,
+  ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+    const supplier = await Supplier.findByPk(req.params.id);
+    if (!supplier) return ResponseFormatter.notFound(res, 'Supplier not found');
+    await supplier.destroy();
+    return ResponseFormatter.success(res, null, 'Supplier deleted');
+  })
+);
+
+// ════════════════════════════════════════════════════════════════════════════
+// PURCHASE ORDER ROUTES
+// ════════════════════════════════════════════════════════════════════════════
+
+// ─── GET /inventory/purchase-orders ───────────────────────────────────────────
+router.get(
+  '/purchase-orders',
+  AuthMiddleware.verifyToken,
+  ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+    const { supplierId, status } = req.query as Record<string, string>;
+    const where: Record<string, any> = {};
+    if (supplierId) where.supplierId = supplierId;
+    if (status) where.status = status;
+    const pos = await PurchaseOrder.findAll({
+      where,
+      include: [{ model: Supplier, as: 'supplier', attributes: ['id', 'supplierName'], required: false }],
+      order: [['poDate', 'DESC']],
+    });
+    return ResponseFormatter.success(res, pos, 'Purchase orders retrieved');
+  })
+);
+
+// ─── POST /inventory/purchase-orders ──────────────────────────────────────────
+router.post(
+  '/purchase-orders',
+  AuthMiddleware.verifyToken,
+  ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+    const user = (req as any).user;
+    const { supplierId, poDate, expectedDeliveryDate, subtotal, discount, tax, total, currency, notes } = req.body;
+    if (!supplierId || !poDate || !expectedDeliveryDate || total === undefined) {
+      return ResponseFormatter.error(res, 'supplierId, poDate, expectedDeliveryDate, total are required', 400);
+    }
+    const last = await PurchaseOrder.findOne({ order: [['id', 'DESC']], paranoid: false });
+    const code = `PO-${String(last ? Number(last.id) + 1 : 1).padStart(6, '0')}`;
+    const po = await PurchaseOrder.create({
+      poCode: code, supplierId, poDate: new Date(poDate), expectedDeliveryDate: new Date(expectedDeliveryDate),
+      subtotal: subtotal ?? 0, discount: discount ?? 0, tax: tax ?? 0, total, currency: currency ?? 'NGN',
+      status: 'Draft', notes, createdById: user.id,
+    } as any);
+    return ResponseFormatter.success(res, po, 'Purchase order created', 201);
+  })
+);
+
+// ─── PATCH /inventory/purchase-orders/:id/status ──────────────────────────────
+router.patch(
+  '/purchase-orders/:id/status',
+  AuthMiddleware.verifyToken,
+  ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+    const po = await PurchaseOrder.findByPk(req.params.id);
+    if (!po) return ResponseFormatter.notFound(res, 'Purchase order not found');
+    await po.update({ status: req.body.status });
+    return ResponseFormatter.success(res, po, 'Status updated');
+  })
+);
 
 // ─── GET /inventory/stock/:itemId ─────────────────────────────────────────────
 router.get(

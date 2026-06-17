@@ -5,8 +5,8 @@ interface CompanyAttributes {
   id: bigint;
   uuid: string;
   name: string;
-  code: 'KURIOS_SAT' | 'VISA_MAX' | 'BEAD_MAX' | 'BEADMAX_SCHOOL';
-  type: 'Tech & Training' | 'Travel & Visa Services' | 'Jewelry & Sales' | 'Vocational School';
+  code: string;
+  type: string;
   logo?: string;
   address?: string;
   city?: string;
@@ -31,8 +31,8 @@ export class Company
   public id!: bigint;
   public uuid!: string;
   public name!: string;
-  public code!: 'KURIOS_SAT' | 'VISA_MAX' | 'BEAD_MAX' | 'BEADMAX_SCHOOL';
-  public type!: 'Tech & Training' | 'Travel & Visa Services' | 'Jewelry & Sales' | 'Vocational School';
+  public code!: string;
+  public type!: string;
   public logo?: string;
   public address?: string;
   public city?: string;
@@ -64,17 +64,12 @@ export class Company
         },
         name: { type: DataTypes.STRING(150), allowNull: false },
         code: {
-          type: DataTypes.ENUM('KURIOS_SAT', 'VISA_MAX', 'BEAD_MAX', 'BEADMAX_SCHOOL'),
+          type: DataTypes.STRING(50),
           allowNull: false,
           unique: true,
         },
         type: {
-          type: DataTypes.ENUM(
-            'Tech & Training',
-            'Travel & Visa Services',
-            'Jewelry & Sales',
-            'Vocational School'
-          ),
+          type: DataTypes.STRING(100),
           allowNull: false,
         },
         logo: { type: DataTypes.STRING(500), allowNull: true },

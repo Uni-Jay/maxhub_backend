@@ -653,6 +653,72 @@ router.patch(
 );
 
 // ════════════════════════════════════════════════════════════════════════════
+// MY PAYSLIPS (employee self-service)
+// ════════════════════════════════════════════════════════════════════════════
+
+const MONTH_NAMES = [
+  '', 'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+// ─── GET /payroll/my-slips ────────────────────────────────────────────────────
+router.get(
+  '/my-slips',
+  AuthMiddleware.verifyToken,
+  ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.id;
+
+    const staff = await Staff.findOne({ where: { userId } });
+    if (!staff) {
+      return ResponseFormatter.success(res, [], 'No payslips found');
+    }
+
+    const salaries = await EmployeeSalary.findAll({
+      where: {
+        staffId: staff.id,
+        status: { [Op.in]: ['Paid', 'Approved', 'Processed', 'Draft'] },
+      },
+      include: [
+        {
+          model:      PayrollPeriod,
+          as:         'payrollPeriod',
+          attributes: ['id', 'periodCode', 'month', 'year', 'bankTransferDate', 'salaryProcessDate'],
+          required:   false,
+        },
+      ],
+      order: [
+        [{ model: PayrollPeriod, as: 'payrollPeriod' }, 'year',  'DESC'],
+        [{ model: PayrollPeriod, as: 'payrollPeriod' }, 'month', 'DESC'],
+      ],
+    });
+
+    const slips = salaries.map((s: any) => {
+      const period = s.payrollPeriod;
+      const month  = period?.month ?? 0;
+      const year   = period?.year  ?? new Date().getFullYear();
+      return {
+        id:              Number(s.id),
+        salaryCode:      `SAL-${String(s.id).padStart(6, '0')}`,
+        periodName:      period ? `${MONTH_NAMES[month]} ${year}` : s.uuid,
+        baseSalary:      Number(s.baseSalary)      || 0,
+        bonus:           Number(s.bonus)           || 0,
+        grossSalary:     Number(s.grossSalary)     || 0,
+        incomeTax:       Number(s.incomeTax)       || 0,
+        providentFund:   Number(s.providentFund)   || 0,
+        healthInsurance: Number(s.healthInsurance) || 0,
+        otherDeductions: Number(s.otherDeductions) || 0,
+        totalDeductions: Number(s.totalDeductions) || 0,
+        netSalary:       Number(s.netSalary)       || 0,
+        status:          s.status,
+        payDate:         (s.paidOn ?? period?.bankTransferDate ?? s.processedOn ?? s.updatedAt)?.toISOString?.() ?? '',
+      };
+    });
+
+    return ResponseFormatter.success(res, slips, 'Payslips retrieved');
+  })
+);
+
+// ════════════════════════════════════════════════════════════════════════════
 // STATS / OVERVIEW
 // ════════════════════════════════════════════════════════════════════════════
 

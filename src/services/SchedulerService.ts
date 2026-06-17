@@ -80,11 +80,11 @@ function scheduleBirthdayMessages(): void {
 
     const [clients, staffMembers] = await Promise.all([
       Client.findAll({
-        where: { status: 'Active', dateOfBirth: { [Op.like]: clientPattern } as any } as any,
+        where: { status: 'Active', dateOfBirth: { [Op.iLike]: clientPattern } as any } as any,
         attributes: ['id', 'fullName', 'email', 'phone'],
       }),
       Staff.findAll({
-        where: { status: 'Active', dateOfBirth: { [Op.like]: staffPattern } as any } as any,
+        where: { status: 'Active', dateOfBirth: { [Op.iLike]: staffPattern } as any } as any,
         attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
       }),
     ]);

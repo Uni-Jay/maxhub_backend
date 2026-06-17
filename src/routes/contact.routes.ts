@@ -69,12 +69,12 @@ router.get(
 
     if (search) {
       where[Op.or as any] = [
-        { firstName: { [Op.like]: `%${search}%` } },
-        { lastName: { [Op.like]: `%${search}%` } },
-        { email: { [Op.like]: `%${search}%` } },
-        { phone: { [Op.like]: `%${search}%` } },
-        { company: { [Op.like]: `%${search}%` } },
-        { contactCode: { [Op.like]: `%${search}%` } },
+        { firstName: { [Op.iLike]: `%${search}%` } },
+        { lastName: { [Op.iLike]: `%${search}%` } },
+        { email: { [Op.iLike]: `%${search}%` } },
+        { phone: { [Op.iLike]: `%${search}%` } },
+        { company: { [Op.iLike]: `%${search}%` } },
+        { contactCode: { [Op.iLike]: `%${search}%` } },
       ];
     }
 

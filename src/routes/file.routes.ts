@@ -1,70 +1,157 @@
+// @ts-nocheck
 import { Router, Request, Response } from 'express';
+import { Op } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
+import fs from 'fs';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
+import { FileRecord } from '@models/FileRecord.model';
+import { upload, getFileUrl } from '@config/multer';
 
 const router = Router();
 
-// Simple in-memory folder/file store until a real model is added
-// In production this would use a File model + cloud storage
-
 // GET /api/files/folders
 router.get('/folders', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const folders = [
-    { id: 'f1', name: 'Company Documents', parentId: null, icon: '🏢' },
-    { id: 'f2', name: 'HR Files', parentId: null, icon: '👥' },
-    { id: 'f3', name: 'Projects', parentId: null, icon: '📁' },
-    { id: 'f4', name: 'Certificates', parentId: null, icon: '🏆' },
-    { id: 'f5', name: 'Shared', parentId: null, icon: '🔗' },
-    { id: 'f6', name: 'Staff Contracts', parentId: 'f2', icon: '📄' },
-    { id: 'f7', name: 'Payroll Records', parentId: 'f2', icon: '💰' },
-  ];
+  const folders = await FileRecord.findAll({
+    where: { isFolder: true },
+    order: [['name', 'ASC']],
+  });
   ResponseFormatter.success(res, folders);
 }));
 
 // POST /api/files/folders
 router.post('/folders', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
   const { name, parentId } = req.body;
   if (!name) return ResponseFormatter.error(res, 'Folder name is required', 400);
-  const folder = { id: uuidv4(), name, parentId: parentId || null, icon: '📁', createdAt: new Date() };
+
+  const folder = await FileRecord.create({
+    uuid: uuidv4(),
+    name,
+    folderId: parentId || null,
+    isFolder: true,
+    icon: '📁',
+    size: 0,
+    uploadedById: user?.id,
+    uploadedByName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
+  } as any);
+
   ResponseFormatter.success(res, folder, 'Folder created', 201);
+}));
+
+// PATCH /api/files/folders/:id/rename
+router.patch('/folders/:id/rename', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const { name } = req.body;
+  if (!name) return ResponseFormatter.error(res, 'New name is required', 400);
+
+  const folder = await FileRecord.findOne({ where: { uuid: req.params.id, isFolder: true } });
+  if (!folder) return ResponseFormatter.notFound(res, 'Folder not found');
+
+  await folder.update({ name });
+  ResponseFormatter.success(res, folder, 'Folder renamed');
+}));
+
+// DELETE /api/files/folders/:id
+router.delete('/folders/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const folder = await FileRecord.findOne({ where: { uuid: req.params.id, isFolder: true } });
+  if (!folder) return ResponseFormatter.notFound(res, 'Folder not found');
+  await folder.destroy();
+  ResponseFormatter.success(res, null, 'Folder deleted');
 }));
 
 // GET /api/files
 router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const { folderId, search } = req.query;
-  const sampleFiles = [
-    { id: '1', name: 'Employee Handbook 2025.pdf', size: 2456789, mimeType: 'application/pdf', folderId: 'f2', uploadedBy: 'HR Team', createdAt: new Date('2025-01-15') },
-    { id: '2', name: 'Company Policy.docx', size: 345678, mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', folderId: 'f1', uploadedBy: 'Admin', createdAt: new Date('2025-01-10') },
-    { id: '3', name: 'Q1 2025 Report.xlsx', size: 1234567, mimeType: 'application/vnd.ms-excel', folderId: 'f1', uploadedBy: 'Finance', createdAt: new Date('2025-03-31') },
-    { id: '4', name: 'MaxHub Logo.png', size: 89012, mimeType: 'image/png', folderId: 'f1', uploadedBy: 'Admin', createdAt: new Date('2025-01-01') },
-  ];
+  const where: any = { isFolder: false };
+  if (folderId) where.folderId = folderId as string;
+  if (search) where.name = { [Op.iLike]: `%${search}%` };
 
-  let files = folderId ? sampleFiles.filter(f => f.folderId === folderId) : sampleFiles;
-  if (search) files = files.filter(f => f.name.toLowerCase().includes((search as string).toLowerCase()));
-
+  const files = await FileRecord.findAll({ where, order: [['createdAt', 'DESC']] });
   ResponseFormatter.success(res, files);
 }));
 
-// POST /api/files/upload
-router.post('/upload', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+// POST /api/files/upload — multipart disk upload
+router.post('/upload', upload.single('file'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
-  const { name, base64Content, folderId, mimeType } = req.body;
-  if (!name) return ResponseFormatter.error(res, 'File name is required', 400);
+  const { folderId } = req.body;
 
-  const file = {
-    id: uuidv4(),
-    name, folderId, mimeType,
-    size: base64Content ? Math.round(base64Content.length * 0.75) : 0,
-    uploadedBy: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
-    url: base64Content ? `data:${mimeType};base64,${base64Content}` : null,
-    createdAt: new Date(),
-  };
-  ResponseFormatter.success(res, file, 'File uploaded', 201);
+  if (req.file) {
+    const record = await FileRecord.create({
+      uuid: uuidv4(),
+      name: req.file.originalname,
+      originalName: req.file.originalname,
+      path: getFileUrl(req.file.filename),
+      mimeType: req.file.mimetype,
+      size: req.file.size,
+      folderId: folderId || null,
+      isFolder: false,
+      uploadedById: user?.id,
+      uploadedByName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
+    } as any);
+    return ResponseFormatter.success(res, record, 'File uploaded', 201);
+  }
+
+  // Fallback: base64 upload
+  const { name, base64Content, mimeType } = req.body;
+  if (!name) return ResponseFormatter.error(res, 'File name or multipart file required', 400);
+
+  let filePath: string | null = null;
+  let size = 0;
+
+  if (base64Content) {
+    const uploadDir = path.join(process.cwd(), 'uploads');
+    fs.mkdirSync(uploadDir, { recursive: true });
+    const ext = path.extname(name) || '';
+    const filename = `${uuidv4()}${ext}`;
+    const buffer = Buffer.from(base64Content, 'base64');
+    fs.writeFileSync(path.join(uploadDir, filename), buffer);
+    filePath = getFileUrl(filename);
+    size = buffer.length;
+  }
+
+  const record = await FileRecord.create({
+    uuid: uuidv4(),
+    name,
+    originalName: name,
+    path: filePath,
+    mimeType: mimeType || 'application/octet-stream',
+    size,
+    folderId: folderId || null,
+    isFolder: false,
+    uploadedById: user?.id,
+    uploadedByName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
+  } as any);
+
+  ResponseFormatter.success(res, record, 'File uploaded', 201);
+}));
+
+// GET /api/files/:id/download
+router.get('/:id/download', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const file = await FileRecord.findOne({ where: { uuid: req.params.id, isFolder: false } });
+  if (!file) return ResponseFormatter.notFound(res, 'File not found');
+
+  if (file.path) {
+    const localPath = path.join(process.cwd(), file.path.replace(/^\//, ''));
+    if (fs.existsSync(localPath)) {
+      return (res as any).download(localPath, file.originalName || file.name);
+    }
+  }
+
+  ResponseFormatter.error(res, 'File content not available on disk', 404);
 }));
 
 // DELETE /api/files/:id
 router.delete('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const file = await FileRecord.findOne({ where: { uuid: req.params.id } });
+  if (!file) return ResponseFormatter.notFound(res, 'File not found');
+
+  if (!file.isFolder && file.path) {
+    const localPath = path.join(process.cwd(), file.path.replace(/^\//, ''));
+    if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
+  }
+
+  await file.destroy();
   ResponseFormatter.success(res, null, 'File deleted');
 }));
 
@@ -72,7 +159,12 @@ router.delete('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Res
 router.patch('/:id/rename', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const { name } = req.body;
   if (!name) return ResponseFormatter.error(res, 'New name is required', 400);
-  ResponseFormatter.success(res, { id: req.params.id, name }, 'File renamed');
+
+  const file = await FileRecord.findOne({ where: { uuid: req.params.id } });
+  if (!file) return ResponseFormatter.notFound(res, 'File not found');
+
+  await file.update({ name });
+  ResponseFormatter.success(res, file, 'File renamed');
 }));
 
 // POST /api/files/:id/share

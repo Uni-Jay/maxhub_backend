@@ -117,11 +117,18 @@ import { StudentEnrollment } from '../models/StudentEnrollment.model';
 import { StudentResult } from '../models/StudentResult.model';
 import { StudentAttendance } from '../models/StudentAttendance.model';
 import { ClassSchedule } from '../models/ClassSchedule.model';
+import { Branch } from '../models/Branch.model';
+import { Unit } from '../models/Unit.model';
+import { Meeting } from '../models/Meeting.model';
+import { MeetingParticipant } from '../models/MeetingParticipant.model';
+import { Call } from '../models/Call.model';
+import { AppModule } from '../models/Module.model';
+import { UserModulePermission } from '../models/UserModulePermission.model';
 import { AssociationManager } from '../models/Associations';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-type PermissionScope = 'all' | 'own' | 'own_department' | 'own_warehouse';
+type PermissionScope = string;
 
 function parsePermissionCode(code: string): {
   module: string;
@@ -177,24 +184,32 @@ async function retryFindOrCreate<T>(
 
 async function main() {
   console.log('\n🚀  MaxHub ERP — Database Migration & Seeder\n');
-  console.log(`📡  Host : ${process.env.DB_HOST}`);
-  console.log(`🗄️   DB   : ${process.env.DB_NAME}`);
-  console.log(`👤  User : ${process.env.DB_USER}\n`);
+  const dbUrl = process.env.DATABASE_URL;
+  console.log(`📡  Host : ${dbUrl ? '(DATABASE_URL)' : process.env.DB_HOST}`);
+  console.log(`🗄️   DB   : ${process.env.DB_NAME ?? 'postgres'}`);
+  console.log(`👤  User : ${process.env.DB_USER ?? 'postgres'}\n`);
+
+  const SSL_OPTIONS = { require: true, rejectUnauthorized: false };
 
   // ── 1. Connect ──────────────────────────────────────────────────────────────
-  const sequelize = new Sequelize({
-    host: process.env.DB_HOST!,
-    port: parseInt(process.env.DB_PORT || '3306'),
-    username: process.env.DB_USER!,
-    password: process.env.DB_PASSWORD!,
-    database: process.env.DB_NAME!,
-    dialect: 'mysql',
-    logging: false,
-    pool: { max: 1, min: 0, idle: 10000 },
-    dialectOptions: {
-      ssl: false,
-    },
-  });
+  const sequelize = dbUrl
+    ? new Sequelize(dbUrl, {
+        dialect: 'postgres',
+        logging: false,
+        pool: { max: 2, min: 0, acquire: 60000, idle: 10000 },
+        dialectOptions: { ssl: SSL_OPTIONS },
+      })
+    : new Sequelize({
+        host:     process.env.DB_HOST!,
+        port:     parseInt(process.env.DB_PORT || '5432'),
+        username: process.env.DB_USER!,
+        password: process.env.DB_PASSWORD!,
+        database: process.env.DB_NAME!,
+        dialect: 'postgres',
+        logging: false,
+        pool: { max: 2, min: 0, acquire: 60000, idle: 10000 },
+        dialectOptions: { ssl: SSL_OPTIONS },
+      });
 
   try {
     await sequelize.authenticate();
@@ -305,19 +320,24 @@ async function main() {
   StudentResult.initModel(sequelize);
   StudentAttendance.initModel(sequelize);
   ClassSchedule.initModel(sequelize);
+  Branch.initModel(sequelize);
+  Unit.initModel(sequelize);
+  Meeting.initModel(sequelize);
+  MeetingParticipant.initModel(sequelize);
+  Call.initModel(sequelize);
+  AppModule.initModel(sequelize);
+  UserModulePermission.initModel(sequelize);
 
   AssociationManager.initializeAssociations(sequelize);
   console.log('✅  Models initialized\n');
 
-  // ── 3. Sync Tables ──────────────────────────────────────────────────────────
-  console.log('🔄  Syncing database tables (alter: true)...');
+  // ── 3. Sync Tables (force = drop+recreate for clean first-time setup) ────────
+  console.log('🔄  Syncing database tables (force: drop + recreate)...');
   console.log('    This may take a moment — creating/updating all tables...');
   let syncAttempt = 0;
   while (true) {
     try {
-      // Use plain sync() to create missing tables without ALTER (avoids deadlocks on shared DBs).
-      // Schema column changes require a manual migration or a one-time force run.
-      await sequelize.sync();
+      await sequelize.sync({ force: true });
       console.log('✅  All tables synced\n');
       break;
     } catch (err: any) {

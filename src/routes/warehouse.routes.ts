@@ -18,7 +18,7 @@ router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response)
   const offset = (Number(page) - 1) * Number(limit);
   const where: any = {};
   if (isActive !== undefined) where.isActive = isActive === 'true';
-  if (search) where.warehouseName = { [Op.like]: `%${search}%` };
+  if (search) where.warehouseName = { [Op.iLike]: `%${search}%` };
 
   const { count, rows } = await Warehouse.findAndCountAll({
     where, order: [['warehouseName', 'ASC']], limit: Number(limit), offset,

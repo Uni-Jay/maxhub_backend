@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import { Sequelize } from 'sequelize';
 import * as dotenv from 'dotenv';
+import { DatabaseConfig } from '@config/Database';
 import { initChatSocket } from './socket/ChatSocket';
 
 // Allow BigInt values to serialize in JSON responses (IDs, counts, etc.)
@@ -167,16 +168,7 @@ class AppBootstrapper {
 
   constructor() {
     this.app = express();
-    this.sequelize = new Sequelize({
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '3306'),
-      username: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || 'password',
-      database: process.env.DB_NAME || 'maxhub_erp',
-      dialect: 'mysql',
-      logging: process.env.NODE_ENV === 'production' ? false : console.log,
-      pool: { max: 10, min: 2, idle: 10000 },
-    });
+    this.sequelize = DatabaseConfig.getInstance();
   }
 
   /**
@@ -466,7 +458,7 @@ class AppBootstrapper {
       // Start server — use http.createServer with increased maxHeaderSize
       // to handle large JWT tokens containing roles/permissions arrays
       const port = process.env.PORT || 3000;
-      const server = http.createServer({ maxHeaderSize: 65536 }, this.app);
+      const server = http.createServer({ maxHeaderSize: 524288 }, this.app);
 
       // Initialize Socket.IO chat server
       const io = initChatSocket(server);

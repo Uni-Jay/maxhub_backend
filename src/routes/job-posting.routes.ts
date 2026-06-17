@@ -19,7 +19,7 @@ router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response)
   if (status) where.status = status;
   if (departmentId) where.departmentId = departmentId;
   if (jobType) where.jobType = jobType;
-  if (search) where.title = { [Op.like]: `%${search}%` };
+  if (search) where.title = { [Op.iLike]: `%${search}%` };
 
   const { count, rows } = await JobPosting.findAndCountAll({
     where,

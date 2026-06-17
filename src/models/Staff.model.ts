@@ -550,8 +550,15 @@ export class Staff extends Model<StaffAttributes, StaffCreationAttributes> imple
         hooks: {
           beforeCreate: async (staff: Staff) => {
             if (!staff.employeeId) {
-              const count = await Staff.count({ paranoid: false });
-              staff.employeeId = `VM${String(count + 1).padStart(3, '0')}`;
+              const bu = (staff.businessUnit || staff.businessUnits?.[0] || '').toLowerCase();
+              let prefix = 'VM';
+              if (bu.includes('beadmax') || bu.includes('bead')) prefix = 'BM';
+              else if (bu.includes('kurios')) prefix = 'KS';
+              const count = await Staff.count({
+                where: { employeeId: { [require('sequelize').Op.iLike]: `${prefix}%` } },
+                paranoid: false,
+              });
+              staff.employeeId = `${prefix}${String(count + 1).padStart(3, '0')}`;
             }
           },
         },

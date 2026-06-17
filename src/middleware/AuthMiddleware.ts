@@ -82,7 +82,10 @@ export class AuthMiddleware {
         ResponseFormatter.unauthorized(res, 'User not authenticated', req.path);
         return;
       }
-      const hasRole = roles.some((role) => req.user?.roles.includes(role));
+      // Normalise both sides: strip non-alpha chars and lowercase for comparison
+      const norm = (s: string) => s.toLowerCase().replace(/[^a-z]/g, '');
+      const userNormRoles = (req.user.roles || []).map(norm);
+      const hasRole = roles.some((role) => userNormRoles.includes(norm(role)));
       if (!hasRole) {
         ResponseFormatter.forbidden(res, `Required roles: ${roles.join(', ')}`, req.path);
         return;
@@ -98,8 +101,9 @@ export class AuthMiddleware {
         return;
       }
 
-      // superadmin bypasses all permission checks
-      if ((req.user.roles || []).includes('superadmin')) {
+      // superadmin bypasses all permission checks (normalise legacy codes like SUPER_ADMIN / super_admin)
+      const normRoles = (req.user.roles || []).map((r: string) => r.toLowerCase().replace(/[^a-z]/g, ''));
+      if (normRoles.includes('superadmin') || normRoles.includes('admin') || normRoles.includes('headofadmin')) {
         return next();
       }
 

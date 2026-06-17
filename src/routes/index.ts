@@ -110,6 +110,12 @@ function setupRoutes(app: any): void {
   apiRouter.use('/meetings', require('./meeting.routes').default);
   apiRouter.use('/calls', require('./call.routes').default);
 
+  // VisaMax
+  apiRouter.use('/visamax', require('./visamax.routes').default);
+
+  // BeadMax Sales
+  apiRouter.use('/beadmax', require('./beadmax.routes').default);
+
   // Calendar & Events
   apiRouter.use('/calendar', require('./calendar.routes').default);
 

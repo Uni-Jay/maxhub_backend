@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
+import bcrypt from 'bcrypt';
+import { Op } from 'sequelize';
 import AuthenticationService from '@services/AuthenticationService';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorHandler } from '@utils/ErrorHandler';
+import { User } from '@models/User.model';
+import { Session } from '@models/Session.model';
 
 export class AuthController {
   /**
@@ -74,10 +78,8 @@ export class AuthController {
    */
   static async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { sessionId } = req.body;
-
-      await AuthenticationService.logout(sessionId);
-
+      const { sessionId, refreshToken } = req.body;
+      await AuthenticationService.logout(sessionId, refreshToken);
       ResponseFormatter.success(res, null, 'Logout successful');
     } catch (error) {
       next(error);
@@ -300,9 +302,16 @@ export class AuthController {
         return;
       }
 
-      // TODO: Implement get sessions logic
+      const sessions = await Session.findAll({
+        where: {
+          userId: BigInt(userId),
+          expiresAt: { [Op.gt]: new Date() },
+        },
+        attributes: ['id', 'uuid', 'ipAddress', 'userAgent', 'createdAt', 'expiresAt'],
+        order: [['createdAt', 'DESC']],
+      });
 
-      ResponseFormatter.success(res, [], 'Sessions retrieved');
+      ResponseFormatter.success(res, sessions, 'Sessions retrieved');
     } catch (error) {
       next(error);
     }
@@ -322,8 +331,16 @@ export class AuthController {
         return;
       }
 
-      // TODO: Implement revoke session logic
+      const session = await Session.findOne({
+        where: { uuid: sessionId, userId: BigInt(userId) },
+      });
 
+      if (!session) {
+        ResponseFormatter.notFound(res, 'Session not found');
+        return;
+      }
+
+      await session.destroy();
       ResponseFormatter.success(res, null, 'Session revoked');
     } catch (error) {
       next(error);
@@ -387,9 +404,27 @@ export class AuthController {
         return;
       }
 
-      // TODO: Implement update profile logic
+      const user = await User.findByPk(BigInt(userId));
+      if (!user) {
+        ResponseFormatter.notFound(res, 'User not found');
+        return;
+      }
 
-      ResponseFormatter.success(res, {}, 'Profile updated');
+      await user.update({
+        firstName: firstName ?? user.firstName,
+        lastName: lastName ?? user.lastName,
+        phone: phone ?? user.phone,
+        avatar: avatar ?? user.avatar,
+      });
+
+      ResponseFormatter.success(res, {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        avatar: user.avatar,
+      }, 'Profile updated');
     } catch (error) {
       next(error);
     }
@@ -409,7 +444,30 @@ export class AuthController {
         return;
       }
 
-      // TODO: Implement change password logic
+      if (!currentPassword || !newPassword) {
+        ResponseFormatter.error(res, 'currentPassword and newPassword are required', 400);
+        return;
+      }
+
+      if (newPassword.length < 8) {
+        ResponseFormatter.error(res, 'New password must be at least 8 characters', 400);
+        return;
+      }
+
+      const user = await User.findByPk(BigInt(userId));
+      if (!user) {
+        ResponseFormatter.notFound(res, 'User not found');
+        return;
+      }
+
+      const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isMatch) {
+        ResponseFormatter.error(res, 'Current password is incorrect', 401);
+        return;
+      }
+
+      const hash = await bcrypt.hash(newPassword, 12);
+      await user.update({ passwordHash: hash });
 
       ResponseFormatter.success(res, null, 'Password changed successfully');
     } catch (error) {

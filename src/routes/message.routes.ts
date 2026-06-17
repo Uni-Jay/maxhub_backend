@@ -1,6 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import { Conversation } from '@models/Conversation.model';
 import { ConversationParticipant } from '@models/ConversationParticipant.model';
 import { Message } from '@models/Message.model';
@@ -10,8 +13,37 @@ import { Staff } from '@models/Staff.model';
 import { Call } from '@models/Call.model';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
+import { AuthMiddleware } from '@middleware/AuthMiddleware';
 
 const router = Router();
+
+// ─── Chat file upload (images, docs, audio, video) ───────────────────────────
+const CHAT_UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'chat');
+const chatStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => { fs.mkdirSync(CHAT_UPLOAD_DIR, { recursive: true }); cb(null, CHAT_UPLOAD_DIR); },
+  filename: (_req, file, cb) => { cb(null, `${uuidv4()}${path.extname(file.originalname).toLowerCase()}`); },
+});
+const CHAT_ALLOWED = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.mp4', '.webm', '.mp3', '.wav', '.ogg', '.m4a', '.zip', '.rar'];
+const chatUpload = multer({
+  storage: chatStorage,
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    CHAT_ALLOWED.includes(ext) ? cb(null, true) : cb(new Error(`File type ${ext} not allowed`));
+  },
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB
+});
+
+// POST /api/messages/upload — upload a chat attachment, returns { url, type, name, size }
+router.post('/upload', AuthMiddleware.verifyToken, chatUpload.single('file'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  if (!req.file) return ResponseFormatter.error(res, 'No file uploaded', 400);
+  const ext = path.extname(req.file.originalname).toLowerCase();
+  let type = 'Document';
+  if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) type = 'Image';
+  else if (['.mp4', '.webm'].includes(ext)) type = 'Video';
+  else if (['.mp3', '.wav', '.ogg', '.m4a', '.webm'].includes(ext)) type = 'Audio';
+  const url = `/uploads/chat/${req.file.filename}`;
+  return ResponseFormatter.success(res, { url, type, name: req.file.originalname, size: req.file.size }, 'File uploaded');
+}));
 
 // ─────────────────────────────────────────────────────────────────────────────
 // USER SEARCH (for starting new chats)
@@ -28,9 +60,9 @@ router.get('/users/search', ErrorMiddleware.asyncHandler(async (req: Request, re
 
   if (q.trim()) {
     where[Op.or] = [
-      { firstName: { [Op.like]: `%${q}%` } },
-      { lastName: { [Op.like]: `%${q}%` } },
-      { email: { [Op.like]: `%${q}%` } },
+      { firstName: { [Op.iLike]: `%${q}%` } },
+      { lastName: { [Op.iLike]: `%${q}%` } },
+      { email: { [Op.iLike]: `%${q}%` } },
     ];
   }
 
@@ -622,7 +654,7 @@ router.get('/search', ErrorMiddleware.asyncHandler(async (req: Request, res: Res
   const messages = await Message.findAll({
     where: {
       conversationId: { [Op.in]: convIds },
-      messageText: { [Op.like]: `%${q}%` },
+      messageText: { [Op.iLike]: `%${q}%` },
     },
     include: [
       { model: User, as: 'sender', attributes: ['id', 'firstName', 'lastName', 'avatar'] },

@@ -72,8 +72,8 @@ router.get(
 
     const rows = await Opportunity.findAll({
       attributes: [
-        [fn('YEAR', col('closeDate')), 'year'],
-        [fn('MONTH', col('closeDate')), 'month'],
+        [literal('EXTRACT(YEAR FROM "close_date")'), 'year'],
+        [literal('EXTRACT(MONTH FROM "close_date")'), 'month'],
         [fn('COUNT', col('id')), 'count'],
         [fn('SUM', col('amount')), 'totalAmount'],
         [fn('SUM', col('expectedRevenue')), 'totalExpectedRevenue'],
@@ -88,10 +88,10 @@ router.get(
         },
       },
       group: [
-        literal('YEAR(closeDate)'),
-        literal('MONTH(closeDate)'),
+        literal('EXTRACT(YEAR FROM "close_date")'),
+        literal('EXTRACT(MONTH FROM "close_date")'),
       ] as any,
-      order: [[literal('MONTH(closeDate)'), 'ASC']] as any,
+      order: [[literal('EXTRACT(MONTH FROM "close_date")'), 'ASC']] as any,
       raw: true,
     });
 
@@ -147,9 +147,9 @@ router.get(
 
     if (search) {
       where[Op.or as any] = [
-        { title:           { [Op.like]: `%${search}%` } },
-        { opportunityCode: { [Op.like]: `%${search}%` } },
-        { description:     { [Op.like]: `%${search}%` } },
+        { title:           { [Op.iLike]: `%${search}%` } },
+        { opportunityCode: { [Op.iLike]: `%${search}%` } },
+        { description:     { [Op.iLike]: `%${search}%` } },
       ];
     }
 
