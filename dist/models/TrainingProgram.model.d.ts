@@ -15,6 +15,8 @@ interface TrainingProgramAttributes {
     endDate: Date;
     budget?: number;
     createdById: bigint;
+    approvedAt?: Date;
+    approvedById?: bigint;
     deletedAt?: Date;
 }
 interface TrainingProgramCreationAttributes extends Optional<TrainingProgramAttributes, 'id' | 'uuid'> {
@@ -35,6 +37,8 @@ export declare class TrainingProgram extends Model<TrainingProgramAttributes, Tr
     endDate: Date;
     budget?: number;
     createdById: bigint;
+    approvedAt?: Date;
+    approvedById?: bigint;
     deletedAt?: Date;
     readonly createdAt: Date;
     readonly updatedAt: Date;

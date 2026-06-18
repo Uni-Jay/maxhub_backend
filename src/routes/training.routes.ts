@@ -112,7 +112,13 @@ router.patch('/:id/status', AuthMiddleware.requirePermission('train.program.upda
     return ResponseFormatter.forbidden(res, 'Only Super Admin can activate a training program', req.path);
   }
 
-  await program.update({ status });
+  const updates: Record<string, unknown> = { status };
+  if (current === 'Draft' && status === 'Active') {
+    updates.approvedAt = new Date();
+    updates.approvedById = (req as any).user?.id;
+  }
+
+  await program.update(updates);
   ResponseFormatter.success(res, program, 'Status updated');
 }));
 

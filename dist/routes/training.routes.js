@@ -97,7 +97,12 @@ router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('train.pr
     if (current === 'Draft' && status === 'Active' && !(0, isSuperAdmin_1.isSuperAdmin)(req)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only Super Admin can activate a training program', req.path);
     }
-    await program.update({ status });
+    const updates = { status };
+    if (current === 'Draft' && status === 'Active') {
+        updates.approvedAt = new Date();
+        updates.approvedById = req.user?.id;
+    }
+    await program.update(updates);
     ResponseFormatter_1.ResponseFormatter.success(res, program, 'Status updated');
 }));
 router.delete('/:id', AuthMiddleware_1.default.requirePermission('train.program.delete.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {

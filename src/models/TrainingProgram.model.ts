@@ -17,6 +17,8 @@ interface TrainingProgramAttributes {
   endDate: Date;
   budget?: number;
   createdById: bigint;
+  approvedAt?: Date;
+  approvedById?: bigint;
   deletedAt?: Date;
 }
 
@@ -39,6 +41,8 @@ export class TrainingProgram extends Model<TrainingProgramAttributes, TrainingPr
   public endDate!: Date;
   public budget?: number;
   public createdById!: bigint;
+  public approvedAt?: Date;
+  public approvedById?: bigint;
   public deletedAt?: Date;
 
   public readonly createdAt!: Date;
@@ -62,6 +66,8 @@ export class TrainingProgram extends Model<TrainingProgramAttributes, TrainingPr
         endDate: { type: DataTypes.DATE, allowNull: false, comment: 'End date' },
         budget: { type: DataTypes.DECIMAL(12, 2), allowNull: true, comment: 'Budget' },
         createdById: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'Created by user ID' },
+        approvedAt: { type: DataTypes.DATE, allowNull: true, comment: 'When Draft was approved into Active' },
+        approvedById: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'User who approved it' },
         deletedAt: { type: DataTypes.DATE, allowNull: true, comment: 'Soft delete timestamp' },
       },
       {

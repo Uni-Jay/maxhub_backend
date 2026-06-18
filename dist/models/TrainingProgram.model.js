@@ -21,6 +21,8 @@ class TrainingProgram extends sequelize_1.Model {
             endDate: { type: sequelize_1.DataTypes.DATE, allowNull: false, comment: 'End date' },
             budget: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: true, comment: 'Budget' },
             createdById: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'Created by user ID' },
+            approvedAt: { type: sequelize_1.DataTypes.DATE, allowNull: true, comment: 'When Draft was approved into Active' },
+            approvedById: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'User who approved it' },
             deletedAt: { type: sequelize_1.DataTypes.DATE, allowNull: true, comment: 'Soft delete timestamp' },
         }, {
             sequelize, tableName: 'training_programs', timestamps: true, paranoid: true, underscored: false, freezeTableName: true,
