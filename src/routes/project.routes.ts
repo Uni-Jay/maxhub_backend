@@ -32,7 +32,19 @@ async function getOwnStaffId(req: Request): Promise<bigint | null> {
   return staff ? (staff as any).id : null;
 }
 
-function canAccessProject(project: Project, staffId: bigint | null): boolean {
+function isHod(req: Request): boolean {
+  const roles = ((req as any).user?.roles || []).map((r: string) => r.toLowerCase().replace(/[^a-z]/g, ''));
+  return roles.includes('hod');
+}
+
+/**
+ * "Own managed project" fallback — lets a staff member without an ALL permission
+ * still manage a project they're personally listed as manager on (their own
+ * personal project). HOD is deliberately excluded: she has no add/edit/delete
+ * authority on projects at all, even ones she happens to be listed as manager on.
+ */
+function canAccessProject(req: Request, project: Project, staffId: bigint | null): boolean {
+  if (isHod(req)) return false;
   if (!staffId) return false;
   return String(project.projectManagerId) === String(staffId);
 }
@@ -100,7 +112,7 @@ router.get(
 
     if (!hasPermission(req, PermissionCode.PROJECT_READ_ALL)) {
       const staffId = await getOwnStaffId(req);
-      if (!canAccessProject(project, staffId)) return ResponseFormatter.notFound(res, 'Project not found');
+      if (!canAccessProject(req, project, staffId)) return ResponseFormatter.notFound(res, 'Project not found');
     }
 
     ResponseFormatter.success(res, project.toJSON());
@@ -185,7 +197,7 @@ router.patch(
 
     if (!hasPermission(req, PermissionCode.PROJECT_UPDATE_ALL)) {
       const staffId = await getOwnStaffId(req);
-      if (!canAccessProject(project, staffId)) return ResponseFormatter.notFound(res, 'Project not found');
+      if (!canAccessProject(req, project, staffId)) return ResponseFormatter.notFound(res, 'Project not found');
     }
 
     const {
@@ -216,7 +228,7 @@ router.delete(
 
     if (!hasPermission(req, PermissionCode.PROJECT_DELETE_ALL)) {
       const staffId = await getOwnStaffId(req);
-      if (!canAccessProject(project, staffId)) return ResponseFormatter.notFound(res, 'Project not found');
+      if (!canAccessProject(req, project, staffId)) return ResponseFormatter.notFound(res, 'Project not found');
     }
 
     await project.destroy();
@@ -232,7 +244,7 @@ router.get(
 
     if (!hasPermission(req, PermissionCode.PROJECT_READ_ALL)) {
       const staffId = await getOwnStaffId(req);
-      if (!canAccessProject(project, staffId)) return ResponseFormatter.notFound(res, 'Project not found');
+      if (!canAccessProject(req, project, staffId)) return ResponseFormatter.notFound(res, 'Project not found');
     }
 
     const tasks = await Task.findAll({
@@ -279,7 +291,7 @@ router.post(
 
     if (!hasPermission(req, PermissionCode.PROJECT_READ_ALL)) {
       const staffId = await getOwnStaffId(req);
-      if (!canAccessProject(project, staffId)) return ResponseFormatter.notFound(res, 'Project not found');
+      if (!canAccessProject(req, project, staffId)) return ResponseFormatter.notFound(res, 'Project not found');
     }
 
     const { content } = req.body;
@@ -325,7 +337,7 @@ router.get(
 
     if (!hasPermission(req, PermissionCode.PROJECT_READ_ALL)) {
       const staffId = await getOwnStaffId(req);
-      if (!canAccessProject(project, staffId)) return ResponseFormatter.notFound(res, 'Project not found');
+      if (!canAccessProject(req, project, staffId)) return ResponseFormatter.notFound(res, 'Project not found');
     }
 
     const comments = await ProjectComment.findAll({

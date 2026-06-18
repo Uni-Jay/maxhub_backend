@@ -31,7 +31,13 @@ async function getOwnStaffId(req) {
     const staff = await Staff_model_1.Staff.findOne({ where: { userId }, attributes: ['id'] });
     return staff ? staff.id : null;
 }
-function canAccessProject(project, staffId) {
+function isHod(req) {
+    const roles = (req.user?.roles || []).map((r) => r.toLowerCase().replace(/[^a-z]/g, ''));
+    return roles.includes('hod');
+}
+function canAccessProject(req, project, staffId) {
+    if (isHod(req))
+        return false;
     if (!staffId)
         return false;
     return String(project.projectManagerId) === String(staffId);
@@ -91,7 +97,7 @@ router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, re
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Project not found');
     if (!hasPermission(req, PermissionCodes_1.PermissionCode.PROJECT_READ_ALL)) {
         const staffId = await getOwnStaffId(req);
-        if (!canAccessProject(project, staffId))
+        if (!canAccessProject(req, project, staffId))
             return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Project not found');
     }
     ResponseFormatter_1.ResponseFormatter.success(res, project.toJSON());
@@ -157,7 +163,7 @@ router.patch('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, 
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Project not found');
     if (!hasPermission(req, PermissionCodes_1.PermissionCode.PROJECT_UPDATE_ALL)) {
         const staffId = await getOwnStaffId(req);
-        if (!canAccessProject(project, staffId))
+        if (!canAccessProject(req, project, staffId))
             return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Project not found');
     }
     const { name, description, status, priority, endDate, expectedEndDate, progress, budget, } = req.body;
@@ -179,7 +185,7 @@ router.delete('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req,
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Project not found');
     if (!hasPermission(req, PermissionCodes_1.PermissionCode.PROJECT_DELETE_ALL)) {
         const staffId = await getOwnStaffId(req);
-        if (!canAccessProject(project, staffId))
+        if (!canAccessProject(req, project, staffId))
             return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Project not found');
     }
     await project.destroy();
@@ -191,7 +197,7 @@ router.get('/:id/tasks', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (r
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Project not found');
     if (!hasPermission(req, PermissionCodes_1.PermissionCode.PROJECT_READ_ALL)) {
         const staffId = await getOwnStaffId(req);
-        if (!canAccessProject(project, staffId))
+        if (!canAccessProject(req, project, staffId))
             return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Project not found');
     }
     const tasks = await Task_model_1.Task.findAll({
@@ -222,7 +228,7 @@ router.post('/:id/comments', AuthMiddleware_1.AuthMiddleware.requirePermission(P
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Project not found');
     if (!hasPermission(req, PermissionCodes_1.PermissionCode.PROJECT_READ_ALL)) {
         const staffId = await getOwnStaffId(req);
-        if (!canAccessProject(project, staffId))
+        if (!canAccessProject(req, project, staffId))
             return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Project not found');
     }
     const { content } = req.body;
@@ -261,7 +267,7 @@ router.get('/:id/comments', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Project not found');
     if (!hasPermission(req, PermissionCodes_1.PermissionCode.PROJECT_READ_ALL)) {
         const staffId = await getOwnStaffId(req);
-        if (!canAccessProject(project, staffId))
+        if (!canAccessProject(req, project, staffId))
             return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Project not found');
     }
     const comments = await ProjectComment_model_1.ProjectComment.findAll({
