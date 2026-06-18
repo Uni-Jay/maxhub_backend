@@ -161,8 +161,10 @@ export class AuthenticationService {
       });
     }
 
-    // If EMAIL-based 2FA, generate and send an OTP now
-    if (requiresMFA && twoFactorAuth?.method === 'EMAIL') {
+    // Login-time 2FA always challenges via an emailed OTP to the account's
+    // login email, regardless of which method (TOTP/SMS/EMAIL) was configured
+    // at setup — that field only affects the original setup flow now.
+    if (requiresMFA) {
       const otpCode = OTPService.generateOTPCode();
       const otpHash = await OTPService.hashOTP(otpCode);
       await OTPVerification.update(
@@ -510,22 +512,20 @@ export class AuthenticationService {
     });
     if (!twoFA) throw new UnauthorizedError('2FA not configured for this account');
 
+    // Login always verifies against the emailed OTP, regardless of the
+    // method (TOTP/SMS/EMAIL) the user originally configured at setup.
     let isValid = false;
 
-    if (twoFA.method === 'TOTP' && twoFA.secret) {
-      isValid = OTPService.verifyTOTP(otpCode, twoFA.secret);
-    } else if (twoFA.method === 'EMAIL') {
-      const otp = await OTPVerification.findOne({
-        where: { userId: user.id, type: '2FA', isUsed: false },
-        order: [['createdAt', 'DESC']],
-      });
-      if (otp && otp.expiresAt >= new Date() && otp.attempts < 5) {
-        isValid = await OTPService.verifyOTP(otpCode, otp.otpHash);
-        if (isValid) {
-          await otp.update({ isUsed: true, usedAt: new Date() });
-        } else {
-          await otp.increment('attempts');
-        }
+    const otp = await OTPVerification.findOne({
+      where: { userId: user.id, type: '2FA', isUsed: false },
+      order: [['createdAt', 'DESC']],
+    });
+    if (otp && otp.expiresAt >= new Date() && otp.attempts < 5) {
+      isValid = await OTPService.verifyOTP(otpCode, otp.otpHash);
+      if (isValid) {
+        await otp.update({ isUsed: true, usedAt: new Date() });
+      } else {
+        await otp.increment('attempts');
       }
     }
 
@@ -765,8 +765,8 @@ export class AuthenticationService {
     if (!user) throw new NotFoundError('User not found');
 
     const twoFA = await TwoFactorAuth.findOne({ where: { userId: user.id, isEnabled: true } });
-    if (!twoFA || twoFA.method !== 'EMAIL') {
-      throw new ValidationError('Email OTP not configured', [] as any);
+    if (!twoFA) {
+      throw new ValidationError('2FA not configured for this account', [] as any);
     }
 
     // Invalidate previous OTPs and create a fresh one

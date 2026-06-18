@@ -101,7 +101,7 @@ class AuthenticationService {
                 },
             });
         }
-        if (requiresMFA && twoFactorAuth?.method === 'EMAIL') {
+        if (requiresMFA) {
             const otpCode = OTPService_1.default.generateOTPCode();
             const otpHash = await OTPService_1.default.hashOTP(otpCode);
             await OTPVerification_model_1.OTPVerification.update({ isUsed: true, usedAt: new Date() }, { where: { userId: user.id, type: '2FA', isUsed: false } });
@@ -356,22 +356,17 @@ class AuthenticationService {
         if (!twoFA)
             throw new ErrorHandler_1.UnauthorizedError('2FA not configured for this account');
         let isValid = false;
-        if (twoFA.method === 'TOTP' && twoFA.secret) {
-            isValid = OTPService_1.default.verifyTOTP(otpCode, twoFA.secret);
-        }
-        else if (twoFA.method === 'EMAIL') {
-            const otp = await OTPVerification_model_1.OTPVerification.findOne({
-                where: { userId: user.id, type: '2FA', isUsed: false },
-                order: [['createdAt', 'DESC']],
-            });
-            if (otp && otp.expiresAt >= new Date() && otp.attempts < 5) {
-                isValid = await OTPService_1.default.verifyOTP(otpCode, otp.otpHash);
-                if (isValid) {
-                    await otp.update({ isUsed: true, usedAt: new Date() });
-                }
-                else {
-                    await otp.increment('attempts');
-                }
+        const otp = await OTPVerification_model_1.OTPVerification.findOne({
+            where: { userId: user.id, type: '2FA', isUsed: false },
+            order: [['createdAt', 'DESC']],
+        });
+        if (otp && otp.expiresAt >= new Date() && otp.attempts < 5) {
+            isValid = await OTPService_1.default.verifyOTP(otpCode, otp.otpHash);
+            if (isValid) {
+                await otp.update({ isUsed: true, usedAt: new Date() });
+            }
+            else {
+                await otp.increment('attempts');
             }
         }
         if (!isValid)
@@ -545,8 +540,8 @@ class AuthenticationService {
         if (!user)
             throw new ErrorHandler_1.NotFoundError('User not found');
         const twoFA = await TwoFactorAuth_model_1.TwoFactorAuth.findOne({ where: { userId: user.id, isEnabled: true } });
-        if (!twoFA || twoFA.method !== 'EMAIL') {
-            throw new ErrorHandler_1.ValidationError('Email OTP not configured', []);
+        if (!twoFA) {
+            throw new ErrorHandler_1.ValidationError('2FA not configured for this account', []);
         }
         await OTPVerification_model_1.OTPVerification.update({ isUsed: true, usedAt: new Date() }, { where: { userId: user.id, type: '2FA', isUsed: false } });
         const otpCode = OTPService_1.default.generateOTPCode();
