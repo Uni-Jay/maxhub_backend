@@ -290,6 +290,9 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.TRAIN_PROGRAM_UPDATE_ALL,
     PermissionCode.TRAIN_ATTENDANCE_READ_ALL,
     PermissionCode.TRAIN_ATTENDANCE_MARK_ALL,
+    // CRM
+    PermissionCode.CRM_CONTACT_READ_ALL,
+    PermissionCode.CRM_OPPORTUNITY_READ_ALL,
     // System
     PermissionCode.SYS_AUDIT_READ_ALL,
     PermissionCode.SYS_REPORT_GENERATE_ALL,
@@ -347,6 +350,7 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.FIN_BUDGET_READ_OWN_DEPARTMENT,
     // CRM
     PermissionCode.CRM_CONTACT_READ_ALL,
+    PermissionCode.CRM_OPPORTUNITY_READ_ALL,
     PermissionCode.CRM_OPPORTUNITY_READ_OWN,
     PermissionCode.CRM_ACTIVITY_READ_OWN,
     // Student management
@@ -421,6 +425,7 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.PROJECT_COMMENT_CREATE_ALL,
     PermissionCode.PROJECT_COMMENT_READ_OWN,
     PermissionCode.CRM_CONTACT_READ_ALL,
+    PermissionCode.CRM_OPPORTUNITY_READ_ALL,
     PermissionCode.CRM_ACTIVITY_READ_OWN,
     PermissionCode.LMS_COURSE_READ_ALL,
     PermissionCode.LMS_ENROLLMENT_VIEW_OWN,
