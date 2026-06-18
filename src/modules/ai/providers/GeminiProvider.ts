@@ -55,7 +55,7 @@ export class GeminiProvider implements AIProvider {
     const genModel = this.getClient().getGenerativeModel({
       model: this.resolveModel(model),
       systemInstruction,
-      generationConfig: { temperature },
+      generationConfig: { temperature, thinkingConfig: { thinkingBudget: 0 } } as any,
     });
     const result = await genModel.startChat({ history }).sendMessage(lastMessage);
     return result.response.text().trim();
@@ -74,7 +74,7 @@ export class GeminiProvider implements AIProvider {
     const genModel = this.getClient().getGenerativeModel({
       model: this.resolveModel(model),
       systemInstruction,
-      generationConfig: { temperature },
+      generationConfig: { temperature, thinkingConfig: { thinkingBudget: 0 } } as any,
       tools: tools.length ? [{ functionDeclarations: tools as any }] : undefined,
     });
 
@@ -101,7 +101,7 @@ export class GeminiProvider implements AIProvider {
   async generate(prompt: string, model?: string, temperature = 0.5): Promise<string> {
     const genModel = this.getClient().getGenerativeModel({
       model: this.resolveModel(model),
-      generationConfig: { temperature },
+      generationConfig: { temperature, thinkingConfig: { thinkingBudget: 0 } } as any,
     });
     const result = await genModel.generateContent(prompt);
     return result.response.text().trim();

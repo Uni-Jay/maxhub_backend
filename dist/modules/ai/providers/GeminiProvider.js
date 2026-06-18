@@ -42,7 +42,7 @@ class GeminiProvider {
         const genModel = this.getClient().getGenerativeModel({
             model: this.resolveModel(model),
             systemInstruction,
-            generationConfig: { temperature },
+            generationConfig: { temperature, thinkingConfig: { thinkingBudget: 0 } },
         });
         const result = await genModel.startChat({ history }).sendMessage(lastMessage);
         return result.response.text().trim();
@@ -52,7 +52,7 @@ class GeminiProvider {
         const genModel = this.getClient().getGenerativeModel({
             model: this.resolveModel(model),
             systemInstruction,
-            generationConfig: { temperature },
+            generationConfig: { temperature, thinkingConfig: { thinkingBudget: 0 } },
             tools: tools.length ? [{ functionDeclarations: tools }] : undefined,
         });
         const chatSession = genModel.startChat({ history });
@@ -75,7 +75,7 @@ class GeminiProvider {
     async generate(prompt, model, temperature = 0.5) {
         const genModel = this.getClient().getGenerativeModel({
             model: this.resolveModel(model),
-            generationConfig: { temperature },
+            generationConfig: { temperature, thinkingConfig: { thinkingBudget: 0 } },
         });
         const result = await genModel.generateContent(prompt);
         return result.response.text().trim();
