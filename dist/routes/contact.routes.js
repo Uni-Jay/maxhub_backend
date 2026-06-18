@@ -35,6 +35,23 @@ router.get('/stats/pipeline', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthM
     const total = Object.values(pipeline).reduce((a, b) => a + b, 0);
     return ResponseFormatter_1.ResponseFormatter.success(res, { pipeline, total }, 'Pipeline stats retrieved');
 }));
+router.get('/stats', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthMiddleware_1.AuthMiddleware.requirePermission('crm.contact.read.all', 'crm.contact.read.own'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (_req, res) => {
+    const counts = await Contact_model_1.Contact.findAll({
+        attributes: ['status', [(0, sequelize_1.fn)('COUNT', (0, sequelize_1.col)('id')), 'count']],
+        group: ['status'],
+        raw: true,
+    });
+    const byStatus = {};
+    for (const row of counts)
+        byStatus[row.status] = Number(row.count);
+    return ResponseFormatter_1.ResponseFormatter.success(res, {
+        total: Object.values(byStatus).reduce((a, b) => a + b, 0),
+        active: byStatus.Active ?? 0,
+        leads: byStatus.Lead ?? 0,
+        prospects: byStatus.Prospect ?? 0,
+        converted: byStatus.Converted ?? 0,
+    }, 'Contact stats retrieved');
+}));
 router.get('/', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthMiddleware_1.AuthMiddleware.requirePermission('crm.contact.read.all', 'crm.contact.read.own'), AuthMiddleware_1.AuthMiddleware.pagination, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { page, limit, offset } = req.pagination;
     const { status, source, search, ownerUserId } = req.query;

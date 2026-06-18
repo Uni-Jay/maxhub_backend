@@ -34,6 +34,7 @@ class StaffQuery extends sequelize_1.Model {
             tableName: 'staff_queries',
             paranoid: true,
             timestamps: true,
+            underscored: false,
         });
     }
 }

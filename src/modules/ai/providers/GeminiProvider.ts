@@ -14,7 +14,13 @@ interface GeminiHistory {
 /** Gemini has no 'system' role in chat history — folds it into systemInstruction instead, and uses 'model' instead of 'assistant'. */
 function toGeminiHistory(messages: AIMessage[]): GeminiHistory {
   const systemParts = messages.filter((m) => m.role === 'system').map((m) => m.content);
-  const conversational = messages.filter((m) => m.role !== 'system');
+  let conversational = messages.filter((m) => m.role !== 'system');
+  // Gemini requires history to start with a 'user' turn. Callers (e.g. the chat UI's
+  // hardcoded greeting bubble) may prepend an assistant turn that was never a real
+  // model reply — drop any leading non-user turns rather than erroring.
+  while (conversational.length && conversational[0].role !== 'user') {
+    conversational = conversational.slice(1);
+  }
   const last = conversational[conversational.length - 1];
   const history = conversational.slice(0, -1).map((m) => ({
     role: (m.role === 'assistant' ? 'model' : 'user') as 'user' | 'model',

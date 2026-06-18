@@ -91,6 +91,7 @@ export class StaffQuery
         tableName: 'staff_queries',
         paranoid: true,
         timestamps: true,
+        underscored: false,
       }
     );
   }

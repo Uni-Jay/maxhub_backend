@@ -1,4 +1,4 @@
-import { Model, Optional } from 'sequelize';
+import { Model, Optional, Sequelize } from 'sequelize';
 interface FileRecordAttributes {
     id: bigint;
     uuid: string;
@@ -32,6 +32,7 @@ export declare class FileRecord extends Model<FileRecordAttributes, FileRecordCr
     deletedAt?: Date;
     readonly createdAt: Date;
     readonly updatedAt: Date;
+    static initModel(sequelize: Sequelize): typeof FileRecord;
 }
 export default FileRecord;
 //# sourceMappingURL=FileRecord.model.d.ts.map

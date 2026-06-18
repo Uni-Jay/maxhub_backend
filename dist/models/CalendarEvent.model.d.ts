@@ -1,4 +1,4 @@
-import { Model, Optional } from 'sequelize';
+import { Model, Optional, Sequelize } from 'sequelize';
 interface CalendarEventAttributes {
     id: bigint;
     uuid: string;
@@ -26,6 +26,7 @@ export declare class CalendarEvent extends Model<CalendarEventAttributes, Calend
     deletedAt?: Date;
     readonly createdAt: Date;
     readonly updatedAt: Date;
+    static initModel(sequelize: Sequelize): typeof CalendarEvent;
 }
 export default CalendarEvent;
 //# sourceMappingURL=CalendarEvent.model.d.ts.map

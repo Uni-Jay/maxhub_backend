@@ -1,4 +1,4 @@
-import { Model } from 'sequelize';
+import { Model, Sequelize } from 'sequelize';
 export interface ICustomer {
     id: bigint;
     organizationId: bigint;
@@ -46,6 +46,7 @@ export declare class Customer extends Model<ICustomer> implements ICustomer {
     createdAt: Date;
     updatedAt: Date;
     deletedAt?: Date;
+    static initModel(sequelize: Sequelize): typeof Customer;
 }
 export default Customer;
 //# sourceMappingURL=Customer.model.d.ts.map

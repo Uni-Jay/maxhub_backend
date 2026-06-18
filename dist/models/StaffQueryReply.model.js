@@ -18,6 +18,7 @@ class StaffQueryReply extends sequelize_1.Model {
             tableName: 'staff_query_replies',
             paranoid: true,
             timestamps: true,
+            underscored: false,
         });
     }
 }

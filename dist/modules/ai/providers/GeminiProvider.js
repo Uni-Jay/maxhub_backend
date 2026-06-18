@@ -6,7 +6,10 @@ const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 const SUPPORTED_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
 function toGeminiHistory(messages) {
     const systemParts = messages.filter((m) => m.role === 'system').map((m) => m.content);
-    const conversational = messages.filter((m) => m.role !== 'system');
+    let conversational = messages.filter((m) => m.role !== 'system');
+    while (conversational.length && conversational[0].role !== 'user') {
+        conversational = conversational.slice(1);
+    }
     const last = conversational[conversational.length - 1];
     const history = conversational.slice(0, -1).map((m) => ({
         role: (m.role === 'assistant' ? 'model' : 'user'),

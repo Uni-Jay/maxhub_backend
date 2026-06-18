@@ -185,10 +185,10 @@ router.get('/analytics', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (r
     const monthlyRaw = await OrderTracking_model_1.OrderTracking.findAll({
         where: { paymentStatus: 'Paid', orderDate: { [sequelize_1.Op.gte]: startOfYear } },
         attributes: [
-            [(0, sequelize_1.literal)('EXTRACT(MONTH FROM "order_date")'), 'month'],
+            [(0, sequelize_1.literal)('EXTRACT(MONTH FROM "orderDate")'), 'month'],
             [(0, sequelize_1.fn)('SUM', (0, sequelize_1.col)('finalAmount')), 'revenue'],
         ],
-        group: [(0, sequelize_1.literal)('EXTRACT(MONTH FROM "order_date")')],
+        group: [(0, sequelize_1.literal)('EXTRACT(MONTH FROM "orderDate")')],
         raw: true,
     });
     const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

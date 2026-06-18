@@ -1,4 +1,4 @@
-import { Model } from 'sequelize';
+import { Model, Sequelize } from 'sequelize';
 export interface IOrderTracking {
     id: bigint;
     organizationId: bigint;
@@ -42,6 +42,7 @@ export declare class OrderTracking extends Model<IOrderTracking> implements IOrd
     createdAt: Date;
     updatedAt: Date;
     deletedAt?: Date;
+    static initModel(sequelize: Sequelize): typeof OrderTracking;
 }
 export default OrderTracking;
 //# sourceMappingURL=OrderTracking.model.d.ts.map

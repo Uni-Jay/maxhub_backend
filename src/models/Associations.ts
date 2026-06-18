@@ -67,6 +67,8 @@ import { PurchaseOrder } from './PurchaseOrder.model';
 import { JobApplication } from './JobApplication.model';
 import { JobSyncLog } from './JobSyncLog.model';
 import { WeeklyReport } from './WeeklyReport.model';
+import { Customer } from './Customer.model';
+import { OrderTracking } from './OrderTracking.model';
 import { AIConversation } from '../modules/ai/models/AIConversation.model';
 import { AIMessage } from '../modules/ai/models/AIMessage.model';
 import { AIMeetingSummary } from '../modules/ai/models/AIMeetingSummary.model';
@@ -284,6 +286,10 @@ export class AssociationManager {
     WeeklyReport.belongsTo(Staff, { foreignKey: 'staffId', as: 'staff' });
     Staff.hasMany(WeeklyReport, { foreignKey: 'staffId', as: 'weeklyReports' });
     WeeklyReport.belongsTo(User, { foreignKey: 'approvedById', as: 'approvedBy' });
+
+    // ======== BEADMAX SALES ========
+    OrderTracking.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' });
+    Customer.hasMany(OrderTracking, { foreignKey: 'customerId', as: 'orders' });
 
     // ======== AI ASSISTANT ========
     AIConversation.belongsTo(User, { foreignKey: 'userId', as: 'user' });

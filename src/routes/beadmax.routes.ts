@@ -210,10 +210,10 @@ router.get('/analytics', ErrorMiddleware.asyncHandler(async (req: Request, res: 
   const monthlyRaw = await OrderTracking.findAll({
     where: { paymentStatus: 'Paid', orderDate: { [Op.gte]: startOfYear } },
     attributes: [
-      [literal('EXTRACT(MONTH FROM "order_date")'), 'month'],
+      [literal('EXTRACT(MONTH FROM "orderDate")'), 'month'],
       [fn('SUM', col('finalAmount')), 'revenue'],
     ],
-    group: [literal('EXTRACT(MONTH FROM "order_date")')],
+    group: [literal('EXTRACT(MONTH FROM "orderDate")')],
     raw: true,
   });
 

@@ -69,6 +69,8 @@ const PurchaseOrder_model_1 = require("./PurchaseOrder.model");
 const JobApplication_model_1 = require("./JobApplication.model");
 const JobSyncLog_model_1 = require("./JobSyncLog.model");
 const WeeklyReport_model_1 = require("./WeeklyReport.model");
+const Customer_model_1 = require("./Customer.model");
+const OrderTracking_model_1 = require("./OrderTracking.model");
 const AIConversation_model_1 = require("../modules/ai/models/AIConversation.model");
 const AIMessage_model_1 = require("../modules/ai/models/AIMessage.model");
 const AIMeetingSummary_model_1 = require("../modules/ai/models/AIMeetingSummary.model");
@@ -201,6 +203,8 @@ class AssociationManager {
         WeeklyReport_model_1.WeeklyReport.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId', as: 'staff' });
         Staff_model_1.Staff.hasMany(WeeklyReport_model_1.WeeklyReport, { foreignKey: 'staffId', as: 'weeklyReports' });
         WeeklyReport_model_1.WeeklyReport.belongsTo(User_model_1.User, { foreignKey: 'approvedById', as: 'approvedBy' });
+        OrderTracking_model_1.OrderTracking.belongsTo(Customer_model_1.Customer, { foreignKey: 'customerId', as: 'customer' });
+        Customer_model_1.Customer.hasMany(OrderTracking_model_1.OrderTracking, { foreignKey: 'customerId', as: 'orders' });
         AIConversation_model_1.AIConversation.belongsTo(User_model_1.User, { foreignKey: 'userId', as: 'user' });
         AIConversation_model_1.AIConversation.hasMany(AIMessage_model_1.AIMessage, { foreignKey: 'conversationId', as: 'messages' });
         AIMessage_model_1.AIMessage.belongsTo(AIConversation_model_1.AIConversation, { foreignKey: 'conversationId', as: 'conversation' });

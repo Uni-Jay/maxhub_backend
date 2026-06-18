@@ -1,5 +1,4 @@
-import { DataTypes, Model } from 'sequelize';
-import sequelize from '../config/Database';
+import { DataTypes, Model, Sequelize } from 'sequelize';
 
 export interface ICustomer {
   id: bigint;
@@ -49,113 +48,49 @@ export class Customer extends Model<ICustomer> implements ICustomer {
   declare createdAt: Date;
   declare updatedAt: Date;
   declare deletedAt?: Date;
-}
 
-Customer.init(
-  {
-    id: {
-      type: DataTypes.BIGINT,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    organizationId: {
-      type: DataTypes.BIGINT,
-      allowNull: false,
-    },
-    firstName: {
-      type: DataTypes.STRING(100),
-      allowNull: false,
-    },
-    lastName: {
-      type: DataTypes.STRING(100),
-      allowNull: false,
-    },
-    email: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
-      validate: { isEmail: true },
-    },
-    phone: {
-      type: DataTypes.STRING(20),
-      allowNull: false,
-    },
-    businessName: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-    },
-    businessType: {
-      type: DataTypes.ENUM('Wholesale', 'Retail', 'Distributor', 'Individual'),
-      allowNull: true,
-    },
-    address: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
-    },
-    city: {
-      type: DataTypes.STRING(100),
-      allowNull: false,
-    },
-    state: {
-      type: DataTypes.STRING(100),
-      allowNull: false,
-    },
-    zipCode: {
-      type: DataTypes.STRING(20),
-      allowNull: false,
-    },
-    country: {
-      type: DataTypes.STRING(100),
-      allowNull: false,
-    },
-    totalPurchases: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
-    },
-    totalSpent: {
-      type: DataTypes.DECIMAL(15, 2),
-      defaultValue: 0,
-    },
-    status: {
-      type: DataTypes.ENUM('Active', 'Inactive', 'Blacklisted', 'VIP'),
-      defaultValue: 'Active',
-    },
-    assignedSalesRep: {
-      type: DataTypes.BIGINT,
-      allowNull: true,
-    },
-    lastPurchaseDate: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
-    notes: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-    },
-    createdAt: {
-      type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW,
-    },
-    updatedAt: {
-      type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW,
-    },
-    deletedAt: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
-  },
-  {
-    sequelize,
-    tableName: 'customer',
-    paranoid: true,
-    timestamps: true,
-    indexes: [
-      { fields: ['organizationId', 'status'] },
-      { fields: ['email'] },
-      { fields: ['phone'] },
-      { fields: ['assignedSalesRep'] },
-    ],
+  public static initModel(sequelize: Sequelize): typeof Customer {
+    Customer.init(
+      {
+        id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
+        organizationId: { type: DataTypes.BIGINT, allowNull: false },
+        firstName: { type: DataTypes.STRING(100), allowNull: false },
+        lastName: { type: DataTypes.STRING(100), allowNull: false },
+        email: { type: DataTypes.STRING(255), allowNull: false, validate: { isEmail: true } },
+        phone: { type: DataTypes.STRING(20), allowNull: false },
+        businessName: { type: DataTypes.STRING(255), allowNull: true },
+        businessType: { type: DataTypes.ENUM('Wholesale', 'Retail', 'Distributor', 'Individual'), allowNull: true },
+        address: { type: DataTypes.STRING(255), allowNull: false },
+        city: { type: DataTypes.STRING(100), allowNull: false },
+        state: { type: DataTypes.STRING(100), allowNull: false },
+        zipCode: { type: DataTypes.STRING(20), allowNull: false },
+        country: { type: DataTypes.STRING(100), allowNull: false },
+        totalPurchases: { type: DataTypes.INTEGER, defaultValue: 0 },
+        totalSpent: { type: DataTypes.DECIMAL(15, 2), defaultValue: 0 },
+        status: { type: DataTypes.ENUM('Active', 'Inactive', 'Blacklisted', 'VIP'), defaultValue: 'Active' },
+        assignedSalesRep: { type: DataTypes.BIGINT, allowNull: true },
+        lastPurchaseDate: { type: DataTypes.DATE, allowNull: true },
+        notes: { type: DataTypes.TEXT, allowNull: true },
+        createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+        updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+        deletedAt: { type: DataTypes.DATE, allowNull: true },
+      },
+      {
+        sequelize,
+        tableName: 'customer',
+        paranoid: true,
+        timestamps: true,
+        underscored: false,
+        indexes: [
+          { fields: ['organizationId', 'status'] },
+          { fields: ['email'] },
+          { fields: ['phone'] },
+          { fields: ['assignedSalesRep'] },
+        ],
+      }
+    );
+    return Customer;
   }
-);
+}
 
 export default Customer;

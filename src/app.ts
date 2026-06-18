@@ -52,6 +52,10 @@ import { Course } from '@models/Course.model';
 import { JobPosting } from '@models/JobPosting.model';
 import { JobSyncLog } from '@models/JobSyncLog.model';
 import { WeeklyReport } from '@models/WeeklyReport.model';
+import { CalendarEvent } from '@models/CalendarEvent.model';
+import { FileRecord } from '@models/FileRecord.model';
+import { Customer } from '@models/Customer.model';
+import { OrderTracking } from '@models/OrderTracking.model';
 // Extended recruitment models
 import { JobApplication } from '@models/JobApplication.model';
 import { Interview } from '@models/Interview.model';
@@ -297,6 +301,10 @@ class AppBootstrapper {
     JobPosting.initModel(this.sequelize);
     JobSyncLog.initModel(this.sequelize);
     WeeklyReport.initModel(this.sequelize);
+    CalendarEvent.initModel(this.sequelize);
+    FileRecord.initModel(this.sequelize);
+    Customer.initModel(this.sequelize);
+    OrderTracking.initModel(this.sequelize);
     JobApplication.initModel(this.sequelize);
     Interview.initModel(this.sequelize);
     JobOffer.initModel(this.sequelize);

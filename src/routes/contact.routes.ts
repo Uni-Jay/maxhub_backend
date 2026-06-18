@@ -51,6 +51,32 @@ router.get(
   })
 );
 
+// ─── GET /contacts/stats ──────────────────────────────────────────────────────
+// Must be declared before /:id so the literal "stats" segment is matched first
+router.get(
+  '/stats',
+  AuthMiddleware.verifyToken,
+  AuthMiddleware.requirePermission('crm.contact.read.all', 'crm.contact.read.own'),
+  ErrorMiddleware.asyncHandler(async (_req: Request, res: Response) => {
+    const counts = await Contact.findAll({
+      attributes: ['status', [fn('COUNT', col('id')), 'count']],
+      group: ['status'],
+      raw: true,
+    }) as any[];
+
+    const byStatus: Record<string, number> = {};
+    for (const row of counts) byStatus[row.status] = Number(row.count);
+
+    return ResponseFormatter.success(res, {
+      total: Object.values(byStatus).reduce((a, b) => a + b, 0),
+      active: byStatus.Active ?? 0,
+      leads: byStatus.Lead ?? 0,
+      prospects: byStatus.Prospect ?? 0,
+      converted: byStatus.Converted ?? 0,
+    }, 'Contact stats retrieved');
+  })
+);
+
 // ─── GET /contacts ────────────────────────────────────────────────────────────
 router.get(
   '/',
