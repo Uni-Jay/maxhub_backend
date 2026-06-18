@@ -1,4 +1,5 @@
 import { User } from '@models/User.model';
+import { Staff } from '@models/Staff.model';
 import { Permission } from '@models/Permission.model';
 import { Session } from '@models/Session.model';
 import { OTPVerification } from '@models/OTPVerification.model';
@@ -104,6 +105,7 @@ export class AuthenticationService {
         ...directPerms.map((p: any) => p.code),
       ]),
     ];
+    const staffRecord = await Staff.findOne({ where: { userId: user.id }, attributes: ['position'] });
 
     const authenticatedUser = {
       id: Number(user.id),
@@ -114,6 +116,7 @@ export class AuthenticationService {
       lastName: user.lastName,
       departmentId: (user as any).departmentId ? Number((user as any).departmentId) : null,
       departmentUuid: (user as any).departmentUuid || '',
+      position: (staffRecord as any)?.position ?? null,
       roles: roles.map((r: any) => r.code),
       permissions: permCodes,
     };
@@ -268,6 +271,7 @@ export class AuthenticationService {
       lastName,
       departmentId: departmentId ? Number(departmentId) : null,
       departmentUuid: '',
+      position: null,
       roles: roles.map((r: any) => r.code),
       permissions: permCodes,
     };
@@ -342,6 +346,7 @@ export class AuthenticationService {
         ...directPerms.map((p: any) => p.code),
       ]),
     ];
+    const staffRecord = await Staff.findOne({ where: { userId: user.id }, attributes: ['position'] });
 
     const authenticatedUser = {
       id: Number(user.id),
@@ -352,6 +357,7 @@ export class AuthenticationService {
       lastName: user.lastName,
       departmentId: (user as any).departmentId ? Number((user as any).departmentId) : null,
       departmentUuid: (user as any).departmentUuid || '',
+      position: (staffRecord as any)?.position ?? null,
       roles: roles.map((r: any) => r.code),
       permissions: permCodes,
     };
@@ -538,6 +544,7 @@ export class AuthenticationService {
         ...directPerms.map((p: any) => p.code),
       ]),
     ];
+    const staffRecord = await Staff.findOne({ where: { userId: user.id }, attributes: ['position'] });
 
     const authenticatedUser = {
       id: Number(user.id),
@@ -548,6 +555,7 @@ export class AuthenticationService {
       lastName: user.lastName,
       departmentId: (user as any).departmentId ? Number((user as any).departmentId) : null,
       departmentUuid: (user as any).departmentUuid || '',
+      position: (staffRecord as any)?.position ?? null,
       roles: roles.map((r: any) => r.code),
       permissions: permCodes,
     };

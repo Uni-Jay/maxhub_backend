@@ -14,6 +14,8 @@ export declare class DashboardController {
     static getHRRecruitment: (req: Request, res: Response, next: NextFunction) => void;
     static getHODStats: (req: Request, res: Response, next: NextFunction) => void;
     static getStaffStats: (req: Request, res: Response, next: NextFunction) => void;
+    static getAccountantStats: (req: Request, res: Response, next: NextFunction) => void;
+    static getReceptionistStats: (req: Request, res: Response, next: NextFunction) => void;
     static getHeadOfAdminStats: (req: Request, res: Response, next: NextFunction) => void;
     static getHeadOfAdminLeaveApprovals: (req: Request, res: Response, next: NextFunction) => void;
     static approveLeave: (req: Request, res: Response, next: NextFunction) => void;

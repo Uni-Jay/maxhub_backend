@@ -23,6 +23,15 @@ const JobApplication_model_1 = require("../models/JobApplication.model");
 const Task_model_1 = require("../models/Task.model");
 const PayrollPeriod_model_1 = require("../models/PayrollPeriod.model");
 const Overtime_model_1 = require("../models/Overtime.model");
+const Budget_model_1 = require("../models/Budget.model");
+const Expense_model_1 = require("../models/Expense.model");
+const Client_model_1 = require("../models/Client.model");
+const CalendarEvent_model_1 = require("../models/CalendarEvent.model");
+const StaffQuery_model_1 = require("../models/StaffQuery.model");
+const ConversationParticipant_model_1 = require("../models/ConversationParticipant.model");
+const Message_model_1 = require("../models/Message.model");
+const MessageRead_model_1 = require("../models/MessageRead.model");
+const payroll_routes_1 = require("../routes/payroll.routes");
 function normaliseRole(r) {
     return r.toLowerCase().replace(/[^a-z]/g, '');
 }
@@ -48,7 +57,13 @@ function getRoleBucket(req) {
 async function getOwnStaff(req) {
     if (!req.user?.id)
         return null;
-    return Staff_model_1.Staff.findOne({ where: { userId: req.user.id }, attributes: ['id', 'departmentId', 'businessUnit'] });
+    return Staff_model_1.Staff.findOne({ where: { userId: req.user.id }, attributes: ['id', 'departmentId', 'businessUnit', 'position'] });
+}
+async function hasPosition(req, position) {
+    if (isSuperAdmin(req))
+        return true;
+    const staff = await getOwnStaff(req);
+    return !!staff?.position && staff.position.toLowerCase() === position.toLowerCase();
 }
 function canApproveLeave(req) {
     return isSuperAdmin(req) || !!req.user?.permissions.some(p => [PermissionCodes_1.PermissionCode.LEAVE_REQUEST_APPROVE_ALL, PermissionCodes_1.PermissionCode.LEAVE_REQUEST_APPROVE_OWN_DEPARTMENT].includes(p));
@@ -399,6 +414,94 @@ DashboardController.getStaffStats = ErrorMiddleware_1.ErrorMiddleware.asyncHandl
         leaveAvailable: leaveBalance,
         notifications: 0,
     }, 'Staff dashboard statistics retrieved');
+});
+DashboardController.getAccountantStats = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    if (!(await hasPosition(req, 'accountant'))) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
+    }
+    const ownStaff = await getOwnStaff(req);
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const [payrollOverview, pendingInvoices, revenueMTD, recentInvoices] = await Promise.all([
+        (0, payroll_routes_1.getPayrollOverview)(),
+        Invoice_model_1.Invoice.count({ where: { status: { [sequelize_1.Op.in]: ['Issued', 'PartiallyPaid', 'Overdue'] } } }),
+        Invoice_model_1.Invoice.sum('total', { where: { status: 'Paid', invoiceDate: { [sequelize_1.Op.gte]: startOfMonth, [sequelize_1.Op.lt]: startOfNextMonth } } }),
+        Invoice_model_1.Invoice.findAll({ order: [['invoiceDate', 'DESC']], limit: 4 }),
+    ]);
+    let departmentBudget = null;
+    let pendingExpenseApprovals = 0;
+    if (ownStaff?.departmentId) {
+        const budgets = await Budget_model_1.Budget.findAll({
+            where: { departmentId: ownStaff.departmentId, status: { [sequelize_1.Op.in]: ['Approved', 'Active'] } },
+        });
+        if (budgets.length) {
+            const amount = budgets.reduce((sum, b) => sum + Number(b.amount), 0);
+            const spent = budgets.reduce((sum, b) => sum + Number(b.spent), 0);
+            departmentBudget = {
+                amount, spent, remaining: amount - spent,
+                utilization: amount > 0 ? Math.round((spent / amount) * 1000) / 10 : 0,
+            };
+        }
+        const deptStaff = await Staff_model_1.Staff.findAll({ where: { departmentId: ownStaff.departmentId }, attributes: ['id'] });
+        const deptStaffIds = deptStaff.map((s) => s.id);
+        pendingExpenseApprovals = await Expense_model_1.Expense.count({
+            where: { staffId: { [sequelize_1.Op.in]: deptStaffIds.length ? deptStaffIds : [-1] }, status: 'Submitted' },
+        });
+    }
+    ResponseFormatter_1.ResponseFormatter.success(res, {
+        monthlyPayroll: payrollOverview.currentMonth?.totalNet ?? 0,
+        pendingInvoices,
+        revenueMTD: revenueMTD ?? 0,
+        departmentBudget,
+        pendingExpenseApprovals,
+        recentInvoices: recentInvoices.map((inv) => ({
+            id: inv.invoiceCode,
+            amount: Number(inv.total),
+            status: inv.status,
+        })),
+    }, 'Accountant dashboard statistics retrieved');
+});
+DashboardController.getReceptionistStats = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    if (!(await hasPosition(req, 'receptionist'))) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
+    }
+    const userId = req.user.id;
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    const [clientsOnFile, todaysEvents, openQueries, participations] = await Promise.all([
+        Client_model_1.Client.count(),
+        CalendarEvent_model_1.CalendarEvent.findAll({
+            where: { date: { [sequelize_1.Op.between]: [startOfDay, endOfDay] } },
+            order: [['date', 'ASC']],
+            limit: 10,
+        }),
+        StaffQuery_model_1.StaffQuery.count({ where: { status: 'Pending' } }),
+        ConversationParticipant_model_1.ConversationParticipant.findAll({ where: { userId }, attributes: ['conversationId'] }),
+    ]);
+    let unreadMessages = 0;
+    for (const p of participations) {
+        const totalMsgs = await Message_model_1.Message.count({
+            where: { conversationId: p.conversationId, senderUserId: { [sequelize_1.Op.ne]: userId } },
+        }).catch(() => 0);
+        const readMsgs = await MessageRead_model_1.MessageRead.count({
+            where: { userId },
+            include: [{ model: Message_model_1.Message, where: { conversationId: p.conversationId }, required: true }],
+        }).catch(() => 0);
+        unreadMessages += Math.max(0, totalMsgs - readMsgs);
+    }
+    ResponseFormatter_1.ResponseFormatter.success(res, {
+        clientsOnFile,
+        todaysAppointments: todaysEvents.length,
+        unreadMessages,
+        queriesOpen: openQueries,
+        schedule: todaysEvents.map((e) => ({
+            time: new Date(e.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+            title: e.title,
+            type: e.type,
+        })),
+    }, 'Receptionist dashboard statistics retrieved');
 });
 DashboardController.getHeadOfAdminStats = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     if (!isAuthenticated(req)) {

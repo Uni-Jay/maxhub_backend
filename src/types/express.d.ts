@@ -12,6 +12,7 @@ export interface AuthenticatedUser {
   lastName?: string;
   departmentId: number | null;
   departmentUuid: string;
+  position?: string | null;
   roles: string[];
   permissions: string[];
 }

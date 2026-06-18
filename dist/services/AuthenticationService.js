@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthenticationService = void 0;
 const User_model_1 = require("../models/User.model");
+const Staff_model_1 = require("../models/Staff.model");
 const Permission_model_1 = require("../models/Permission.model");
 const Session_model_1 = require("../models/Session.model");
 const OTPVerification_model_1 = require("../models/OTPVerification.model");
@@ -56,6 +57,7 @@ class AuthenticationService {
                 ...directPerms.map((p) => p.code),
             ]),
         ];
+        const staffRecord = await Staff_model_1.Staff.findOne({ where: { userId: user.id }, attributes: ['position'] });
         const authenticatedUser = {
             id: Number(user.id),
             uuid: user.uuid,
@@ -65,6 +67,7 @@ class AuthenticationService {
             lastName: user.lastName,
             departmentId: user.departmentId ? Number(user.departmentId) : null,
             departmentUuid: user.departmentUuid || '',
+            position: staffRecord?.position ?? null,
             roles: roles.map((r) => r.code),
             permissions: permCodes,
         };
@@ -180,6 +183,7 @@ class AuthenticationService {
             lastName,
             departmentId: departmentId ? Number(departmentId) : null,
             departmentUuid: '',
+            position: null,
             roles: roles.map((r) => r.code),
             permissions: permCodes,
         };
@@ -237,6 +241,7 @@ class AuthenticationService {
                 ...directPerms.map((p) => p.code),
             ]),
         ];
+        const staffRecord = await Staff_model_1.Staff.findOne({ where: { userId: user.id }, attributes: ['position'] });
         const authenticatedUser = {
             id: Number(user.id),
             uuid: user.uuid,
@@ -246,6 +251,7 @@ class AuthenticationService {
             lastName: user.lastName,
             departmentId: user.departmentId ? Number(user.departmentId) : null,
             departmentUuid: user.departmentUuid || '',
+            position: staffRecord?.position ?? null,
             roles: roles.map((r) => r.code),
             permissions: permCodes,
         };
@@ -381,6 +387,7 @@ class AuthenticationService {
                 ...directPerms.map((p) => p.code),
             ]),
         ];
+        const staffRecord = await Staff_model_1.Staff.findOne({ where: { userId: user.id }, attributes: ['position'] });
         const authenticatedUser = {
             id: Number(user.id),
             uuid: user.uuid,
@@ -390,6 +397,7 @@ class AuthenticationService {
             lastName: user.lastName,
             departmentId: user.departmentId ? Number(user.departmentId) : null,
             departmentUuid: user.departmentUuid || '',
+            position: staffRecord?.position ?? null,
             roles: roles.map((r) => r.code),
             permissions: permCodes,
         };

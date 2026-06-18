@@ -40,4 +40,8 @@ router.get('/hod/approvals-queue', AuthMiddleware.verifyToken, DashboardControll
 // Staff Dashboard
 router.get('/staff/stats', AuthMiddleware.verifyToken, DashboardController.getStaffStats);
 
+// Position-specific dashboards (Accountant, Receptionist — not RBAC roles, gated on Staff.position)
+router.get('/accountant/stats', AuthMiddleware.verifyToken, DashboardController.getAccountantStats);
+router.get('/receptionist/stats', AuthMiddleware.verifyToken, DashboardController.getReceptionistStats);
+
 export default router;

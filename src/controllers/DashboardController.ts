@@ -21,6 +21,15 @@ import { JobApplication } from '@models/JobApplication.model';
 import { Task } from '@models/Task.model';
 import { PayrollPeriod } from '@models/PayrollPeriod.model';
 import { Overtime } from '@models/Overtime.model';
+import { Budget } from '@models/Budget.model';
+import { Expense } from '@models/Expense.model';
+import { Client } from '@models/Client.model';
+import { CalendarEvent } from '@models/CalendarEvent.model';
+import { StaffQuery } from '@models/StaffQuery.model';
+import { ConversationParticipant } from '@models/ConversationParticipant.model';
+import { Message } from '@models/Message.model';
+import { MessageRead } from '@models/MessageRead.model';
+import { getPayrollOverview } from '@routes/payroll.routes';
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -56,10 +65,17 @@ function getRoleBucket(req: AuthenticatedRequest): 'superadmin' | 'admin' | 'hr'
   return 'staff';
 }
 
-/** Looks up the requester's own Staff row (id/department/business unit) — same lookup pattern already used in weekly-report.routes.ts's getStaffId(). */
+/** Looks up the requester's own Staff row (id/department/business unit/position) — same lookup pattern already used in weekly-report.routes.ts's getStaffId(). */
 async function getOwnStaff(req: AuthenticatedRequest) {
   if (!req.user?.id) return null;
-  return Staff.findOne({ where: { userId: req.user.id }, attributes: ['id', 'departmentId', 'businessUnit'] });
+  return Staff.findOne({ where: { userId: req.user.id }, attributes: ['id', 'departmentId', 'businessUnit', 'position'] });
+}
+
+/** Position is not an RBAC role — this just lets a staff member's job title unlock their own position-specific dashboard, same way getStaffStats already self-scopes without a permission gate. */
+async function hasPosition(req: AuthenticatedRequest, position: string): Promise<boolean> {
+  if (isSuperAdmin(req)) return true;
+  const staff = await getOwnStaff(req);
+  return !!staff?.position && staff.position.toLowerCase() === position.toLowerCase();
 }
 
 function canApproveLeave(req: AuthenticatedRequest): boolean {
@@ -532,6 +548,111 @@ export class DashboardController {
         leaveAvailable: leaveBalance,
         notifications: 0,
       }, 'Staff dashboard statistics retrieved');
+    }
+  );
+
+  static getAccountantStats = ErrorMiddleware.asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      if (!(await hasPosition(req, 'accountant'))) {
+        return ResponseFormatter.forbidden(res, 'Insufficient permissions');
+      }
+
+      const ownStaff = await getOwnStaff(req);
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+      const [payrollOverview, pendingInvoices, revenueMTD, recentInvoices] = await Promise.all([
+        getPayrollOverview(),
+        Invoice.count({ where: { status: { [Op.in]: ['Issued', 'PartiallyPaid', 'Overdue'] } } }),
+        Invoice.sum('total', { where: { status: 'Paid', invoiceDate: { [Op.gte]: startOfMonth, [Op.lt]: startOfNextMonth } } }),
+        Invoice.findAll({ order: [['invoiceDate', 'DESC']], limit: 4 }),
+      ]);
+
+      // Department-scoped: budget utilization and pending expense approvals for the accountant's own department.
+      let departmentBudget = null as null | { amount: number; spent: number; remaining: number; utilization: number };
+      let pendingExpenseApprovals = 0;
+      if (ownStaff?.departmentId) {
+        const budgets = await Budget.findAll({
+          where: { departmentId: ownStaff.departmentId, status: { [Op.in]: ['Approved', 'Active'] } },
+        });
+        if (budgets.length) {
+          const amount = budgets.reduce((sum: number, b: any) => sum + Number(b.amount), 0);
+          const spent = budgets.reduce((sum: number, b: any) => sum + Number(b.spent), 0);
+          departmentBudget = {
+            amount, spent, remaining: amount - spent,
+            utilization: amount > 0 ? Math.round((spent / amount) * 1000) / 10 : 0,
+          };
+        }
+
+        const deptStaff = await Staff.findAll({ where: { departmentId: ownStaff.departmentId }, attributes: ['id'] });
+        const deptStaffIds = deptStaff.map((s: any) => s.id);
+        pendingExpenseApprovals = await Expense.count({
+          where: { staffId: { [Op.in]: deptStaffIds.length ? deptStaffIds : [-1] }, status: 'Submitted' },
+        });
+      }
+
+      ResponseFormatter.success(res, {
+        monthlyPayroll: payrollOverview.currentMonth?.totalNet ?? 0,
+        pendingInvoices,
+        revenueMTD: revenueMTD ?? 0,
+        departmentBudget,
+        pendingExpenseApprovals,
+        recentInvoices: recentInvoices.map((inv: any) => ({
+          id: inv.invoiceCode,
+          amount: Number(inv.total),
+          status: inv.status,
+        })),
+      }, 'Accountant dashboard statistics retrieved');
+    }
+  );
+
+  static getReceptionistStats = ErrorMiddleware.asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      if (!(await hasPosition(req, 'receptionist'))) {
+        return ResponseFormatter.forbidden(res, 'Insufficient permissions');
+      }
+
+      const userId = req.user!.id;
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+      const [clientsOnFile, todaysEvents, openQueries, participations] = await Promise.all([
+        Client.count(),
+        CalendarEvent.findAll({
+          where: { date: { [Op.between]: [startOfDay, endOfDay] } },
+          order: [['date', 'ASC']],
+          limit: 10,
+        }),
+        StaffQuery.count({ where: { status: 'Pending' } }),
+        ConversationParticipant.findAll({ where: { userId }, attributes: ['conversationId'] }),
+      ]);
+
+      // Sum unread messages across every conversation this user participates in (same calc as message.routes.ts's conversation list).
+      let unreadMessages = 0;
+      for (const p of participations as any[]) {
+        const totalMsgs = await Message.count({
+          where: { conversationId: p.conversationId, senderUserId: { [Op.ne]: userId } },
+        }).catch(() => 0);
+        const readMsgs = await MessageRead.count({
+          where: { userId },
+          include: [{ model: Message, where: { conversationId: p.conversationId }, required: true }] as any,
+        }).catch(() => 0);
+        unreadMessages += Math.max(0, totalMsgs - readMsgs);
+      }
+
+      ResponseFormatter.success(res, {
+        clientsOnFile,
+        todaysAppointments: todaysEvents.length,
+        unreadMessages,
+        queriesOpen: openQueries,
+        schedule: todaysEvents.map((e: any) => ({
+          time: new Date(e.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+          title: e.title,
+          type: e.type,
+        })),
+      }, 'Receptionist dashboard statistics retrieved');
     }
   );
 
