@@ -35,6 +35,7 @@ function setupRoutes(app) {
     apiRouter.use('/departments', require('./department.routes').default);
     apiRouter.use('/designations', require('./designation.routes').default);
     apiRouter.use('/hr', require('./hr-management.routes').default);
+    apiRouter.use('/hr/weekly-reports', require('./weekly-report.routes').default);
     apiRouter.use('/attendance', require('./attendance-management.routes').default);
     apiRouter.use('/leave', require('./leave.routes').default);
     apiRouter.use('/projects', require('./project.routes').default);

@@ -1,0 +1,1 @@
+{"version":3,"file":"isSuperAdmin.js","sourceRoot":"","sources":["../../src/utils/isSuperAdmin.ts"],"names":[],"mappings":";;AASA,oCAIC;AAJD,SAAgB,YAAY,CAAC,GAAY;IACvC,OAAO,CAAC,GAAG,CAAC,IAAI,EAAE,KAAK,IAAI,EAAE,CAAC,CAAC,IAAI,CACjC,CAAC,CAAS,EAAE,EAAE,CAAC,CAAC,CAAC,WAAW,EAAE,CAAC,OAAO,CAAC,SAAS,EAAE,EAAE,CAAC,KAAK,YAAY,CACvE,CAAC;AACJ,CAAC"}

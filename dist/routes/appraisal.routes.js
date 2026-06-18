@@ -14,6 +14,7 @@ const Goal_model_1 = require("../models/Goal.model");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
+const isSuperAdmin_1 = require("../utils/isSuperAdmin");
 const router = (0, express_1.Router)();
 router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { page = 1, limit = 20, status, staffId, appraisalPeriod } = req.query;
@@ -101,6 +102,9 @@ router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('HR.APPRA
     };
     if (!validTransitions[current]?.includes(status)) {
         return ResponseFormatter_1.ResponseFormatter.error(res, `Cannot transition from ${current} to ${status}`, 400);
+    }
+    if ((status === 'Approved' || status === 'Rejected') && !(0, isSuperAdmin_1.isSuperAdmin)(req)) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only Super Admin can approve or reject an appraisal', req.path);
     }
     const updates = { status };
     if (status === 'Completed')

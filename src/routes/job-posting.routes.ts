@@ -10,6 +10,7 @@ import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import AuthMiddleware from '@middleware/AuthMiddleware';
 import JobSyncService from '@services/JobSyncService';
+import { isSuperAdmin } from '@utils/isSuperAdmin';
 
 const BUSINESS_UNITS = ['KS', 'VM', 'BM'];
 
@@ -136,6 +137,10 @@ router.patch('/:id/status', AuthMiddleware.requirePermission('rec.posting.update
   const current = (posting as any).status;
   if (!validTransitions[current]?.includes(status)) {
     return ResponseFormatter.error(res, `Cannot transition from ${current} to ${status}`, 400);
+  }
+
+  if (current === 'Draft' && status === 'Open' && !isSuperAdmin(req)) {
+    return ResponseFormatter.forbidden(res, 'Only Super Admin can publish a job posting', req.path);
   }
 
   await posting.update({ status });

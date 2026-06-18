@@ -14,6 +14,7 @@ const User_model_1 = require("../models/User.model");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
+const isSuperAdmin_1 = require("../utils/isSuperAdmin");
 const router = (0, express_1.Router)();
 router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { page = 1, limit = 12, status, trainingType, search } = req.query;
@@ -53,7 +54,7 @@ router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, re
     ]);
     ResponseFormatter_1.ResponseFormatter.success(res, { ...program.toJSON(), attendanceSummary: { present: presentCount, absent: absentCount, late: lateCount } });
 }));
-router.post('/', AuthMiddleware_1.default.requirePermission('HR.TRAINING.CREATE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.post('/', AuthMiddleware_1.default.requirePermission('train.program.create.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { trainingName, trainingType, duration, durationUnit, startDate, endDate, description, provider, location, budget } = req.body;
     if (!trainingName || !trainingType || !duration || !durationUnit || !startDate || !endDate) {
         return ResponseFormatter_1.ResponseFormatter.error(res, 'trainingName, trainingType, duration, durationUnit, startDate, endDate are required', 400);
@@ -67,7 +68,7 @@ router.post('/', AuthMiddleware_1.default.requirePermission('HR.TRAINING.CREATE.
     });
     ResponseFormatter_1.ResponseFormatter.success(res, program, 'Training program created', 201);
 }));
-router.put('/:id', AuthMiddleware_1.default.requirePermission('HR.TRAINING.UPDATE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.put('/:id', AuthMiddleware_1.default.requirePermission('train.program.update.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const program = await TrainingProgram_model_1.TrainingProgram.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!program)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Training program not found', 404);
@@ -78,7 +79,7 @@ router.put('/:id', AuthMiddleware_1.default.requirePermission('HR.TRAINING.UPDAT
     await program.update(updates);
     ResponseFormatter_1.ResponseFormatter.success(res, program, 'Training program updated');
 }));
-router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('HR.TRAINING.UPDATE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('train.program.update.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const program = await TrainingProgram_model_1.TrainingProgram.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!program)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Training program not found', 404);
@@ -93,10 +94,13 @@ router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('HR.TRAIN
     if (!validTransitions[current]?.includes(status)) {
         return ResponseFormatter_1.ResponseFormatter.error(res, `Cannot transition from ${current} to ${status}`, 400);
     }
+    if (current === 'Draft' && status === 'Active' && !(0, isSuperAdmin_1.isSuperAdmin)(req)) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only Super Admin can activate a training program', req.path);
+    }
     await program.update({ status });
     ResponseFormatter_1.ResponseFormatter.success(res, program, 'Status updated');
 }));
-router.delete('/:id', AuthMiddleware_1.default.requirePermission('HR.TRAINING.DELETE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.delete('/:id', AuthMiddleware_1.default.requirePermission('train.program.delete.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const program = await TrainingProgram_model_1.TrainingProgram.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!program)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Training program not found', 404);
@@ -114,7 +118,7 @@ router.get('/:id/attendance', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asy
     });
     ResponseFormatter_1.ResponseFormatter.success(res, attendance);
 }));
-router.post('/:id/attendance', AuthMiddleware_1.default.requirePermission('HR.TRAINING.UPDATE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.post('/:id/attendance', AuthMiddleware_1.default.requirePermission('train.program.update.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const program = await TrainingProgram_model_1.TrainingProgram.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!program)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Training program not found', 404);
@@ -130,7 +134,7 @@ router.post('/:id/attendance', AuthMiddleware_1.default.requirePermission('HR.TR
         await record.update({ status, notes });
     ResponseFormatter_1.ResponseFormatter.success(res, record, created ? 'Attendance recorded' : 'Attendance updated', created ? 201 : 200);
 }));
-router.put('/:id/attendance/:attendanceId', AuthMiddleware_1.default.requirePermission('HR.TRAINING.UPDATE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.put('/:id/attendance/:attendanceId', AuthMiddleware_1.default.requirePermission('train.program.update.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const record = await TrainingAttendance_model_1.TrainingAttendance.findByPk(req.params.attendanceId);
     if (!record)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Attendance record not found', 404);

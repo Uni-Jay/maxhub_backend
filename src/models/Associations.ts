@@ -66,6 +66,7 @@ import { Supplier } from './Supplier.model';
 import { PurchaseOrder } from './PurchaseOrder.model';
 import { JobApplication } from './JobApplication.model';
 import { JobSyncLog } from './JobSyncLog.model';
+import { WeeklyReport } from './WeeklyReport.model';
 
 /**
  * Initialize all Sequelize model associations
@@ -274,6 +275,11 @@ export class AssociationManager {
     JobApplication.belongsTo(JobPosting, { foreignKey: 'jobPostingId', as: 'jobPosting' });
     JobPosting.hasMany(JobSyncLog, { foreignKey: 'jobPostingId', as: 'syncLogs' });
     JobSyncLog.belongsTo(JobPosting, { foreignKey: 'jobPostingId', as: 'jobPosting' });
+
+    // ======== WEEKLY REPORTS ========
+    WeeklyReport.belongsTo(Staff, { foreignKey: 'staffId', as: 'staff' });
+    Staff.hasMany(WeeklyReport, { foreignKey: 'staffId', as: 'weeklyReports' });
+    WeeklyReport.belongsTo(User, { foreignKey: 'approvedById', as: 'approvedBy' });
 
     // ======== PERFORMANCE & TRAINING ========
     Appraisal.belongsTo(Staff, { foreignKey: 'staffId', as: 'staff' });

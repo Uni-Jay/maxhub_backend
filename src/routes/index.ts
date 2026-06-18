@@ -51,6 +51,7 @@ function setupRoutes(app: any): void {
 
   // HR Management routes
   apiRouter.use('/hr', require('./hr-management.routes').default);
+  apiRouter.use('/hr/weekly-reports', require('./weekly-report.routes').default);
 
   // Attendance & Leave routes
   apiRouter.use('/attendance', require('./attendance-management.routes').default);

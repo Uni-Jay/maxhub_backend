@@ -9,6 +9,7 @@ import { Goal } from '@models/Goal.model';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import AuthMiddleware from '@middleware/AuthMiddleware';
+import { isSuperAdmin } from '@utils/isSuperAdmin';
 
 const router = Router();
 
@@ -112,6 +113,10 @@ router.patch('/:id/status', AuthMiddleware.requirePermission('HR.APPRAISAL.UPDAT
 
   if (!validTransitions[current]?.includes(status)) {
     return ResponseFormatter.error(res, `Cannot transition from ${current} to ${status}`, 400);
+  }
+
+  if ((status === 'Approved' || status === 'Rejected') && !isSuperAdmin(req)) {
+    return ResponseFormatter.forbidden(res, 'Only Super Admin can approve or reject an appraisal', req.path);
   }
 
   const updates: any = { status };

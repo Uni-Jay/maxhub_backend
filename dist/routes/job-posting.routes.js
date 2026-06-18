@@ -15,6 +15,7 @@ const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
 const JobSyncService_1 = __importDefault(require("../services/JobSyncService"));
+const isSuperAdmin_1 = require("../utils/isSuperAdmin");
 const BUSINESS_UNITS = ['KS', 'VM', 'BM'];
 const router = (0, express_1.Router)();
 router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
@@ -120,6 +121,9 @@ router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('rec.post
     const current = posting.status;
     if (!validTransitions[current]?.includes(status)) {
         return ResponseFormatter_1.ResponseFormatter.error(res, `Cannot transition from ${current} to ${status}`, 400);
+    }
+    if (current === 'Draft' && status === 'Open' && !(0, isSuperAdmin_1.isSuperAdmin)(req)) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only Super Admin can publish a job posting', req.path);
     }
     await posting.update({ status });
     if (posting.businessUnit) {
