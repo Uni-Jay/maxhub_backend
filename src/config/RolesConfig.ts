@@ -204,6 +204,7 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.ORG_STAFF_CREATE_ALL,
     PermissionCode.ORG_STAFF_READ_ALL,
     PermissionCode.ORG_STAFF_UPDATE_ALL,
+    PermissionCode.ORG_STAFF_DELETE_ALL,
     PermissionCode.ORG_DEPARTMENT_READ_ALL,
     PermissionCode.ORG_DESIGNATION_READ_ALL,
     // HR core
@@ -316,10 +317,8 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
   [RoleCode.HOD]: [
     PermissionCode.AUTH_USER_READ_OWN,
     PermissionCode.AUTH_USER_UPDATE_OWN,
+    // Staff: view-only — only HR/Admin/Super Admin can add, edit, or deactivate staff
     PermissionCode.ORG_STAFF_READ_OWN_DEPARTMENT,
-    PermissionCode.ORG_STAFF_CREATE_OWN_DEPARTMENT,
-    PermissionCode.ORG_STAFF_UPDATE_OWN_DEPARTMENT,
-    PermissionCode.ORG_STAFF_DELETE_OWN_DEPARTMENT,
     PermissionCode.ORG_DEPARTMENT_READ_OWN_DEPARTMENT,
     PermissionCode.ORG_QUALIFICATION_READ_ALL,
     PermissionCode.ORG_SKILL_READ_ALL,
