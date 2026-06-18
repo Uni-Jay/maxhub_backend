@@ -1,19 +1,17 @@
 import type { AIMessage } from '../interfaces/AIInterfaces';
 import type { AIProvider, ChatToolDeclaration } from './AIProvider.interface';
-export declare class OllamaProvider implements AIProvider {
-    private baseUrl;
-    private defaultModel;
-    constructor();
+export declare class GeminiProvider implements AIProvider {
+    private client;
+    private getClient;
     private resolveModel;
     chat(messages: AIMessage[], model?: string, temperature?: number): Promise<string>;
-    chatWithTools(messages: AIMessage[], _tools: ChatToolDeclaration[], _executeTool: (name: string, args: Record<string, unknown>) => Promise<string>, model?: string, temperature?: number): Promise<string>;
+    chatWithTools(messages: AIMessage[], tools: ChatToolDeclaration[], executeTool: (name: string, args: Record<string, unknown>) => Promise<string>, model?: string, temperature?: number): Promise<string>;
     generate(prompt: string, model?: string, temperature?: number): Promise<string>;
     listModels(): Promise<string[]>;
     isAvailable(): Promise<boolean>;
     getDefaultModel(): string;
     getSupportedModels(): string[];
-    private post;
 }
-declare const _default: OllamaProvider;
+declare const _default: GeminiProvider;
 export default _default;
-//# sourceMappingURL=OllamaProvider.d.ts.map
+//# sourceMappingURL=GeminiProvider.d.ts.map

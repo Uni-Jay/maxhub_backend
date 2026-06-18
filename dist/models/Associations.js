@@ -69,6 +69,10 @@ const PurchaseOrder_model_1 = require("./PurchaseOrder.model");
 const JobApplication_model_1 = require("./JobApplication.model");
 const JobSyncLog_model_1 = require("./JobSyncLog.model");
 const WeeklyReport_model_1 = require("./WeeklyReport.model");
+const AIConversation_model_1 = require("../modules/ai/models/AIConversation.model");
+const AIMessage_model_1 = require("../modules/ai/models/AIMessage.model");
+const AIMeetingSummary_model_1 = require("../modules/ai/models/AIMeetingSummary.model");
+const AIReminder_model_1 = require("../modules/ai/models/AIReminder.model");
 class AssociationManager {
     static initializeAssociations(sequelize) {
         User_model_1.User.hasMany(Session_model_1.Session, { foreignKey: 'userId', as: 'sessions' });
@@ -197,6 +201,11 @@ class AssociationManager {
         WeeklyReport_model_1.WeeklyReport.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId', as: 'staff' });
         Staff_model_1.Staff.hasMany(WeeklyReport_model_1.WeeklyReport, { foreignKey: 'staffId', as: 'weeklyReports' });
         WeeklyReport_model_1.WeeklyReport.belongsTo(User_model_1.User, { foreignKey: 'approvedById', as: 'approvedBy' });
+        AIConversation_model_1.AIConversation.belongsTo(User_model_1.User, { foreignKey: 'userId', as: 'user' });
+        AIConversation_model_1.AIConversation.hasMany(AIMessage_model_1.AIMessage, { foreignKey: 'conversationId', as: 'messages' });
+        AIMessage_model_1.AIMessage.belongsTo(AIConversation_model_1.AIConversation, { foreignKey: 'conversationId', as: 'conversation' });
+        AIMeetingSummary_model_1.AIMeetingSummary.belongsTo(User_model_1.User, { foreignKey: 'userId', as: 'user' });
+        AIReminder_model_1.AIReminder.belongsTo(User_model_1.User, { foreignKey: 'userId', as: 'user' });
         Appraisal_model_1.Appraisal.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId', as: 'staff' });
         TrainingAttendance_model_1.TrainingAttendance.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId', as: 'staff' });
         EmployeeSalary_model_1.EmployeeSalary.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId', as: 'staff' });

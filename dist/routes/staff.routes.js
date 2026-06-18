@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.searchStaff = searchStaff;
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
 const idOrUuid_1 = require("../utils/idOrUuid");
@@ -21,21 +22,18 @@ const PasswordService_1 = __importDefault(require("../services/PasswordService")
 const CommunicationService_1 = require("../services/CommunicationService");
 const multer_1 = require("../config/multer");
 const router = (0, express_1.Router)();
-router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const page = req.pagination?.page || 1;
-    const limit = req.pagination?.limit || 20;
-    const offset = (page - 1) * limit;
+async function searchStaff(filters) {
     const where = {};
-    if (req.query.status)
-        where.status = req.query.status;
-    if (req.query.departmentId)
-        where.departmentId = BigInt(req.query.departmentId);
-    if (req.query.branchId)
-        where.branchId = BigInt(req.query.branchId);
-    if (req.query.unitId)
-        where.unitId = BigInt(req.query.unitId);
-    if (req.query.search) {
-        const s = `%${req.query.search}%`;
+    if (filters.status)
+        where.status = filters.status;
+    if (filters.departmentId)
+        where.departmentId = BigInt(filters.departmentId);
+    if (filters.branchId)
+        where.branchId = BigInt(filters.branchId);
+    if (filters.unitId)
+        where.unitId = BigInt(filters.unitId);
+    if (filters.search) {
+        const s = `%${filters.search}%`;
         where[sequelize_1.Op.or] = [
             { firstName: { [sequelize_1.Op.iLike]: s } },
             { lastName: { [sequelize_1.Op.iLike]: s } },
@@ -43,7 +41,7 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
             { employeeId: { [sequelize_1.Op.iLike]: s } },
         ];
     }
-    const { count, rows } = await Staff_model_1.Staff.findAndCountAll({
+    return Staff_model_1.Staff.findAndCountAll({
         where,
         include: [
             { model: Department_model_1.Department, as: 'department', attributes: ['id', 'name', 'code'], required: false },
@@ -51,10 +49,24 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
             { model: Branch_model_1.Branch, as: 'branch', attributes: ['id', 'uuid', 'branchCode', 'branchName'], required: false },
             { model: Unit_model_1.Unit, as: 'unit', attributes: ['id', 'uuid', 'code', 'name'], required: false },
         ],
-        limit,
-        offset,
-        order: [[req.sort?.field || 'createdAt', req.sort?.order || 'DESC']],
+        limit: filters.limit ?? 20,
+        offset: filters.offset ?? 0,
+        order: [[filters.sortField || 'createdAt', filters.sortOrder || 'DESC']],
         paranoid: true,
+    });
+}
+router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const page = req.pagination?.page || 1;
+    const limit = req.pagination?.limit || 20;
+    const offset = (page - 1) * limit;
+    const { count, rows } = await searchStaff({
+        search: req.query.search,
+        status: req.query.status,
+        departmentId: req.query.departmentId,
+        branchId: req.query.branchId,
+        unitId: req.query.unitId,
+        limit, offset,
+        sortField: req.sort?.field, sortOrder: req.sort?.order,
     });
     ResponseFormatter_1.ResponseFormatter.paginated(res, rows.map(r => r.toJSON()), count, page, limit);
 }));

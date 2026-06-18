@@ -10,11 +10,12 @@ const router = Router();
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// GET /api/reports/attendance?month=X&year=Y
-router.get('/attendance', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const month = Math.min(12, Math.max(1, parseInt(req.query.month as string) || new Date().getMonth() + 1));
-  const year = parseInt(req.query.year as string) || new Date().getFullYear();
-
+/**
+ * Core attendance report aggregation for a given month/year — shared by the
+ * /api/reports/attendance route and the AI assistant's getAttendanceInsights tool,
+ * so both surfaces stay behaviorally identical.
+ */
+export async function getAttendanceReportData(month: number, year: number) {
   const startDate = new Date(year, month - 1, 1);
   const endDate = new Date(year, month, 0, 23, 59, 59);
 
@@ -91,11 +92,20 @@ router.get('/attendance', ErrorMiddleware.asyncHandler(async (req: Request, res:
     rate: d.total > 0 ? Math.round((d.present / d.total) * 100) : 0,
   }));
 
-  ResponseFormatter.success(res, {
+  return {
     records: staffRecords,
     monthly: monthlyData,
     departments: deptData,
-  });
+  };
+}
+
+// GET /api/reports/attendance?month=X&year=Y
+router.get('/attendance', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const month = Math.min(12, Math.max(1, parseInt(req.query.month as string) || new Date().getMonth() + 1));
+  const year = parseInt(req.query.year as string) || new Date().getFullYear();
+
+  const data = await getAttendanceReportData(month, year);
+  ResponseFormatter.success(res, data);
 }));
 
 export default router;

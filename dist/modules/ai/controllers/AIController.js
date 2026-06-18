@@ -6,21 +6,26 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AIController = void 0;
 const ResponseFormatter_1 = require("../../../utils/ResponseFormatter");
 const OllamaAIService_1 = __importDefault(require("../services/OllamaAIService"));
-const OllamaProvider_1 = __importDefault(require("../providers/OllamaProvider"));
+const ProviderFactory_1 = require("../providers/ProviderFactory");
+const ERPTools_1 = require("../tools/ERPTools");
 function getUser(req) {
     return req.user;
 }
 class AIController {
     static async status(req, res) {
-        const available = await OllamaProvider_1.default.isAvailable();
-        const models = available ? await OllamaProvider_1.default.listModels() : [];
+        const provider = (0, ProviderFactory_1.getActiveProvider)();
+        const providerName = (0, ProviderFactory_1.getActiveProviderName)();
+        const available = await provider.isAvailable();
+        const models = available ? await provider.listModels() : [];
         ResponseFormatter_1.ResponseFormatter.success(res, {
-            ollamaAvailable: available,
-            ollamaUrl: process.env.OLLAMA_URL || 'http://localhost:11434',
-            activeModel: process.env.AI_MODEL || 'llama3',
+            provider: providerName,
+            available,
+            activeModel: provider.getDefaultModel(),
             availableModels: models,
-            supportedModels: OllamaProvider_1.default.getSupportedModels(),
-        }, available ? 'Ollama is running' : 'Ollama is not available');
+            supportedModels: provider.getSupportedModels(),
+            ollamaAvailable: providerName === 'ollama' && available,
+            ollamaUrl: process.env.OLLAMA_URL || 'http://localhost:11434',
+        }, available ? `${providerName} is available` : `${providerName} is not available`);
     }
     static async chat(req, res) {
         const { messages, model, conversationId } = req.body;
@@ -30,7 +35,7 @@ class AIController {
         }
         const user = getUser(req);
         const roleName = user.roles?.[0] ?? 'staff';
-        const result = await OllamaAIService_1.default.chat({ messages, model: model, conversationId }, user.id, roleName, user.name, user.businessUnit);
+        const result = await OllamaAIService_1.default.chat({ messages, model: model, conversationId }, user.id, roleName, user.name, user.businessUnit, { tools: ERPTools_1.ERP_TOOL_DECLARATIONS, executeTool: (0, ERPTools_1.createToolExecutor)(req) });
         ResponseFormatter_1.ResponseFormatter.success(res, result, 'AI response generated');
     }
     static async generateReport(req, res) {

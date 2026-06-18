@@ -125,34 +125,43 @@ router.patch(
   })
 );
 
+/**
+ * Core own-leave-balance aggregation — shared by the /api/leave/balance route and
+ * the AI assistant's getLeaveSummary tool, so both surfaces stay behaviorally identical.
+ */
+export async function getLeaveBalance(staffId?: number) {
+  const year = new Date().getFullYear();
+
+  const balances = await LeaveBalance.findAll({
+    where: {
+      staffId: staffId ? BigInt(staffId) : BigInt(1),
+      year,
+    },
+    include: [
+      { model: LeaveType, as: 'leaveType', attributes: ['id', 'name', 'code'], required: false },
+    ],
+  });
+
+  const plain = balances.map(b => b.toJSON()) as unknown as Array<{
+    totalDays: number;
+    usedDays: number;
+    remainingDays: number;
+  }>;
+
+  return {
+    total: plain.reduce((sum, b) => sum + Number(b.totalDays), 0),
+    used: plain.reduce((sum, b) => sum + Number(b.usedDays), 0),
+    available: plain.reduce((sum, b) => sum + Number(b.remainingDays), 0),
+    leaveTypes: plain,
+  };
+}
+
 router.get(
   '/balance',
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const user = (req as unknown as { user?: { staffId?: number } }).user;
-    const year = new Date().getFullYear();
-
-    const balances = await LeaveBalance.findAll({
-      where: {
-        staffId: user?.staffId ? BigInt(user.staffId) : BigInt(1),
-        year,
-      },
-      include: [
-        { model: LeaveType, as: 'leaveType', attributes: ['id', 'name', 'code'], required: false },
-      ],
-    });
-
-    const plain = balances.map(b => b.toJSON()) as unknown as Array<{
-      totalDays: number;
-      usedDays: number;
-      remainingDays: number;
-    }>;
-
-    ResponseFormatter.success(res, {
-      total: plain.reduce((sum, b) => sum + Number(b.totalDays), 0),
-      used: plain.reduce((sum, b) => sum + Number(b.usedDays), 0),
-      available: plain.reduce((sum, b) => sum + Number(b.remainingDays), 0),
-      leaveTypes: plain,
-    });
+    const data = await getLeaveBalance(user?.staffId);
+    ResponseFormatter.success(res, data);
   })
 );
 

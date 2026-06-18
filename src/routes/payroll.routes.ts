@@ -722,114 +722,120 @@ router.get(
 // STATS / OVERVIEW
 // ════════════════════════════════════════════════════════════════════════════
 
+/**
+ * Core payroll overview aggregation — shared by the /payroll/stats/overview route
+ * and the AI assistant's getPayrollSummary tool, so both surfaces stay behaviorally
+ * identical. Gated by the same 'PAYROLL_VIEW' permission in both places.
+ */
+export async function getPayrollOverview() {
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear  = now.getFullYear();
+
+  // Current month's period (if exists)
+  const currentPeriod = await PayrollPeriod.findOne({
+    where: { month: currentMonth, year: currentYear },
+  });
+
+  // Aggregate salary stats for current month
+  let monthlySalaryStats: {
+    headcount: number;
+    totalGross: number;
+    totalNet: number;
+    totalDeductions: number;
+    avgNet: number;
+  } = { headcount: 0, totalGross: 0, totalNet: 0, totalDeductions: 0, avgNet: 0 };
+
+  if (currentPeriod) {
+    const agg = await EmployeeSalary.findOne({
+      attributes: [
+        [fn('COUNT', col('id')), 'headcount'],
+        [fn('SUM', col('grossSalary')), 'totalGross'],
+        [fn('SUM', col('netSalary')), 'totalNet'],
+        [fn('SUM', col('totalDeductions')), 'totalDeductions'],
+        [fn('AVG', col('netSalary')), 'avgNet'],
+      ],
+      where: {
+        payrollPeriodId: currentPeriod.id,
+        status: { [Op.notIn]: ['OnHold'] },
+      },
+      raw: true,
+    }) as any;
+
+    if (agg) {
+      monthlySalaryStats = {
+        headcount:       Number(agg.headcount)       || 0,
+        totalGross:      Number(agg.totalGross)      || 0,
+        totalNet:        Number(agg.totalNet)        || 0,
+        totalDeductions: Number(agg.totalDeductions) || 0,
+        avgNet:          Number(agg.avgNet)          || 0,
+      };
+    }
+  }
+
+  // Active headcount
+  const activeStaffCount = await Staff.count({ where: { status: 'Active' } });
+
+  // Year-to-date payroll cost
+  const ytdAgg = await EmployeeSalary.findOne({
+    attributes: [
+      [fn('SUM', col('netSalary')), 'ytdNet'],
+      [fn('SUM', col('grossSalary')), 'ytdGross'],
+    ],
+    where: {
+      status: { [Op.in]: ['Paid', 'Processed', 'Approved'] },
+    },
+    include: [
+      {
+        model:      PayrollPeriod,
+        as:         'payrollPeriod',
+        attributes: [],
+        where:      { year: currentYear },
+        required:   true,
+      },
+    ],
+    raw: true,
+  }) as any;
+
+  const ytdStats = {
+    ytdNet:   Number(ytdAgg?.ytdNet)   || 0,
+    ytdGross: Number(ytdAgg?.ytdGross) || 0,
+  };
+
+  // Status breakdown for all periods
+  const statusBreakdown = await EmployeeSalary.findAll({
+    attributes: [
+      'status',
+      [fn('COUNT', col('id')), 'count'],
+    ],
+    group: ['status'],
+    raw: true,
+  }) as any[];
+
+  const statusSummary: Record<string, number> = {};
+  for (const row of statusBreakdown) {
+    statusSummary[row.status] = Number(row.count);
+  }
+
+  return {
+    currentPeriod: currentPeriod
+      ? { id: currentPeriod.id, periodCode: currentPeriod.periodCode, status: currentPeriod.status }
+      : null,
+    currentMonth:    monthlySalaryStats,
+    activeHeadcount: activeStaffCount,
+    yearToDate:      ytdStats,
+    statusSummary,
+  };
+}
+
 // ─── GET /payroll/stats/overview ─────────────────────────────────────────────
 router.get(
   '/stats/overview',
   AuthMiddleware.verifyToken,
   AuthMiddleware.requirePermission('PAYROLL_VIEW'),
   ErrorMiddleware.asyncHandler(async (_req: Request, res: Response) => {
-    const now = new Date();
-    const currentMonth = now.getMonth() + 1;
-    const currentYear  = now.getFullYear();
-
-    // Current month's period (if exists)
-    const currentPeriod = await PayrollPeriod.findOne({
-      where: { month: currentMonth, year: currentYear },
-    });
-
-    // Aggregate salary stats for current month
-    let monthlySalaryStats: {
-      headcount: number;
-      totalGross: number;
-      totalNet: number;
-      totalDeductions: number;
-      avgNet: number;
-    } = { headcount: 0, totalGross: 0, totalNet: 0, totalDeductions: 0, avgNet: 0 };
-
-    if (currentPeriod) {
-      const agg = await EmployeeSalary.findOne({
-        attributes: [
-          [fn('COUNT', col('id')), 'headcount'],
-          [fn('SUM', col('grossSalary')), 'totalGross'],
-          [fn('SUM', col('netSalary')), 'totalNet'],
-          [fn('SUM', col('totalDeductions')), 'totalDeductions'],
-          [fn('AVG', col('netSalary')), 'avgNet'],
-        ],
-        where: {
-          payrollPeriodId: currentPeriod.id,
-          status: { [Op.notIn]: ['OnHold'] },
-        },
-        raw: true,
-      }) as any;
-
-      if (agg) {
-        monthlySalaryStats = {
-          headcount:       Number(agg.headcount)       || 0,
-          totalGross:      Number(agg.totalGross)      || 0,
-          totalNet:        Number(agg.totalNet)        || 0,
-          totalDeductions: Number(agg.totalDeductions) || 0,
-          avgNet:          Number(agg.avgNet)          || 0,
-        };
-      }
-    }
-
-    // Active headcount
-    const activeStaffCount = await Staff.count({ where: { status: 'Active' } });
-
-    // Year-to-date payroll cost
-    const ytdAgg = await EmployeeSalary.findOne({
-      attributes: [
-        [fn('SUM', col('netSalary')), 'ytdNet'],
-        [fn('SUM', col('grossSalary')), 'ytdGross'],
-      ],
-      where: {
-        status: { [Op.in]: ['Paid', 'Processed', 'Approved'] },
-      },
-      include: [
-        {
-          model:      PayrollPeriod,
-          as:         'payrollPeriod',
-          attributes: [],
-          where:      { year: currentYear },
-          required:   true,
-        },
-      ],
-      raw: true,
-    }) as any;
-
-    const ytdStats = {
-      ytdNet:   Number(ytdAgg?.ytdNet)   || 0,
-      ytdGross: Number(ytdAgg?.ytdGross) || 0,
-    };
-
-    // Status breakdown for all periods
-    const statusBreakdown = await EmployeeSalary.findAll({
-      attributes: [
-        'status',
-        [fn('COUNT', col('id')), 'count'],
-      ],
-      group: ['status'],
-      raw: true,
-    }) as any[];
-
-    const statusSummary: Record<string, number> = {};
-    for (const row of statusBreakdown) {
-      statusSummary[row.status] = Number(row.count);
-    }
-
-    return ResponseFormatter.success(
-      res,
-      {
-        currentPeriod: currentPeriod
-          ? { id: currentPeriod.id, periodCode: currentPeriod.periodCode, status: currentPeriod.status }
-          : null,
-        currentMonth:    monthlySalaryStats,
-        activeHeadcount: activeStaffCount,
-        yearToDate:      ytdStats,
-        statusSummary,
-      },
-      'Payroll overview retrieved'
-    );
+    const data = await getPayrollOverview();
+    return ResponseFormatter.success(res, data, 'Payroll overview retrieved');
   })
 );
 

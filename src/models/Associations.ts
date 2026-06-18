@@ -67,6 +67,10 @@ import { PurchaseOrder } from './PurchaseOrder.model';
 import { JobApplication } from './JobApplication.model';
 import { JobSyncLog } from './JobSyncLog.model';
 import { WeeklyReport } from './WeeklyReport.model';
+import { AIConversation } from '../modules/ai/models/AIConversation.model';
+import { AIMessage } from '../modules/ai/models/AIMessage.model';
+import { AIMeetingSummary } from '../modules/ai/models/AIMeetingSummary.model';
+import { AIReminder } from '../modules/ai/models/AIReminder.model';
 
 /**
  * Initialize all Sequelize model associations
@@ -280,6 +284,13 @@ export class AssociationManager {
     WeeklyReport.belongsTo(Staff, { foreignKey: 'staffId', as: 'staff' });
     Staff.hasMany(WeeklyReport, { foreignKey: 'staffId', as: 'weeklyReports' });
     WeeklyReport.belongsTo(User, { foreignKey: 'approvedById', as: 'approvedBy' });
+
+    // ======== AI ASSISTANT ========
+    AIConversation.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+    AIConversation.hasMany(AIMessage, { foreignKey: 'conversationId', as: 'messages' });
+    AIMessage.belongsTo(AIConversation, { foreignKey: 'conversationId', as: 'conversation' });
+    AIMeetingSummary.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+    AIReminder.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
     // ======== PERFORMANCE & TRAINING ========
     Appraisal.belongsTo(Staff, { foreignKey: 'staffId', as: 'staff' });

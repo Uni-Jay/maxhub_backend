@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getLeaveBalance = getLeaveBalance;
 const express_1 = require("express");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
@@ -100,12 +101,11 @@ router.patch('/requests/:id/reject', ErrorMiddleware_1.ErrorMiddleware.asyncHand
     });
     ResponseFormatter_1.ResponseFormatter.success(res, leave.toJSON(), 'Leave request rejected');
 }));
-router.get('/balance', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const user = req.user;
+async function getLeaveBalance(staffId) {
     const year = new Date().getFullYear();
     const balances = await LeaveBalance_model_1.LeaveBalance.findAll({
         where: {
-            staffId: user?.staffId ? BigInt(user.staffId) : BigInt(1),
+            staffId: staffId ? BigInt(staffId) : BigInt(1),
             year,
         },
         include: [
@@ -113,12 +113,17 @@ router.get('/balance', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req
         ],
     });
     const plain = balances.map(b => b.toJSON());
-    ResponseFormatter_1.ResponseFormatter.success(res, {
+    return {
         total: plain.reduce((sum, b) => sum + Number(b.totalDays), 0),
         used: plain.reduce((sum, b) => sum + Number(b.usedDays), 0),
         available: plain.reduce((sum, b) => sum + Number(b.remainingDays), 0),
         leaveTypes: plain,
-    });
+    };
+}
+router.get('/balance', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const user = req.user;
+    const data = await getLeaveBalance(user?.staffId);
+    ResponseFormatter_1.ResponseFormatter.success(res, data);
 }));
 router.get('/types', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const types = await LeaveType_model_1.LeaveType.findAll({ order: [['name', 'ASC']] });

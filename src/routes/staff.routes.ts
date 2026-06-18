@@ -18,6 +18,45 @@ import { upload, getFileUrl } from '@config/multer';
 
 const router = Router();
 
+/**
+ * Core staff search/filter query — shared by the /api/staff route and the AI
+ * assistant's searchEmployees tool, so both surfaces stay behaviorally identical.
+ */
+export async function searchStaff(filters: {
+  search?: string; status?: string; departmentId?: string | number;
+  branchId?: string | number; unitId?: string | number;
+  limit?: number; offset?: number; sortField?: string; sortOrder?: 'ASC' | 'DESC';
+}) {
+  const where: Record<string, unknown> = {};
+  if (filters.status) where.status = filters.status;
+  if (filters.departmentId) where.departmentId = BigInt(filters.departmentId);
+  if (filters.branchId) where.branchId = BigInt(filters.branchId);
+  if (filters.unitId) where.unitId = BigInt(filters.unitId);
+  if (filters.search) {
+    const s = `%${filters.search}%`;
+    where[Op.or as unknown as string] = [
+      { firstName: { [Op.iLike]: s } },
+      { lastName: { [Op.iLike]: s } },
+      { email: { [Op.iLike]: s } },
+      { employeeId: { [Op.iLike]: s } },
+    ];
+  }
+
+  return Staff.findAndCountAll({
+    where,
+    include: [
+      { model: Department, as: 'department', attributes: ['id', 'name', 'code'], required: false },
+      { model: Designation, as: 'designation', attributes: ['id', 'name'], required: false },
+      { model: Branch, as: 'branch', attributes: ['id', 'uuid', 'branchCode', 'branchName'], required: false },
+      { model: Unit, as: 'unit', attributes: ['id', 'uuid', 'code', 'name'], required: false },
+    ],
+    limit: filters.limit ?? 20,
+    offset: filters.offset ?? 0,
+    order: [[filters.sortField || 'createdAt', filters.sortOrder || 'DESC']],
+    paranoid: true,
+  });
+}
+
 // ─── GET /api/staff ──────────────────────────────────────────────────────────
 router.get(
   '/',
@@ -26,33 +65,14 @@ router.get(
     const limit = req.pagination?.limit || 20;
     const offset = (page - 1) * limit;
 
-    const where: Record<string, unknown> = {};
-    if (req.query.status) where.status = req.query.status;
-    if (req.query.departmentId) where.departmentId = BigInt(req.query.departmentId as string);
-    if (req.query.branchId) where.branchId = BigInt(req.query.branchId as string);
-    if (req.query.unitId) where.unitId = BigInt(req.query.unitId as string);
-    if (req.query.search) {
-      const s = `%${req.query.search}%`;
-      where[Op.or as unknown as string] = [
-        { firstName: { [Op.iLike]: s } },
-        { lastName: { [Op.iLike]: s } },
-        { email: { [Op.iLike]: s } },
-        { employeeId: { [Op.iLike]: s } },
-      ];
-    }
-
-    const { count, rows } = await Staff.findAndCountAll({
-      where,
-      include: [
-        { model: Department, as: 'department', attributes: ['id', 'name', 'code'], required: false },
-        { model: Designation, as: 'designation', attributes: ['id', 'name'], required: false },
-        { model: Branch, as: 'branch', attributes: ['id', 'uuid', 'branchCode', 'branchName'], required: false },
-        { model: Unit, as: 'unit', attributes: ['id', 'uuid', 'code', 'name'], required: false },
-      ],
-      limit,
-      offset,
-      order: [[req.sort?.field || 'createdAt', req.sort?.order || 'DESC']],
-      paranoid: true,
+    const { count, rows } = await searchStaff({
+      search: req.query.search as string | undefined,
+      status: req.query.status as string | undefined,
+      departmentId: req.query.departmentId as string | undefined,
+      branchId: req.query.branchId as string | undefined,
+      unitId: req.query.unitId as string | undefined,
+      limit, offset,
+      sortField: req.sort?.field, sortOrder: req.sort?.order,
     });
 
     ResponseFormatter.paginated(res, rows.map(r => r.toJSON()), count, page, limit);

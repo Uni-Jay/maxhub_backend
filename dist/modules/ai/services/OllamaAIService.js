@@ -1,9 +1,6 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const OllamaProvider_1 = __importDefault(require("../providers/OllamaProvider"));
+const ProviderFactory_1 = require("../providers/ProviderFactory");
 const SystemPrompts_1 = require("../prompts/SystemPrompts");
 const AIConversation_model_1 = require("../models/AIConversation.model");
 const AIMessage_model_1 = require("../models/AIMessage.model");
@@ -21,14 +18,17 @@ function safeParseJSON(text, fallback) {
     }
 }
 class OllamaAIService {
-    async chat(request, userId, roleName, userName, businessUnit) {
+    async chat(request, userId, roleName, userName, businessUnit, toolSupport) {
         const model = request.model ?? process.env.AI_MODEL ?? 'llama3';
         const systemPrompt = (0, SystemPrompts_1.buildChatSystem)(roleName, userName, businessUnit);
         const ollamaMessages = [
             { role: 'system', content: systemPrompt },
             ...request.messages.map((m) => ({ role: m.role, content: m.content })),
         ];
-        const reply = await OllamaProvider_1.default.chat(ollamaMessages, model);
+        const provider = (0, ProviderFactory_1.getActiveProvider)();
+        const reply = toolSupport
+            ? await provider.chatWithTools(ollamaMessages, toolSupport.tools, toolSupport.executeTool, model)
+            : await provider.chat(ollamaMessages, model);
         let conversationId = request.conversationId;
         let conversation = null;
         if (conversationId) {
@@ -55,7 +55,7 @@ class OllamaAIService {
     async generateReport(request, userId) {
         const model = request.model ?? process.env.AI_MODEL ?? 'llama3';
         const prompt = (0, SystemPrompts_1.buildReportPrompt)(request.type, request.data, request.period);
-        const report = await OllamaProvider_1.default.generate(prompt, model, 0.4);
+        const report = await (0, ProviderFactory_1.getActiveProvider)().generate(prompt, model, 0.4);
         const conv = await AIConversation_model_1.AIConversation.create({
             userId: BigInt(userId),
             title: `${request.type} Report — ${request.period ?? new Date().toLocaleDateString()}`,
@@ -72,7 +72,7 @@ class OllamaAIService {
     async summarizeMeeting(request, userId) {
         const model = request.model ?? process.env.AI_MODEL ?? 'llama3';
         const prompt = (0, SystemPrompts_1.buildMeetingSummaryPrompt)(request.title, request.transcript, request.participants);
-        const raw = await OllamaProvider_1.default.generate(prompt, model, 0.3);
+        const raw = await (0, ProviderFactory_1.getActiveProvider)().generate(prompt, model, 0.3);
         const parsed = safeParseJSON(raw, {});
         const result = {
             title: request.title,
@@ -98,7 +98,7 @@ class OllamaAIService {
     async draftEmail(request, userId) {
         const model = request.model ?? process.env.AI_MODEL ?? 'llama3';
         const prompt = (0, SystemPrompts_1.buildEmailPrompt)(request.type, request.recipient, request.context);
-        const raw = await OllamaProvider_1.default.generate(prompt, model, 0.6);
+        const raw = await (0, ProviderFactory_1.getActiveProvider)().generate(prompt, model, 0.6);
         const parsed = safeParseJSON(raw, {});
         const result = {
             subject: parsed.subject ?? `${request.type.replace(/_/g, ' ')} — ${new Date().toLocaleDateString()}`,
@@ -121,7 +121,7 @@ class OllamaAIService {
     async suggestTasks(request, userId) {
         const model = request.model ?? process.env.AI_MODEL ?? 'llama3';
         const prompt = (0, SystemPrompts_1.buildTaskSuggestionsPrompt)(request.overdueTasks, request.pendingTasks, request.teamWorkload);
-        const raw = await OllamaProvider_1.default.generate(prompt, model, 0.4);
+        const raw = await (0, ProviderFactory_1.getActiveProvider)().generate(prompt, model, 0.4);
         const parsed = safeParseJSON(raw, {});
         return {
             priorityOrder: parsed.priorityOrder ?? [],
@@ -132,7 +132,7 @@ class OllamaAIService {
     async generateReminder(request, userId) {
         const model = request.model ?? process.env.AI_MODEL ?? 'llama3';
         const prompt = (0, SystemPrompts_1.buildReminderPrompt)(request.type, request.context);
-        const raw = await OllamaProvider_1.default.generate(prompt, model, 0.5);
+        const raw = await (0, ProviderFactory_1.getActiveProvider)().generate(prompt, model, 0.5);
         const parsed = safeParseJSON(raw, {});
         const result = {
             title: parsed.title ?? `${request.type} Reminder`,

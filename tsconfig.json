@@ -27,6 +27,7 @@
       "@repositories/*": ["./repositories/*"],
       "@config/*": ["./config/*"],
       "@middleware/*": ["./middleware/*"],
+      "@routes/*": ["./routes/*"],
       "@utils/*": ["./utils/*"],
       "@types/*": ["./types/*"]
     }

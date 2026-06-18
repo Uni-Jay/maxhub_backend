@@ -17,12 +17,15 @@ class OllamaProvider {
         const targetModel = this.resolveModel(model);
         const payload = {
             model: targetModel,
-            messages,
+            messages: messages,
             stream: false,
             options: { temperature, top_p: 0.9, num_ctx: 4096 },
         };
         const res = await this.post('/api/chat', payload, targetModel);
         return res.message.content.trim();
+    }
+    async chatWithTools(messages, _tools, _executeTool, model, temperature = 0.7) {
+        return this.chat(messages, model, temperature);
     }
     async generate(prompt, model, temperature = 0.5) {
         const targetModel = this.resolveModel(model);

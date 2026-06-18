@@ -11,7 +11,7 @@ export interface AIMessage {
 }
 export interface ChatRequest {
     messages: AIMessage[];
-    model?: OllamaModel;
+    model?: string;
     conversationId?: string;
 }
 export interface ChatResponse {
@@ -25,7 +25,7 @@ export interface ReportRequest {
     period?: string;
     staffId?: number;
     departmentId?: number;
-    model?: OllamaModel;
+    model?: string;
 }
 export interface ReportResponse {
     report: string;
@@ -36,7 +36,7 @@ export interface MeetingSummaryRequest {
     title: string;
     transcript: string;
     participants?: string[];
-    model?: OllamaModel;
+    model?: string;
 }
 export interface ActionItem {
     task: string;
@@ -56,7 +56,7 @@ export interface EmailDraftRequest {
     type: EmailType;
     recipient: string;
     context: Record<string, unknown>;
-    model?: OllamaModel;
+    model?: string;
 }
 export interface EmailDraftResponse {
     subject: string;
@@ -67,7 +67,7 @@ export interface TaskSuggestionRequest {
     overdueTasks: TaskItem[];
     pendingTasks: TaskItem[];
     teamWorkload?: TeamMemberWorkload[];
-    model?: OllamaModel;
+    model?: string;
 }
 export interface TaskItem {
     id: string | number;
@@ -97,7 +97,7 @@ export interface TaskSuggestionResponse {
 export interface ReminderRequest {
     type: ReminderType;
     context: Record<string, unknown>;
-    model?: OllamaModel;
+    model?: string;
 }
 export interface ReminderResponse {
     title: string;

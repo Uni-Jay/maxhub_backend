@@ -3,11 +3,13 @@ import type {
   OllamaChatPayload,
   OllamaChatApiResponse,
   OllamaModel,
+  AIMessage,
 } from '../interfaces/AIInterfaces';
+import type { AIProvider, ChatToolDeclaration } from './AIProvider.interface';
 
 const SUPPORTED_MODELS: OllamaModel[] = ['llama3', 'deepseek-r1', 'mistral', 'gemma'];
 
-export class OllamaProvider {
+export class OllamaProvider implements AIProvider {
   private baseUrl: string;
   private defaultModel: OllamaModel;
 
@@ -17,21 +19,21 @@ export class OllamaProvider {
     this.defaultModel = SUPPORTED_MODELS.includes(envModel) ? envModel : 'llama3';
   }
 
-  private resolveModel(model?: OllamaModel): string {
-    if (model && SUPPORTED_MODELS.includes(model)) return model;
+  private resolveModel(model?: string): string {
+    if (model && SUPPORTED_MODELS.includes(model as OllamaModel)) return model;
     return this.defaultModel;
   }
 
   /** Call /api/chat — maintains message history, best for conversational use. */
   async chat(
-    messages: OllamaMessage[],
-    model?: OllamaModel,
+    messages: AIMessage[],
+    model?: string,
     temperature = 0.7,
   ): Promise<string> {
     const targetModel = this.resolveModel(model);
     const payload: OllamaChatPayload = {
       model: targetModel,
-      messages,
+      messages: messages as OllamaMessage[],
       stream: false,
       options: { temperature, top_p: 0.9, num_ctx: 4096 },
     };
@@ -40,10 +42,25 @@ export class OllamaProvider {
     return res.message.content.trim();
   }
 
+  /**
+   * Ollama has no function-calling support wired up in this codebase — tools and
+   * executeTool are ignored and this falls back to a plain chat() call. Documented
+   * limitation, not a regression (it had no tool support before this either).
+   */
+  async chatWithTools(
+    messages: AIMessage[],
+    _tools: ChatToolDeclaration[],
+    _executeTool: (name: string, args: Record<string, unknown>) => Promise<string>,
+    model?: string,
+    temperature = 0.7,
+  ): Promise<string> {
+    return this.chat(messages, model, temperature);
+  }
+
   /** Call /api/generate — single-shot prompt, better for structured generation. */
   async generate(
     prompt: string,
-    model?: OllamaModel,
+    model?: string,
     temperature = 0.5,
   ): Promise<string> {
     const targetModel = this.resolveModel(model);
@@ -77,7 +94,7 @@ export class OllamaProvider {
   }
 
   getDefaultModel(): string { return this.defaultModel; }
-  getSupportedModels(): OllamaModel[] { return [...SUPPORTED_MODELS]; }
+  getSupportedModels(): string[] { return [...SUPPORTED_MODELS]; }
 
   private async post<T>(path: string, body: unknown, model: string): Promise<T> {
     let res: Response;

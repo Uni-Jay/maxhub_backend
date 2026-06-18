@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import OllamaAIService from '../services/OllamaAIService';
-import OllamaProvider from '../providers/OllamaProvider';
+import { getActiveProvider, getActiveProviderName } from '../providers/ProviderFactory';
+import { ERP_TOOL_DECLARATIONS, createToolExecutor } from '../tools/ERPTools';
 import type {
   ChatRequest,
   ReportRequest,
@@ -24,15 +25,20 @@ function getUser(req: Request) {
 export class AIController {
   // GET /api/ai/status
   static async status(req: Request, res: Response): Promise<void> {
-    const available = await OllamaProvider.isAvailable();
-    const models = available ? await OllamaProvider.listModels() : [];
+    const provider = getActiveProvider();
+    const providerName = getActiveProviderName();
+    const available = await provider.isAvailable();
+    const models = available ? await provider.listModels() : [];
     ResponseFormatter.success(res, {
-      ollamaAvailable: available,
-      ollamaUrl: process.env.OLLAMA_URL || 'http://localhost:11434',
-      activeModel: process.env.AI_MODEL || 'llama3',
+      provider: providerName,
+      available,
+      activeModel: provider.getDefaultModel(),
       availableModels: models,
-      supportedModels: OllamaProvider.getSupportedModels(),
-    }, available ? 'Ollama is running' : 'Ollama is not available');
+      supportedModels: provider.getSupportedModels(),
+      // legacy fields kept for the existing frontend status banner
+      ollamaAvailable: providerName === 'ollama' && available,
+      ollamaUrl: process.env.OLLAMA_URL || 'http://localhost:11434',
+    }, available ? `${providerName} is available` : `${providerName} is not available`);
   }
 
   // POST /api/ai/chat
@@ -52,6 +58,7 @@ export class AIController {
       roleName,
       user.name,
       user.businessUnit,
+      { tools: ERP_TOOL_DECLARATIONS, executeTool: createToolExecutor(req) },
     );
 
     ResponseFormatter.success(res, result, 'AI response generated');

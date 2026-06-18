@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getPayrollOverview = getPayrollOverview;
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
@@ -453,7 +454,7 @@ router.get('/my-slips', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddle
     });
     return ResponseFormatter_1.ResponseFormatter.success(res, slips, 'Payslips retrieved');
 }));
-router.get('/stats/overview', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthMiddleware_1.AuthMiddleware.requirePermission('PAYROLL_VIEW'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (_req, res) => {
+async function getPayrollOverview() {
     const now = new Date();
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
@@ -522,7 +523,7 @@ router.get('/stats/overview', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthM
     for (const row of statusBreakdown) {
         statusSummary[row.status] = Number(row.count);
     }
-    return ResponseFormatter_1.ResponseFormatter.success(res, {
+    return {
         currentPeriod: currentPeriod
             ? { id: currentPeriod.id, periodCode: currentPeriod.periodCode, status: currentPeriod.status }
             : null,
@@ -530,7 +531,11 @@ router.get('/stats/overview', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthM
         activeHeadcount: activeStaffCount,
         yearToDate: ytdStats,
         statusSummary,
-    }, 'Payroll overview retrieved');
+    };
+}
+router.get('/stats/overview', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthMiddleware_1.AuthMiddleware.requirePermission('PAYROLL_VIEW'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (_req, res) => {
+    const data = await getPayrollOverview();
+    return ResponseFormatter_1.ResponseFormatter.success(res, data, 'Payroll overview retrieved');
 }));
 exports.default = router;
 //# sourceMappingURL=payroll.routes.js.map
