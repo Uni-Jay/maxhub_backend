@@ -335,8 +335,8 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.LEAVE_REQUEST_CREATE_OWN,
     PermissionCode.LEAVE_REQUEST_READ_OWN,
     PermissionCode.LEAVE_TYPE_READ_ALL,
-    // Projects
-    PermissionCode.PROJECT_CREATE_ALL,
+    // Projects — can only create within her own department, never company-wide
+    PermissionCode.PROJECT_CREATE_OWN_DEPARTMENT,
     PermissionCode.PROJECT_READ_ALL,
     PermissionCode.PROJECT_UPDATE_ALL,
     PermissionCode.MILESTONE_CREATE_ALL,

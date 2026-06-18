@@ -290,7 +290,7 @@ exports.ROLE_PERMISSIONS = {
         PermissionCodes_1.PermissionCode.LEAVE_REQUEST_CREATE_OWN,
         PermissionCodes_1.PermissionCode.LEAVE_REQUEST_READ_OWN,
         PermissionCodes_1.PermissionCode.LEAVE_TYPE_READ_ALL,
-        PermissionCodes_1.PermissionCode.PROJECT_CREATE_ALL,
+        PermissionCodes_1.PermissionCode.PROJECT_CREATE_OWN_DEPARTMENT,
         PermissionCodes_1.PermissionCode.PROJECT_READ_ALL,
         PermissionCodes_1.PermissionCode.PROJECT_UPDATE_ALL,
         PermissionCodes_1.PermissionCode.MILESTONE_CREATE_ALL,

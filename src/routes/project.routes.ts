@@ -109,9 +109,10 @@ router.get(
 
 router.post(
   '/',
-  AuthMiddleware.requirePermission(PermissionCode.PROJECT_CREATE_ALL, PermissionCode.PROJECT_CREATE_OWN),
+  AuthMiddleware.requirePermission(PermissionCode.PROJECT_CREATE_ALL, PermissionCode.PROJECT_CREATE_OWN_DEPARTMENT, PermissionCode.PROJECT_CREATE_OWN),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const canCreateAll = hasPermission(req, PermissionCode.PROJECT_CREATE_ALL);
+    const canCreateOwnDepartment = !canCreateAll && hasPermission(req, PermissionCode.PROJECT_CREATE_OWN_DEPARTMENT);
     const user = (req as any).user;
     const ownStaffId = await getOwnStaffId(req);
 
@@ -130,6 +131,22 @@ router.post(
         return ResponseFormatter.error(res, 'departmentId and projectManagerId are required', 400);
       }
       departmentId = BigInt(req.body.departmentId);
+      projectManagerId = BigInt(req.body.projectManagerId);
+      startDate = req.body.startDate ? new Date(req.body.startDate) : new Date();
+    } else if (canCreateOwnDepartment) {
+      // HOD: project is always created under her own department; the project manager
+      // must be a staff member within that same department.
+      if (!user?.departmentId) {
+        return ResponseFormatter.error(res, 'No department linked to this account', 400);
+      }
+      if (!req.body.projectManagerId) {
+        return ResponseFormatter.error(res, 'projectManagerId is required', 400);
+      }
+      const manager = await Staff.findByPk(req.body.projectManagerId, { attributes: ['id', 'departmentId'] });
+      if (!manager || String((manager as any).departmentId) !== String(user.departmentId)) {
+        return ResponseFormatter.forbidden(res, 'You can only assign a project manager from your own department', req.path);
+      }
+      departmentId = BigInt(user.departmentId);
       projectManagerId = BigInt(req.body.projectManagerId);
       startDate = req.body.startDate ? new Date(req.body.startDate) : new Date();
     } else {

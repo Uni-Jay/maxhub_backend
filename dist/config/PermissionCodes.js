@@ -96,6 +96,7 @@ var PermissionCode;
     PermissionCode["LEAVE_REQUEST_REJECT_OWN_DEPARTMENT"] = "leave.request.reject.own_department";
     PermissionCode["PROJECT_CREATE_ALL"] = "project.create.all";
     PermissionCode["PROJECT_CREATE_OWN"] = "project.create.own";
+    PermissionCode["PROJECT_CREATE_OWN_DEPARTMENT"] = "project.create.own_department";
     PermissionCode["PROJECT_READ_ALL"] = "project.read.all";
     PermissionCode["PROJECT_READ_OWN"] = "project.read.own";
     PermissionCode["PROJECT_UPDATE_ALL"] = "project.update.all";

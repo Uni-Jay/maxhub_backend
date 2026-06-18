@@ -96,8 +96,9 @@ router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, re
     }
     ResponseFormatter_1.ResponseFormatter.success(res, project.toJSON());
 }));
-router.post('/', AuthMiddleware_1.AuthMiddleware.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_CREATE_ALL, PermissionCodes_1.PermissionCode.PROJECT_CREATE_OWN), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.post('/', AuthMiddleware_1.AuthMiddleware.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_CREATE_ALL, PermissionCodes_1.PermissionCode.PROJECT_CREATE_OWN_DEPARTMENT, PermissionCodes_1.PermissionCode.PROJECT_CREATE_OWN), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const canCreateAll = hasPermission(req, PermissionCodes_1.PermissionCode.PROJECT_CREATE_ALL);
+    const canCreateOwnDepartment = !canCreateAll && hasPermission(req, PermissionCodes_1.PermissionCode.PROJECT_CREATE_OWN_DEPARTMENT);
     const user = req.user;
     const ownStaffId = await getOwnStaffId(req);
     const { name, description, projectCode, endDate, expectedEndDate, budget, status, priority, } = req.body;
@@ -109,6 +110,21 @@ router.post('/', AuthMiddleware_1.AuthMiddleware.requirePermission(PermissionCod
             return ResponseFormatter_1.ResponseFormatter.error(res, 'departmentId and projectManagerId are required', 400);
         }
         departmentId = BigInt(req.body.departmentId);
+        projectManagerId = BigInt(req.body.projectManagerId);
+        startDate = req.body.startDate ? new Date(req.body.startDate) : new Date();
+    }
+    else if (canCreateOwnDepartment) {
+        if (!user?.departmentId) {
+            return ResponseFormatter_1.ResponseFormatter.error(res, 'No department linked to this account', 400);
+        }
+        if (!req.body.projectManagerId) {
+            return ResponseFormatter_1.ResponseFormatter.error(res, 'projectManagerId is required', 400);
+        }
+        const manager = await Staff_model_1.Staff.findByPk(req.body.projectManagerId, { attributes: ['id', 'departmentId'] });
+        if (!manager || String(manager.departmentId) !== String(user.departmentId)) {
+            return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You can only assign a project manager from your own department', req.path);
+        }
+        departmentId = BigInt(user.departmentId);
         projectManagerId = BigInt(req.body.projectManagerId);
         startDate = req.body.startDate ? new Date(req.body.startDate) : new Date();
     }

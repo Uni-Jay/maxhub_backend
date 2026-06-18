@@ -92,6 +92,7 @@ export declare enum PermissionCode {
     LEAVE_REQUEST_REJECT_OWN_DEPARTMENT = "leave.request.reject.own_department",
     PROJECT_CREATE_ALL = "project.create.all",
     PROJECT_CREATE_OWN = "project.create.own",
+    PROJECT_CREATE_OWN_DEPARTMENT = "project.create.own_department",
     PROJECT_READ_ALL = "project.read.all",
     PROJECT_READ_OWN = "project.read.own",
     PROJECT_UPDATE_ALL = "project.update.all",
