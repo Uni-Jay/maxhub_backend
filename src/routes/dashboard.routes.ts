@@ -14,7 +14,7 @@ router.get('/super-admin/students', AuthMiddleware.verifyToken, DashboardControl
 router.get('/super-admin/projects', AuthMiddleware.verifyToken, DashboardController.getSuperAdminProjects);
 router.get('/super-admin/crm', AuthMiddleware.verifyToken, DashboardController.getSuperAdminCRM);
 router.get('/super-admin/notifications', AuthMiddleware.verifyToken, DashboardController.getSuperAdminNotifications);
-router.get('/super-admin/approvals-queue', AuthMiddleware.verifyToken, DashboardController.getSuperAdminApprovalsQueue);
+router.get('/super-admin/approvals-queue', AuthMiddleware.verifyToken, DashboardController.getApprovalsQueue);
 
 // Head of Admin Dashboard
 router.get('/head-of-admin/stats', AuthMiddleware.verifyToken, DashboardController.getHeadOfAdminStats);
@@ -26,15 +26,18 @@ router.get('/head-of-admin/department-kpis', AuthMiddleware.verifyToken, Dashboa
 router.get('/head-of-admin/projects', AuthMiddleware.verifyToken, DashboardController.getHeadOfAdminProjects);
 router.get('/head-of-admin/communications', AuthMiddleware.verifyToken, DashboardController.getHeadOfAdminCommunications);
 router.get('/head-of-admin/leave-summary', AuthMiddleware.verifyToken, DashboardController.getHeadOfAdminLeaveSummary);
+router.get('/head-of-admin/approvals-queue', AuthMiddleware.verifyToken, DashboardController.getApprovalsQueue);
 
 // HR Dashboard
-router.get('/hr/stats', AuthMiddleware.verifyToken, DashboardController.getSuperAdminStats);
-router.get('/hr/recruitment', AuthMiddleware.verifyToken, DashboardController.getSuperAdminStats);
+router.get('/hr/stats', AuthMiddleware.verifyToken, DashboardController.getHRStats);
+router.get('/hr/recruitment', AuthMiddleware.verifyToken, DashboardController.getHRRecruitment);
+router.get('/hr/approvals-queue', AuthMiddleware.verifyToken, DashboardController.getApprovalsQueue);
 
 // HOD Dashboard
-router.get('/hod/stats', AuthMiddleware.verifyToken, DashboardController.getHeadOfAdminStats);
+router.get('/hod/stats', AuthMiddleware.verifyToken, DashboardController.getHODStats);
+router.get('/hod/approvals-queue', AuthMiddleware.verifyToken, DashboardController.getApprovalsQueue);
 
 // Staff Dashboard
-router.get('/staff/stats', AuthMiddleware.verifyToken, DashboardController.getHeadOfAdminStats);
+router.get('/staff/stats', AuthMiddleware.verifyToken, DashboardController.getStaffStats);
 
 export default router;

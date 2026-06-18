@@ -4,6 +4,7 @@ import { PermissionCode } from '../config/PermissionCodes';
 import { AttendanceService, ClockInRequest, ClockOutRequest } from '../services/AttendanceService';
 import { Attendance } from '../models/Attendance.model';
 import { Staff } from '../models/Staff.model';
+import { Overtime } from '../models/Overtime.model';
 
 const router = Router();
 const attendanceService = new AttendanceService();
@@ -228,7 +229,25 @@ router.post(
   AuthMiddleware.requirePermission(PermissionCode.ATT_ATTENDANCE_CREATE_OWN),
   async (req: Request, res: Response) => {
     try {
-      res.json({ success: true, data: { message: 'Overtime request submitted' } });
+      const staffId = (req as any).user.staffId;
+      const { attendanceId, date, startTime, endTime, overtimeHours, overtimeRate, reason } = req.body;
+      if (!attendanceId || !date || !startTime || !endTime || !overtimeHours) {
+        return res.status(400).json({ success: false, message: 'attendanceId, date, startTime, endTime and overtimeHours are required' });
+      }
+
+      const overtime = await Overtime.create({
+        staffId,
+        attendanceId,
+        date,
+        startTime: new Date(startTime),
+        endTime: new Date(endTime),
+        overtimeHours,
+        overtimeRate: overtimeRate ?? 1.5,
+        reason,
+        status: 'Pending',
+      } as any);
+
+      res.json({ success: true, data: overtime });
     } catch (error) {
       res.status(400).json({ success: false, error: (error as Error).message });
     }
@@ -245,9 +264,32 @@ router.put(
   AuthMiddleware.requirePermission(PermissionCode.ATT_OVERTIME_APPROVE_ALL),
   async (req: Request, res: Response) => {
     try {
-      const overtimeId = BigInt(req.params.id);
-      const result = await attendanceService.approveOvertime(req, overtimeId);
-      res.json({ success: true, data: result });
+      const overtime = await Overtime.findByPk(req.params.id);
+      if (!overtime) return res.status(404).json({ success: false, message: 'Overtime request not found' });
+
+      await overtime.update({ status: 'Approved', approvedBy: (req as any).user.id } as any);
+      res.json({ success: true, data: overtime });
+    } catch (error) {
+      res.status(400).json({ success: false, error: (error as Error).message });
+    }
+  }
+);
+
+/**
+ * PUT /api/attendance/overtime/:id/reject
+ * Reject overtime request
+ */
+router.put(
+  '/overtime/:id/reject',
+  AuthMiddleware.verifyToken,
+  AuthMiddleware.requirePermission(PermissionCode.ATT_OVERTIME_APPROVE_ALL),
+  async (req: Request, res: Response) => {
+    try {
+      const overtime = await Overtime.findByPk(req.params.id);
+      if (!overtime) return res.status(404).json({ success: false, message: 'Overtime request not found' });
+
+      await overtime.update({ status: 'Rejected', approvedBy: (req as any).user.id } as any);
+      res.json({ success: true, data: overtime });
     } catch (error) {
       res.status(400).json({ success: false, error: (error as Error).message });
     }

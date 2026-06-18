@@ -16,7 +16,7 @@ router.get('/super-admin/students', AuthMiddleware_1.default.verifyToken, Dashbo
 router.get('/super-admin/projects', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getSuperAdminProjects);
 router.get('/super-admin/crm', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getSuperAdminCRM);
 router.get('/super-admin/notifications', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getSuperAdminNotifications);
-router.get('/super-admin/approvals-queue', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getSuperAdminApprovalsQueue);
+router.get('/super-admin/approvals-queue', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getApprovalsQueue);
 router.get('/head-of-admin/stats', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getHeadOfAdminStats);
 router.get('/head-of-admin/leave-approvals/pending', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getHeadOfAdminLeaveApprovals);
 router.post('/head-of-admin/leave-approvals/:leaveId/approve', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.approveLeave);
@@ -26,9 +26,12 @@ router.get('/head-of-admin/department-kpis', AuthMiddleware_1.default.verifyToke
 router.get('/head-of-admin/projects', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getHeadOfAdminProjects);
 router.get('/head-of-admin/communications', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getHeadOfAdminCommunications);
 router.get('/head-of-admin/leave-summary', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getHeadOfAdminLeaveSummary);
-router.get('/hr/stats', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getSuperAdminStats);
-router.get('/hr/recruitment', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getSuperAdminStats);
-router.get('/hod/stats', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getHeadOfAdminStats);
-router.get('/staff/stats', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getHeadOfAdminStats);
+router.get('/head-of-admin/approvals-queue', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getApprovalsQueue);
+router.get('/hr/stats', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getHRStats);
+router.get('/hr/recruitment', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getHRRecruitment);
+router.get('/hr/approvals-queue', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getApprovalsQueue);
+router.get('/hod/stats', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getHODStats);
+router.get('/hod/approvals-queue', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getApprovalsQueue);
+router.get('/staff/stats', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getStaffStats);
 exports.default = router;
 //# sourceMappingURL=dashboard.routes.js.map

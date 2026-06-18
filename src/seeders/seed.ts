@@ -37,6 +37,7 @@ import { StaffSkill } from '../models/StaffSkill.model';
 import { StaffDocument } from '../models/StaffDocument.model';
 import { Shift } from '../models/Shift.model';
 import { Attendance } from '../models/Attendance.model';
+import { Overtime } from '../models/Overtime.model';
 import { Timesheet } from '../models/Timesheet.model';
 import { AttendanceLog } from '../models/AttendanceLog.model';
 import { LeaveType } from '../models/LeaveType.model';
@@ -255,6 +256,7 @@ async function main() {
   StaffDocument.initModel(sequelize);
   Shift.initModel(sequelize);
   Attendance.initModel(sequelize);
+  Overtime.initModel(sequelize);
   Timesheet.initModel(sequelize);
   AttendanceLog.initModel(sequelize);
   LeaveType.initModel(sequelize);

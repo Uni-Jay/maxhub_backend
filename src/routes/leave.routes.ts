@@ -5,6 +5,8 @@ import { LeaveRequest } from '@models/LeaveRequest.model';
 import { LeaveBalance } from '@models/LeaveBalance.model';
 import { LeaveType } from '@models/LeaveType.model';
 import { Staff } from '@models/Staff.model';
+import AuthMiddleware from '@middleware/AuthMiddleware';
+import { PermissionCode } from '@config/PermissionCodes';
 
 const router = Router();
 
@@ -87,6 +89,7 @@ router.get(
 
 router.patch(
   '/requests/:id/approve',
+  AuthMiddleware.requirePermission(PermissionCode.LEAVE_REQUEST_APPROVE_ALL, PermissionCode.LEAVE_REQUEST_APPROVE_OWN_DEPARTMENT),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const leave = await LeaveRequest.findByPk(req.params.id);
     if (!leave) return ResponseFormatter.notFound(res, 'Leave request not found');
@@ -108,6 +111,7 @@ router.patch(
 
 router.patch(
   '/requests/:id/reject',
+  AuthMiddleware.requirePermission(PermissionCode.LEAVE_REQUEST_REJECT_ALL, PermissionCode.LEAVE_REQUEST_REJECT_OWN_DEPARTMENT),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const leave = await LeaveRequest.findByPk(req.params.id);
     if (!leave) return ResponseFormatter.notFound(res, 'Leave request not found');

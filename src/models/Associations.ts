@@ -22,6 +22,7 @@ import { StaffSkill } from './StaffSkill.model';
 import { StaffDocument } from './StaffDocument.model';
 import { Shift } from './Shift.model';
 import { Attendance } from './Attendance.model';
+import { Overtime } from './Overtime.model';
 import { Timesheet } from './Timesheet.model';
 import { AttendanceLog } from './AttendanceLog.model';
 import { LeaveType } from './LeaveType.model';
@@ -186,6 +187,8 @@ export class AssociationManager {
     Attendance.belongsTo(Staff, { foreignKey: 'staffId', as: 'staff' });
     Attendance.belongsTo(Shift, { foreignKey: 'shiftId' });
     Attendance.belongsTo(User, { foreignKey: 'approvedBy', as: 'approver' });
+    Overtime.belongsTo(Staff, { foreignKey: 'staffId', as: 'staff' });
+    Overtime.belongsTo(Attendance, { foreignKey: 'attendanceId', as: 'attendance' });
     Attendance.hasMany(AttendanceLog, { foreignKey: 'attendanceId', as: 'logs' });
 
     // Timesheet associations

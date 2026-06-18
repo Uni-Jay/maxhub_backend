@@ -58,6 +58,7 @@ const StaffSkill_model_1 = require("../models/StaffSkill.model");
 const StaffDocument_model_1 = require("../models/StaffDocument.model");
 const Shift_model_1 = require("../models/Shift.model");
 const Attendance_model_1 = require("../models/Attendance.model");
+const Overtime_model_1 = require("../models/Overtime.model");
 const Timesheet_model_1 = require("../models/Timesheet.model");
 const AttendanceLog_model_1 = require("../models/AttendanceLog.model");
 const LeaveType_model_1 = require("../models/LeaveType.model");
@@ -251,6 +252,7 @@ async function main() {
     StaffDocument_model_1.StaffDocument.initModel(sequelize);
     Shift_model_1.Shift.initModel(sequelize);
     Attendance_model_1.Attendance.initModel(sequelize);
+    Overtime_model_1.Overtime.initModel(sequelize);
     Timesheet_model_1.Timesheet.initModel(sequelize);
     AttendanceLog_model_1.AttendanceLog.initModel(sequelize);
     LeaveType_model_1.LeaveType.initModel(sequelize);

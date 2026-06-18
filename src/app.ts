@@ -35,6 +35,7 @@ import { StaffSkill } from '@models/StaffSkill.model';
 import { StaffDocument } from '@models/StaffDocument.model';
 import { Shift } from '@models/Shift.model';
 import { Attendance } from '@models/Attendance.model';
+import { Overtime } from '@models/Overtime.model';
 import { Timesheet } from '@models/Timesheet.model';
 import { AttendanceLog } from '@models/AttendanceLog.model';
 import { LeaveType } from '@models/LeaveType.model';
@@ -265,6 +266,7 @@ class AppBootstrapper {
     // Attendance models
     Shift.initModel(this.sequelize);
     Attendance.initModel(this.sequelize);
+    Overtime.initModel(this.sequelize);
     Timesheet.initModel(this.sequelize);
     AttendanceLog.initModel(this.sequelize);
 

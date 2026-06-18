@@ -24,6 +24,7 @@ const StaffSkill_model_1 = require("./StaffSkill.model");
 const StaffDocument_model_1 = require("./StaffDocument.model");
 const Shift_model_1 = require("./Shift.model");
 const Attendance_model_1 = require("./Attendance.model");
+const Overtime_model_1 = require("./Overtime.model");
 const Timesheet_model_1 = require("./Timesheet.model");
 const AttendanceLog_model_1 = require("./AttendanceLog.model");
 const LeaveType_model_1 = require("./LeaveType.model");
@@ -147,6 +148,8 @@ class AssociationManager {
         Attendance_model_1.Attendance.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId', as: 'staff' });
         Attendance_model_1.Attendance.belongsTo(Shift_model_1.Shift, { foreignKey: 'shiftId' });
         Attendance_model_1.Attendance.belongsTo(User_model_1.User, { foreignKey: 'approvedBy', as: 'approver' });
+        Overtime_model_1.Overtime.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId', as: 'staff' });
+        Overtime_model_1.Overtime.belongsTo(Attendance_model_1.Attendance, { foreignKey: 'attendanceId', as: 'attendance' });
         Attendance_model_1.Attendance.hasMany(AttendanceLog_model_1.AttendanceLog, { foreignKey: 'attendanceId', as: 'logs' });
         Timesheet_model_1.Timesheet.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId' });
         Timesheet_model_1.Timesheet.belongsTo(User_model_1.User, { foreignKey: 'approvedBy', as: 'approver' });

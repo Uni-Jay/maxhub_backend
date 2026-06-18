@@ -1,4 +1,7 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getLeaveBalance = getLeaveBalance;
 const express_1 = require("express");
@@ -8,6 +11,8 @@ const LeaveRequest_model_1 = require("../models/LeaveRequest.model");
 const LeaveBalance_model_1 = require("../models/LeaveBalance.model");
 const LeaveType_model_1 = require("../models/LeaveType.model");
 const Staff_model_1 = require("../models/Staff.model");
+const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
+const PermissionCodes_1 = require("../config/PermissionCodes");
 const router = (0, express_1.Router)();
 router.get('/requests', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const page = req.pagination?.page || 1;
@@ -71,7 +76,7 @@ router.get('/requests/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Leave request not found');
     ResponseFormatter_1.ResponseFormatter.success(res, leave.toJSON());
 }));
-router.patch('/requests/:id/approve', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.patch('/requests/:id/approve', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.LEAVE_REQUEST_APPROVE_ALL, PermissionCodes_1.PermissionCode.LEAVE_REQUEST_APPROVE_OWN_DEPARTMENT), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const leave = await LeaveRequest_model_1.LeaveRequest.findByPk(req.params.id);
     if (!leave)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Leave request not found');
@@ -87,7 +92,7 @@ router.patch('/requests/:id/approve', ErrorMiddleware_1.ErrorMiddleware.asyncHan
     });
     ResponseFormatter_1.ResponseFormatter.success(res, leave.toJSON(), 'Leave request approved');
 }));
-router.patch('/requests/:id/reject', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.patch('/requests/:id/reject', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.LEAVE_REQUEST_REJECT_ALL, PermissionCodes_1.PermissionCode.LEAVE_REQUEST_REJECT_OWN_DEPARTMENT), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const leave = await LeaveRequest_model_1.LeaveRequest.findByPk(req.params.id);
     if (!leave)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Leave request not found');

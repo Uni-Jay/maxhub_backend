@@ -17,6 +17,10 @@ import { LeaveType } from '@models/LeaveType.model';
 import { WeeklyReport } from '@models/WeeklyReport.model';
 import { EmployeePromotion } from '@models/EmployeePromotion.model';
 import { JobPosting } from '@models/JobPosting.model';
+import { JobApplication } from '@models/JobApplication.model';
+import { Task } from '@models/Task.model';
+import { PayrollPeriod } from '@models/PayrollPeriod.model';
+import { Overtime } from '@models/Overtime.model';
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -25,6 +29,7 @@ interface AuthenticatedRequest extends Request {
     email: string;
     roles: string[];
     permissions: string[];
+    departmentId?: bigint | null;
   };
 }
 
@@ -39,6 +44,22 @@ function isSuperAdmin(req: AuthenticatedRequest): boolean {
 
 function isAuthenticated(req: AuthenticatedRequest): boolean {
   return !!req.user;
+}
+
+/** Coarse role bucket used to pick which scope to apply — first matching role wins. */
+function getRoleBucket(req: AuthenticatedRequest): 'superadmin' | 'admin' | 'hr' | 'hod' | 'staff' {
+  const roles = (req.user?.roles ?? []).map(normaliseRole);
+  if (roles.includes('superadmin')) return 'superadmin';
+  if (roles.includes('admin') || roles.includes('headofadmin')) return 'admin';
+  if (roles.includes('hr')) return 'hr';
+  if (roles.includes('hod')) return 'hod';
+  return 'staff';
+}
+
+/** Looks up the requester's own Staff row (id/department/business unit) — same lookup pattern already used in weekly-report.routes.ts's getStaffId(). */
+async function getOwnStaff(req: AuthenticatedRequest) {
+  if (!req.user?.id) return null;
+  return Staff.findOne({ where: { userId: req.user.id }, attributes: ['id', 'departmentId', 'businessUnit'] });
 }
 
 function canApproveLeave(req: AuthenticatedRequest): boolean {
@@ -290,53 +311,227 @@ export class DashboardController {
     }
   );
 
-  static getSuperAdminApprovalsQueue = ErrorMiddleware.asyncHandler(
+  /**
+   * Role-aware approvals queue, shared by Super Admin / Admin / HR / HOD dashboards.
+   * Which categories appear, and how each is scoped, depends on the caller's role —
+   * the frontend doesn't need to know this; it just renders whatever categories
+   * come back. Staff has no approval permissions in RolesConfig.ts and isn't expected
+   * to call this at all.
+   */
+  static getApprovalsQueue = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
-      if (!isSuperAdmin(req)) {
+      if (!isAuthenticated(req)) {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 
-      const [
-        weeklyReportCount, weeklyReports,
-        leaveCount, leaveRequests,
-        promotionCount, promotions,
-        jobPostingCount, jobPostings,
-      ] = await Promise.all([
-        WeeklyReport.count({ where: { approvalStatus: 'Pending' } }),
-        WeeklyReport.findAll({
-          where: { approvalStatus: 'Pending' },
-          include: [{ model: Staff, as: 'staff', attributes: ['firstName', 'lastName'] }],
-          order: [['createdAt', 'DESC']],
-          limit: 5,
-        }),
+      const bucket = getRoleBucket(req);
+
+      // Resolve the staffId scope for roles that aren't company-wide.
+      let staffIds: number[] | null = null; // null = unscoped (superadmin / hr)
+      let departmentIds: number[] | null = null;
+      if (bucket === 'hod') {
+        const departmentId = req.user?.departmentId;
+        const deptStaff = await Staff.findAll({ where: departmentId ? { departmentId } : {}, attributes: ['id'] });
+        staffIds = deptStaff.map((s: any) => Number(s.id));
+        departmentIds = departmentId ? [Number(departmentId)] : [];
+      } else if (bucket === 'admin') {
+        const ownStaff = await getOwnStaff(req);
+        if (ownStaff?.businessUnit) {
+          const buStaff = await Staff.findAll({ where: { businessUnit: ownStaff.businessUnit }, attributes: ['id', 'departmentId'] });
+          staffIds = buStaff.map((s: any) => Number(s.id));
+          departmentIds = [...new Set(buStaff.map((s: any) => s.departmentId).filter(Boolean).map(Number))];
+        }
+      }
+      const staffScope = staffIds ? { staffId: { [Op.in]: staffIds.length ? staffIds : [-1] } } : {};
+      const assigneeScope = staffIds ? { assigneeId: { [Op.in]: staffIds.length ? staffIds : [-1] } } : {};
+      const deptScope = departmentIds ? { departmentId: { [Op.in]: departmentIds.length ? departmentIds : [-1] } } : {};
+
+      // Which categories are relevant to each role, matching the approve-permissions actually granted in RolesConfig.ts.
+      const show = {
+        weeklyReports: true, // every role here can review reports for their scope
+        leaveRequests: true,
+        promotions: bucket === 'superadmin' || bucket === 'admin' || bucket === 'hr',
+        jobPostings: bucket === 'superadmin' || bucket === 'admin' || bucket === 'hr',
+        projects: bucket === 'superadmin' || bucket === 'admin',
+        tasks: bucket === 'superadmin' || bucket === 'admin' || bucket === 'hod',
+        payroll: bucket === 'superadmin' || bucket === 'admin',
+        overtime: bucket === 'superadmin' || bucket === 'admin',
+      };
+
+      const result: Record<string, { count: number; items: unknown[] }> = {};
+
+      if (show.weeklyReports) {
+        const where = { approvalStatus: 'Pending', ...staffScope };
+        const [count, items] = await Promise.all([
+          WeeklyReport.count({ where }),
+          WeeklyReport.findAll({ where, include: [{ model: Staff, as: 'staff', attributes: ['firstName', 'lastName'] }], order: [['createdAt', 'DESC']], limit: 5 }),
+        ]);
+        result.weeklyReports = { count, items };
+      }
+
+      if (show.leaveRequests) {
+        const where = { status: 'Pending', ...staffScope };
+        const [count, items] = await Promise.all([
+          LeaveRequest.count({ where }),
+          LeaveRequest.findAll({ where, include: [{ model: Staff, as: 'staff', attributes: ['firstName', 'lastName'] }], order: [['createdAt', 'DESC']], limit: 5 }),
+        ]);
+        result.leaveRequests = { count, items };
+      }
+
+      if (show.promotions) {
+        const where = { status: 'Proposed', ...staffScope };
+        const [count, items] = await Promise.all([
+          EmployeePromotion.count({ where }),
+          EmployeePromotion.findAll({ where, include: [{ model: Staff, as: 'staff', attributes: ['firstName', 'lastName'] }], order: [['createdAt', 'DESC']], limit: 5 }),
+        ]);
+        result.promotions = { count, items };
+      }
+
+      if (show.jobPostings) {
+        const where = { status: 'Draft' as const };
+        const [count, items] = await Promise.all([
+          JobPosting.count({ where }),
+          JobPosting.findAll({ where, order: [['createdAt', 'DESC']], limit: 5 }),
+        ]);
+        result.jobPostings = { count, items };
+      }
+
+      if (show.projects) {
+        const where = { status: 'Planning' as const, ...deptScope };
+        const [count, items] = await Promise.all([
+          Project.count({ where }),
+          Project.findAll({ where, order: [['createdAt', 'DESC']], limit: 5 }),
+        ]);
+        result.projects = { count, items };
+      }
+
+      if (show.tasks) {
+        const where = { status: 'InReview' as const, ...assigneeScope };
+        const [count, items] = await Promise.all([
+          Task.count({ where }),
+          Task.findAll({ where, order: [['createdAt', 'DESC']], limit: 5 }),
+        ]);
+        result.tasks = { count, items };
+      }
+
+      if (show.payroll) {
+        const where = { status: 'Processed' as const };
+        const [count, items] = await Promise.all([
+          PayrollPeriod.count({ where }),
+          PayrollPeriod.findAll({ where, order: [['createdAt', 'DESC']], limit: 5 }),
+        ]);
+        result.payroll = { count, items };
+      }
+
+      if (show.overtime) {
+        const where = { status: 'Pending' as const, ...staffScope };
+        const [count, items] = await Promise.all([
+          Overtime.count({ where }),
+          Overtime.findAll({ where, include: [{ model: Staff, as: 'staff', attributes: ['firstName', 'lastName'] }], order: [['createdAt', 'DESC']], limit: 5 }),
+        ]);
+        result.overtime = { count, items };
+      }
+
+      ResponseFormatter.success(res, result, 'Approvals queue retrieved');
+    }
+  );
+
+  static getHRStats = ErrorMiddleware.asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      if (!isAuthenticated(req)) {
+        return ResponseFormatter.forbidden(res, 'Insufficient permissions');
+      }
+
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const [totalEmployees, newHires, openJobs, applicants, pendingLeave] = await Promise.all([
+        Staff.count({ where: { status: 'Active' } }),
+        Staff.count({ where: { status: 'Active', joiningDate: { [Op.gte]: thirtyDaysAgo } } }),
+        JobPosting.count({ where: { status: 'Open' } }),
+        JobApplication.count(),
         LeaveRequest.count({ where: { status: 'Pending' } }),
-        LeaveRequest.findAll({
-          where: { status: 'Pending' },
-          include: [{ model: Staff, as: 'staff', attributes: ['firstName', 'lastName'] }],
-          order: [['createdAt', 'DESC']],
-          limit: 5,
-        }),
-        EmployeePromotion.count({ where: { status: 'Proposed' } }),
-        EmployeePromotion.findAll({
-          where: { status: 'Proposed' },
-          include: [{ model: Staff, as: 'staff', attributes: ['firstName', 'lastName'] }],
-          order: [['createdAt', 'DESC']],
-          limit: 5,
-        }),
-        JobPosting.count({ where: { status: 'Draft' } }),
-        JobPosting.findAll({
-          where: { status: 'Draft' },
-          order: [['createdAt', 'DESC']],
-          limit: 5,
-        }),
+      ]);
+
+      ResponseFormatter.success(res, { totalEmployees, newHires, openJobs, applicants, pendingLeave }, 'HR statistics retrieved');
+    }
+  );
+
+  static getHRRecruitment = ErrorMiddleware.asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      if (!isAuthenticated(req)) {
+        return ResponseFormatter.forbidden(res, 'Insufficient permissions');
+      }
+
+      const [openJobs, totalApplicants, shortlisted, hired] = await Promise.all([
+        JobPosting.count({ where: { status: 'Open' } }),
+        JobApplication.count(),
+        JobApplication.count({ where: { status: 'Shortlisted' } }),
+        JobApplication.count({ where: { status: 'Offered' } }),
+      ]);
+
+      ResponseFormatter.success(res, { openJobs, totalApplicants, shortlisted, hired }, 'Recruitment analytics retrieved');
+    }
+  );
+
+  static getHODStats = ErrorMiddleware.asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      if (!isAuthenticated(req)) {
+        return ResponseFormatter.forbidden(res, 'Insufficient permissions');
+      }
+
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+      // HOD is department-only — scoped to req.user.departmentId (already on the JWT, no lookup needed).
+      const departmentId = req.user?.departmentId;
+      const staffWhere: Record<string, unknown> = { status: 'Active' };
+      if (departmentId) staffWhere.departmentId = departmentId;
+
+      const teamStaff = await Staff.findAll({ where: staffWhere, attributes: ['id'] });
+      const staffIds = teamStaff.map((s: any) => s.id);
+      const idFilter = { [Op.in]: staffIds.length ? staffIds : [-1] };
+
+      const [totalStaff, pendingApprovals, todayPresent, todayTotal, activeProjects, reportsWaitingReview] = await Promise.all([
+        Promise.resolve(staffIds.length),
+        LeaveRequest.count({ where: { status: 'Pending', staffId: idFilter } }),
+        Attendance.count({ where: { staffId: idFilter, attendanceDate: { [Op.between]: [startOfDay, endOfDay] }, status: { [Op.in]: ['Present', 'Late'] } } }),
+        Attendance.count({ where: { staffId: idFilter, attendanceDate: { [Op.between]: [startOfDay, endOfDay] } } }),
+        departmentId ? Project.count({ where: { departmentId, status: 'Active' } }) : Project.count({ where: { status: 'Active' } }),
+        WeeklyReport.count({ where: { approvalStatus: 'Pending', staffId: idFilter } }),
+      ]);
+
+      const averageAttendance = todayTotal > 0 ? Math.round((todayPresent / todayTotal) * 1000) / 10 : 0;
+
+      ResponseFormatter.success(res, { totalStaff, pendingApprovals, averageAttendance, activeProjects, reportsWaitingReview }, 'HOD dashboard statistics retrieved');
+    }
+  );
+
+  static getStaffStats = ErrorMiddleware.asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      if (!isAuthenticated(req)) {
+        return ResponseFormatter.forbidden(res, 'Insufficient permissions');
+      }
+
+      // Staff sees only their own data.
+      const ownStaff = await getOwnStaff(req);
+      if (!ownStaff) {
+        return ResponseFormatter.success(res, { myTasks: 0, pendingTasks: 0, leaveAvailable: 0, notifications: 0 }, 'Staff dashboard statistics retrieved');
+      }
+
+      const [myTasks, pendingTasks, leaveBalance] = await Promise.all([
+        Task.count({ where: { assigneeId: ownStaff.id } }),
+        Task.count({ where: { assigneeId: ownStaff.id, status: { [Op.notIn]: ['Done', 'Cancelled'] } } }),
+        LeaveRequest.count({ where: { staffId: ownStaff.id, status: 'Approved' } }),
       ]);
 
       ResponseFormatter.success(res, {
-        weeklyReports: { count: weeklyReportCount, items: weeklyReports },
-        leaveRequests: { count: leaveCount, items: leaveRequests },
-        promotions: { count: promotionCount, items: promotions },
-        jobPostings: { count: jobPostingCount, items: jobPostings },
-      }, 'Approvals queue retrieved');
+        myTasks,
+        pendingTasks,
+        leaveAvailable: leaveBalance,
+        notifications: 0,
+      }, 'Staff dashboard statistics retrieved');
     }
   );
 
@@ -350,17 +545,32 @@ export class DashboardController {
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-      const [totalStaff, pendingApprovals, todayPresent, todayTotal, activeProjects] = await Promise.all([
-        Staff.count({ where: { status: 'Active' } }),
-        LeaveRequest.count({ where: { status: 'Pending' } }),
-        Attendance.count({ where: { attendanceDate: { [Op.between]: [startOfDay, endOfDay] }, status: { [Op.in]: ['Present', 'Late'] } } }),
-        Attendance.count({ where: { attendanceDate: { [Op.between]: [startOfDay, endOfDay] } } }),
-        Project.count({ where: { status: 'Active' } }),
+      // Admin (branch/business-unit manager) sees only their own business unit; superadmin/headofadmin see everything.
+      const bucket = getRoleBucket(req);
+      const ownStaff = bucket === 'admin' ? await getOwnStaff(req) : null;
+      const businessUnit = ownStaff?.businessUnit;
+      const staffWhere: Record<string, unknown> = { status: 'Active' };
+      if (businessUnit) staffWhere.businessUnit = businessUnit;
+
+      const scopedStaffIds = businessUnit
+        ? (await Staff.findAll({ where: staffWhere, attributes: ['id'] })).map((s: any) => s.id)
+        : null;
+      const attendanceScope = scopedStaffIds ? { staffId: { [Op.in]: scopedStaffIds.length ? scopedStaffIds : [-1] } } : {};
+      const projectWhere: Record<string, unknown> = { status: 'Active' };
+
+      const [totalStaff, pendingApprovals, todayPresent, todayTotal, activeProjects, pendingOvertime, pendingWeeklyReports] = await Promise.all([
+        Staff.count({ where: staffWhere }),
+        LeaveRequest.count({ where: scopedStaffIds ? { status: 'Pending', ...attendanceScope } : { status: 'Pending' } }),
+        Attendance.count({ where: { ...attendanceScope, attendanceDate: { [Op.between]: [startOfDay, endOfDay] }, status: { [Op.in]: ['Present', 'Late'] } } }),
+        Attendance.count({ where: { ...attendanceScope, attendanceDate: { [Op.between]: [startOfDay, endOfDay] } } }),
+        Project.count({ where: projectWhere }),
+        Overtime.count({ where: scopedStaffIds ? { status: 'Pending', ...attendanceScope } : { status: 'Pending' } }),
+        WeeklyReport.count({ where: scopedStaffIds ? { approvalStatus: 'Pending', ...attendanceScope } : { approvalStatus: 'Pending' } }),
       ]);
 
       const averageAttendance = todayTotal > 0 ? Math.round((todayPresent / todayTotal) * 1000) / 10 : 0;
 
-      ResponseFormatter.success(res, { totalStaff, pendingApprovals, averageAttendance, activeProjects }, 'Dashboard statistics retrieved');
+      ResponseFormatter.success(res, { totalStaff, pendingApprovals, averageAttendance, activeProjects, pendingOvertime, pendingWeeklyReports }, 'Dashboard statistics retrieved');
     }
   );
 
@@ -453,6 +663,11 @@ export class DashboardController {
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
+      const bucket = getRoleBucket(req);
+      const ownStaff = bucket === 'admin' ? await getOwnStaff(req) : null;
+      const staffWhere: Record<string, unknown> = { status: 'Active' };
+      if (ownStaff?.businessUnit) staffWhere.businessUnit = ownStaff.businessUnit;
+
       const departments = await Department.findAll({
         attributes: ['id', 'name'],
         include: [
@@ -461,7 +676,7 @@ export class DashboardController {
             as: 'staff',
             attributes: ['id'],
             required: false,
-            where: { status: 'Active' },
+            where: staffWhere,
           },
         ],
       });
@@ -493,10 +708,15 @@ export class DashboardController {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 
+      const bucket = getRoleBucket(req);
+      const ownStaff = bucket === 'admin' ? await getOwnStaff(req) : null;
+      const staffWhere: Record<string, unknown> = { status: 'Active' };
+      if (ownStaff?.businessUnit) staffWhere.businessUnit = ownStaff.businessUnit;
+
       const departments = await Department.findAll({
         attributes: ['id', 'name'],
         include: [
-          { model: Staff, as: 'staff', attributes: ['id'], required: false, where: { status: 'Active' } },
+          { model: Staff, as: 'staff', attributes: ['id'], required: false, where: staffWhere },
         ],
       });
 
@@ -518,9 +738,18 @@ export class DashboardController {
         return ResponseFormatter.forbidden(res, 'Insufficient permissions');
       }
 
+      const bucket = getRoleBucket(req);
+      const ownStaff = bucket === 'admin' ? await getOwnStaff(req) : null;
+      const projectWhere: Record<string, unknown> = { status: { [Op.in]: ['Active', 'OnHold'] } };
+      if (ownStaff?.businessUnit) {
+        const deptStaff = await Staff.findAll({ where: { businessUnit: ownStaff.businessUnit }, attributes: ['departmentId'] });
+        const deptIds = [...new Set(deptStaff.map((s: any) => s.departmentId).filter(Boolean))];
+        projectWhere.departmentId = { [Op.in]: deptIds.length ? deptIds : [-1] };
+      }
+
       const projects = await Project.findAll({
         attributes: ['id', 'name', 'status'],
-        where: { status: { [Op.in]: ['Active', 'OnHold'] } },
+        where: projectWhere,
         limit: 10,
         order: [['createdAt', 'DESC']],
       });
