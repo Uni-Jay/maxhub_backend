@@ -28,7 +28,7 @@ export interface OnboardingTaskUpdateRequest {
 export declare class HRService extends BaseService {
     issueWarning(req: Request, warningData: WarningRequest): Promise<{
         message: string;
-        escalationLevel: 1 | 2 | 3;
+        escalationLevel: 1 | 3 | 2;
         status: string;
     }>;
     acknowledgeWarning(req: Request, warningId: bigint, staffId: bigint): Promise<{

@@ -52,7 +52,7 @@ class AIAssistantService {
       executeTool: (name: string, args: Record<string, unknown>) => Promise<string>;
     },
   ): Promise<ChatResponse> {
-    const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+    const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
     const systemPrompt = buildChatSystem(roleName, userName, businessUnit);
 
     const chatMessages = [
@@ -98,7 +98,7 @@ class AIAssistantService {
   // ── Report Generation ─────────────────────────────────────
 
   async generateReport(request: ReportRequest, userId: number | bigint): Promise<ReportResponse> {
-    const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+    const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
     const prompt = buildReportPrompt(request.type, request.data, request.period);
 
     const report = await getActiveProvider().generate(prompt, model, 0.4);
@@ -122,7 +122,7 @@ class AIAssistantService {
   // ── Meeting Summary ───────────────────────────────────────
 
   async summarizeMeeting(request: MeetingSummaryRequest, userId: number | bigint): Promise<MeetingSummaryResponse> {
-    const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+    const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
     const prompt = buildMeetingSummaryPrompt(request.title, request.transcript, request.participants);
 
     const raw = await getActiveProvider().generate(prompt, model, 0.3);
@@ -156,7 +156,7 @@ class AIAssistantService {
   // ── Email Drafting ────────────────────────────────────────
 
   async draftEmail(request: EmailDraftRequest, userId: number | bigint): Promise<EmailDraftResponse> {
-    const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+    const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
     const prompt = buildEmailPrompt(request.type, request.recipient, request.context);
 
     const raw = await getActiveProvider().generate(prompt, model, 0.6);
@@ -187,7 +187,7 @@ class AIAssistantService {
   // ── Task Suggestions ──────────────────────────────────────
 
   async suggestTasks(request: TaskSuggestionRequest, userId: number | bigint): Promise<TaskSuggestionResponse> {
-    const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+    const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
     const prompt = buildTaskSuggestionsPrompt(request.overdueTasks, request.pendingTasks, request.teamWorkload);
 
     const raw = await getActiveProvider().generate(prompt, model, 0.4);
@@ -203,7 +203,7 @@ class AIAssistantService {
   // ── Smart Reminder ────────────────────────────────────────
 
   async generateReminder(request: ReminderRequest, userId: number | bigint): Promise<ReminderResponse> {
-    const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+    const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
     const prompt = buildReminderPrompt(request.type, request.context);
 
     const raw = await getActiveProvider().generate(prompt, model, 0.5);

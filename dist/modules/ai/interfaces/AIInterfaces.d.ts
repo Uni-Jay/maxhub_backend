@@ -1,4 +1,4 @@
-export type GeminiModel = 'gemini-2.0-flash' | 'gemini-1.5-flash' | 'gemini-1.5-pro';
+export type GeminiModel = 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-2.5-flash-lite' | 'gemini-3.5-flash';
 export type AIRole = 'system' | 'user' | 'assistant';
 export type AIFeature = 'chat' | 'report' | 'summarize' | 'email' | 'tasks' | 'reminder';
 export type ReportType = 'attendance' | 'payroll' | 'leave' | 'performance';

@@ -57,6 +57,24 @@ const DEFINE = {
     paranoid: true,
     underscored: true,
 };
+const RETRY = {
+    max: 3,
+    match: [
+        /ETIMEDOUT/,
+        /EHOSTUNREACH/,
+        /ECONNRESET/,
+        /ECONNREFUSED/,
+        /ENOTFOUND/,
+        /ESOCKETTIMEDOUT/,
+        /EPIPE/,
+        /SequelizeConnectionError/,
+        /SequelizeConnectionRefusedError/,
+        /SequelizeHostNotFoundError/,
+        /SequelizeHostNotReachableError/,
+        /SequelizeInvalidConnectionError/,
+        /SequelizeConnectionTimedOutError/,
+    ],
+};
 class DatabaseConfig {
     static getInstance() {
         if (!DatabaseConfig.instance) {
@@ -68,6 +86,7 @@ class DatabaseConfig {
                     dialectOptions: { ssl: SSL_OPTIONS },
                     pool: POOL,
                     define: DEFINE,
+                    retry: RETRY,
                 });
             }
             else {
@@ -82,6 +101,7 @@ class DatabaseConfig {
                     dialectOptions: { ssl: SSL_OPTIONS },
                     pool: POOL,
                     define: DEFINE,
+                    retry: RETRY,
                 });
             }
         }

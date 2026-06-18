@@ -31,6 +31,28 @@ const DEFINE = {
   underscored: true,
 };
 
+// Retries transient connection failures (DNS blips, resets) instead of
+// failing the request outright — e.g. the Supabase pooler hostname
+// occasionally has a brief DNS resolution hiccup (ENOTFOUND).
+const RETRY = {
+  max: 3,
+  match: [
+    /ETIMEDOUT/,
+    /EHOSTUNREACH/,
+    /ECONNRESET/,
+    /ECONNREFUSED/,
+    /ENOTFOUND/,
+    /ESOCKETTIMEDOUT/,
+    /EPIPE/,
+    /SequelizeConnectionError/,
+    /SequelizeConnectionRefusedError/,
+    /SequelizeHostNotFoundError/,
+    /SequelizeHostNotReachableError/,
+    /SequelizeInvalidConnectionError/,
+    /SequelizeConnectionTimedOutError/,
+  ],
+};
+
 /**
  * Sequelize singleton — one connection for the entire app.
  * Prefers DATABASE_URL when set (Supabase / Railway / Render),
@@ -50,6 +72,7 @@ class DatabaseConfig {
           dialectOptions: { ssl: SSL_OPTIONS },
           pool: POOL,
           define: DEFINE,
+          retry: RETRY,
         });
       } else {
         DatabaseConfig.instance = new Sequelize({
@@ -63,6 +86,7 @@ class DatabaseConfig {
           dialectOptions: { ssl: SSL_OPTIONS },
           pool: POOL,
           define: DEFINE,
+          retry: RETRY,
         });
       }
     }

@@ -2,8 +2,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { AIMessage } from '../interfaces/AIInterfaces';
 import type { AIProvider, ChatToolDeclaration } from './AIProvider.interface';
 
-const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
-const SUPPORTED_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+// gemini-2.0-flash and gemini-1.5-* were shut down by Google — gemini-2.5-flash is the current stable default.
+const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const SUPPORTED_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite', 'gemini-3.5-flash'];
 
 interface GeminiHistory {
   systemInstruction?: string;

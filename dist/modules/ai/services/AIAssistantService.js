@@ -19,7 +19,7 @@ function safeParseJSON(text, fallback) {
 }
 class AIAssistantService {
     async chat(request, userId, roleName, userName, businessUnit, toolSupport) {
-        const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+        const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
         const systemPrompt = (0, SystemPrompts_1.buildChatSystem)(roleName, userName, businessUnit);
         const chatMessages = [
             { role: 'system', content: systemPrompt },
@@ -53,7 +53,7 @@ class AIAssistantService {
         return { reply, model, conversationId: conversation.uuid };
     }
     async generateReport(request, userId) {
-        const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+        const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
         const prompt = (0, SystemPrompts_1.buildReportPrompt)(request.type, request.data, request.period);
         const report = await (0, ProviderFactory_1.getActiveProvider)().generate(prompt, model, 0.4);
         const conv = await AIConversation_model_1.AIConversation.create({
@@ -70,7 +70,7 @@ class AIAssistantService {
         return { report, type: request.type, generatedAt: new Date().toISOString() };
     }
     async summarizeMeeting(request, userId) {
-        const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+        const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
         const prompt = (0, SystemPrompts_1.buildMeetingSummaryPrompt)(request.title, request.transcript, request.participants);
         const raw = await (0, ProviderFactory_1.getActiveProvider)().generate(prompt, model, 0.3);
         const parsed = safeParseJSON(raw, {});
@@ -96,7 +96,7 @@ class AIAssistantService {
         return result;
     }
     async draftEmail(request, userId) {
-        const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+        const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
         const prompt = (0, SystemPrompts_1.buildEmailPrompt)(request.type, request.recipient, request.context);
         const raw = await (0, ProviderFactory_1.getActiveProvider)().generate(prompt, model, 0.6);
         const parsed = safeParseJSON(raw, {});
@@ -119,7 +119,7 @@ class AIAssistantService {
         return result;
     }
     async suggestTasks(request, userId) {
-        const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+        const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
         const prompt = (0, SystemPrompts_1.buildTaskSuggestionsPrompt)(request.overdueTasks, request.pendingTasks, request.teamWorkload);
         const raw = await (0, ProviderFactory_1.getActiveProvider)().generate(prompt, model, 0.4);
         const parsed = safeParseJSON(raw, {});
@@ -130,7 +130,7 @@ class AIAssistantService {
         };
     }
     async generateReminder(request, userId) {
-        const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+        const model = request.model ?? process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
         const prompt = (0, SystemPrompts_1.buildReminderPrompt)(request.type, request.context);
         const raw = await (0, ProviderFactory_1.getActiveProvider)().generate(prompt, model, 0.5);
         const parsed = safeParseJSON(raw, {});

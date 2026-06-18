@@ -2,8 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GeminiProvider = void 0;
 const generative_ai_1 = require("@google/generative-ai");
-const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
-const SUPPORTED_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const SUPPORTED_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite', 'gemini-3.5-flash'];
 function toGeminiHistory(messages) {
     const systemParts = messages.filter((m) => m.role === 'system').map((m) => m.content);
     let conversational = messages.filter((m) => m.role !== 'system');
