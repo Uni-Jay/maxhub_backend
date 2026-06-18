@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AIController = void 0;
 const ResponseFormatter_1 = require("../../../utils/ResponseFormatter");
-const OllamaAIService_1 = __importDefault(require("../services/OllamaAIService"));
+const AIAssistantService_1 = __importDefault(require("../services/AIAssistantService"));
 const ProviderFactory_1 = require("../providers/ProviderFactory");
 const ERPTools_1 = require("../tools/ERPTools");
 function getUser(req) {
@@ -23,8 +23,6 @@ class AIController {
             activeModel: provider.getDefaultModel(),
             availableModels: models,
             supportedModels: provider.getSupportedModels(),
-            ollamaAvailable: providerName === 'ollama' && available,
-            ollamaUrl: process.env.OLLAMA_URL || 'http://localhost:11434',
         }, available ? `${providerName} is available` : `${providerName} is not available`);
     }
     static async chat(req, res) {
@@ -35,7 +33,7 @@ class AIController {
         }
         const user = getUser(req);
         const roleName = user.roles?.[0] ?? 'staff';
-        const result = await OllamaAIService_1.default.chat({ messages, model: model, conversationId }, user.id, roleName, user.name, user.businessUnit, { tools: ERPTools_1.ERP_TOOL_DECLARATIONS, executeTool: (0, ERPTools_1.createToolExecutor)(req) });
+        const result = await AIAssistantService_1.default.chat({ messages, model: model, conversationId }, user.id, roleName, user.name, user.businessUnit, { tools: ERPTools_1.ERP_TOOL_DECLARATIONS, executeTool: (0, ERPTools_1.createToolExecutor)(req) });
         ResponseFormatter_1.ResponseFormatter.success(res, result, 'AI response generated');
     }
     static async generateReport(req, res) {
@@ -45,7 +43,7 @@ class AIController {
             return;
         }
         const user = getUser(req);
-        const result = await OllamaAIService_1.default.generateReport({ type, data, period, staffId, departmentId, model }, user.id);
+        const result = await AIAssistantService_1.default.generateReport({ type, data, period, staffId, departmentId, model }, user.id);
         ResponseFormatter_1.ResponseFormatter.success(res, result, 'Report generated');
     }
     static async summarizeMeeting(req, res) {
@@ -55,7 +53,7 @@ class AIController {
             return;
         }
         const user = getUser(req);
-        const result = await OllamaAIService_1.default.summarizeMeeting({ title: title || 'Untitled Meeting', transcript, participants, model }, user.id);
+        const result = await AIAssistantService_1.default.summarizeMeeting({ title: title || 'Untitled Meeting', transcript, participants, model }, user.id);
         ResponseFormatter_1.ResponseFormatter.success(res, result, 'Meeting summarized');
     }
     static async draftEmail(req, res) {
@@ -65,7 +63,7 @@ class AIController {
             return;
         }
         const user = getUser(req);
-        const result = await OllamaAIService_1.default.draftEmail({ type, recipient, context: context || {}, model }, user.id);
+        const result = await AIAssistantService_1.default.draftEmail({ type, recipient, context: context || {}, model }, user.id);
         ResponseFormatter_1.ResponseFormatter.success(res, result, 'Email draft generated');
     }
     static async taskSuggestions(req, res) {
@@ -75,7 +73,7 @@ class AIController {
             return;
         }
         const user = getUser(req);
-        const result = await OllamaAIService_1.default.suggestTasks({ overdueTasks, pendingTasks, teamWorkload, model }, user.id);
+        const result = await AIAssistantService_1.default.suggestTasks({ overdueTasks, pendingTasks, teamWorkload, model }, user.id);
         ResponseFormatter_1.ResponseFormatter.success(res, result, 'Task suggestions generated');
     }
     static async generateReminder(req, res) {
@@ -85,18 +83,18 @@ class AIController {
             return;
         }
         const user = getUser(req);
-        const result = await OllamaAIService_1.default.generateReminder({ type, context: context || {}, model }, user.id);
+        const result = await AIAssistantService_1.default.generateReminder({ type, context: context || {}, model }, user.id);
         ResponseFormatter_1.ResponseFormatter.success(res, result, 'Reminder generated');
     }
     static async listConversations(req, res) {
         const user = getUser(req);
         const feature = req.query.feature;
-        const data = await OllamaAIService_1.default.listConversations(user.id, feature);
+        const data = await AIAssistantService_1.default.listConversations(user.id, feature);
         ResponseFormatter_1.ResponseFormatter.success(res, data);
     }
     static async getConversation(req, res) {
         const user = getUser(req);
-        const data = await OllamaAIService_1.default.getConversation(req.params.uuid, user.id);
+        const data = await AIAssistantService_1.default.getConversation(req.params.uuid, user.id);
         if (!data) {
             ResponseFormatter_1.ResponseFormatter.notFound(res, 'Conversation not found');
             return;
@@ -105,12 +103,12 @@ class AIController {
     }
     static async listMeetingSummaries(req, res) {
         const user = getUser(req);
-        const data = await OllamaAIService_1.default.getMeetingSummaries(user.id);
+        const data = await AIAssistantService_1.default.getMeetingSummaries(user.id);
         ResponseFormatter_1.ResponseFormatter.success(res, data);
     }
     static async listReminders(req, res) {
         const user = getUser(req);
-        const data = await OllamaAIService_1.default.getReminders(user.id);
+        const data = await AIAssistantService_1.default.getReminders(user.id);
         ResponseFormatter_1.ResponseFormatter.success(res, data);
     }
 }

@@ -1,4 +1,4 @@
-export type OllamaModel = 'llama3' | 'deepseek-r1' | 'mistral' | 'gemma';
+export type GeminiModel = 'gemini-2.0-flash' | 'gemini-1.5-flash' | 'gemini-1.5-pro';
 export type AIRole = 'system' | 'user' | 'assistant';
 export type AIFeature = 'chat' | 'report' | 'summarize' | 'email' | 'tasks' | 'reminder';
 export type ReportType = 'attendance' | 'payroll' | 'leave' | 'performance';
@@ -133,28 +133,4 @@ export interface ReminderResponse {
   message: string;
   urgency: 'critical' | 'high' | 'normal';
   suggestedSendTime?: string;
-}
-
-// ── Ollama raw API ──────────────────────────────────────────
-export interface OllamaMessage {
-  role: AIRole;
-  content: string;
-}
-
-export interface OllamaChatPayload {
-  model: string;
-  messages: OllamaMessage[];
-  stream: false;
-  options?: {
-    temperature?: number;
-    top_p?: number;
-    num_ctx?: number;
-  };
-}
-
-export interface OllamaChatApiResponse {
-  model: string;
-  message: OllamaMessage;
-  done: boolean;
-  eval_count?: number;
 }

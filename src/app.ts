@@ -370,7 +370,7 @@ class AppBootstrapper {
     SystemSetting.initModel(this.sequelize);
     AuditLog.initModel(this.sequelize);
 
-    // AI module models (Ollama-powered)
+    // AI module models (Gemini-powered)
     AIConversation.initModel(this.sequelize);
     AIMessage.initModel(this.sequelize);
     AIMeetingSummary.initModel(this.sequelize);

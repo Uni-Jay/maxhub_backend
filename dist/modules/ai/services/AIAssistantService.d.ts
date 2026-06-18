@@ -4,7 +4,7 @@ import { AIMessage } from '../models/AIMessage.model';
 import { AIMeetingSummary } from '../models/AIMeetingSummary.model';
 import { AIReminder } from '../models/AIReminder.model';
 import type { ChatRequest, ChatResponse, ReportRequest, ReportResponse, MeetingSummaryRequest, MeetingSummaryResponse, EmailDraftRequest, EmailDraftResponse, TaskSuggestionRequest, TaskSuggestionResponse, ReminderRequest, ReminderResponse } from '../interfaces/AIInterfaces';
-declare class OllamaAIService {
+declare class AIAssistantService {
     chat(request: ChatRequest, userId: number | bigint, roleName: string, userName?: string, businessUnit?: string, toolSupport?: {
         tools: ChatToolDeclaration[];
         executeTool: (name: string, args: Record<string, unknown>) => Promise<string>;
@@ -22,6 +22,6 @@ declare class OllamaAIService {
     getMeetingSummaries(userId: number | bigint): Promise<AIMeetingSummary[]>;
     getReminders(userId: number | bigint): Promise<AIReminder[]>;
 }
-declare const _default: OllamaAIService;
+declare const _default: AIAssistantService;
 export default _default;
-//# sourceMappingURL=OllamaAIService.d.ts.map
+//# sourceMappingURL=AIAssistantService.d.ts.map

@@ -8,8 +8,8 @@ export interface ChatToolDeclaration {
 }
 
 /**
- * Common interface every LLM provider (Ollama, Gemini, and future OpenAI/DeepSeek
- * providers) must implement, so the orchestration layer (OllamaAIService) never
+ * Common interface every LLM provider (Gemini today, future OpenAI/DeepSeek
+ * providers) must implement, so the orchestration layer (AIAssistantService) never
  * talks to a specific vendor SDK directly.
  */
 export interface AIProvider {
@@ -20,7 +20,7 @@ export interface AIProvider {
    * Conversational call with function-calling tools available. Implementations that
    * support it (Gemini) execute the full tool round-trip internally via `executeTool`
    * and return the final natural-language reply. Implementations without tool support
-   * (Ollama) should ignore `tools`/`executeTool` and fall back to plain `chat()`.
+   * should ignore `tools`/`executeTool` and fall back to plain `chat()`.
    */
   chatWithTools(
     messages: AIMessage[],
