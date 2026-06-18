@@ -8,7 +8,7 @@ const uuid_1 = require("uuid");
 const WeeklyReport_model_1 = require("../models/WeeklyReport.model");
 const Staff_model_1 = require("../models/Staff.model");
 const idOrUuid_1 = require("../utils/idOrUuid");
-const isSuperAdmin_1 = require("../utils/isSuperAdmin");
+const RoleBucket_1 = require("../utils/RoleBucket");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
@@ -35,7 +35,8 @@ router.get('/current', AuthMiddleware_1.default.requirePermission('hr.weeklyrepo
 }));
 router.get('/', AuthMiddleware_1.default.requirePermission('hr.weeklyreport.read.own'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const where = {};
-    if (!(0, isSuperAdmin_1.isSuperAdmin)(req)) {
+    const bucket = (0, RoleBucket_1.getRoleBucket)(req);
+    if (bucket !== 'superadmin' && bucket !== 'admin') {
         const staffId = await getStaffId(req);
         if (!staffId)
             return ResponseFormatter_1.ResponseFormatter.success(res, []);

@@ -74,6 +74,8 @@ exports.ROLE_PERMISSIONS = {
         PermissionCodes_1.PermissionCode.HR_WARNING_READ_ALL,
         PermissionCodes_1.PermissionCode.HR_RESIGNATION_READ_ALL,
         PermissionCodes_1.PermissionCode.HR_RESIGNATION_APPROVE_ALL,
+        PermissionCodes_1.PermissionCode.HR_WEEKLY_REPORT_CREATE_OWN,
+        PermissionCodes_1.PermissionCode.HR_WEEKLY_REPORT_READ_OWN,
         PermissionCodes_1.PermissionCode.ATT_ATTENDANCE_READ_ALL,
         PermissionCodes_1.PermissionCode.ATT_ATTENDANCE_UPDATE_ALL,
         PermissionCodes_1.PermissionCode.ATT_TIMESHEET_READ_ALL,

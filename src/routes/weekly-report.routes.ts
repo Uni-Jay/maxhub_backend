@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { WeeklyReport } from '@models/WeeklyReport.model';
 import { Staff } from '@models/Staff.model';
 import { idOrUuidWhere } from '@utils/idOrUuid';
-import { isSuperAdmin } from '@utils/isSuperAdmin';
+import { getRoleBucket } from '@utils/RoleBucket';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import AuthMiddleware from '@middleware/AuthMiddleware';
@@ -34,10 +34,13 @@ router.get('/current', AuthMiddleware.requirePermission('hr.weeklyreport.read.ow
   ResponseFormatter.success(res, report);
 }));
 
-// GET /api/hr/weekly-reports
+// GET /api/hr/weekly-reports — Super Admin and Admin see everyone's reports
+// (the only two roles weekly reports are routed to for oversight); everyone
+// else (HR/HOD/Staff, including Admin's own submission) only ever sees their own.
 router.get('/', AuthMiddleware.requirePermission('hr.weeklyreport.read.own'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const where: any = {};
-  if (!isSuperAdmin(req)) {
+  const bucket = getRoleBucket(req);
+  if (bucket !== 'superadmin' && bucket !== 'admin') {
     const staffId = await getStaffId(req);
     if (!staffId) return ResponseFormatter.success(res, []);
     where.staffId = staffId;

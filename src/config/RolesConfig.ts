@@ -85,6 +85,8 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.HR_WARNING_READ_ALL,
     PermissionCode.HR_RESIGNATION_READ_ALL,
     PermissionCode.HR_RESIGNATION_APPROVE_ALL,
+    PermissionCode.HR_WEEKLY_REPORT_CREATE_OWN,
+    PermissionCode.HR_WEEKLY_REPORT_READ_OWN,
     // Attendance
     PermissionCode.ATT_ATTENDANCE_READ_ALL,
     PermissionCode.ATT_ATTENDANCE_UPDATE_ALL,
