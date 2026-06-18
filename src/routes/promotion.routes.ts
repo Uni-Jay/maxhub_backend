@@ -9,16 +9,44 @@ import { PermissionCode } from '@config/PermissionCodes';
 
 const router = Router();
 
+function isBypassRole(req: Request): boolean {
+  const roles = ((req as any).user?.roles || []).map((r: string) => r.toLowerCase().replace(/[^a-z]/g, ''));
+  return roles.includes('superadmin') || roles.includes('admin') || roles.includes('headofadmin');
+}
+
+function hasPermission(req: Request, code: string): boolean {
+  if (isBypassRole(req)) return true;
+  const perms = new Set(((req as any).user?.permissions || []).map((p: string) => String(p).toLowerCase()));
+  return perms.has(code.toLowerCase());
+}
+
+function isDepartmentScopedOnly(req: Request, allCode: string, deptCode: string): boolean {
+  return !hasPermission(req, allCode) && hasPermission(req, deptCode);
+}
+
+async function getOwnStaff(req: Request) {
+  const userId = (req as any).user?.id;
+  if (!userId) return null;
+  return Staff.findOne({ where: { userId }, attributes: ['id', 'departmentId'] });
+}
+
 // GET /api/promotions
-router.get('/', AuthMiddleware.requirePermission(PermissionCode.HR_PROMOTION_READ_ALL), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.get('/', AuthMiddleware.requirePermission(PermissionCode.HR_PROMOTION_READ_ALL, PermissionCode.HR_PROMOTION_READ_OWN_DEPARTMENT), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const { status } = req.query as Record<string, string>;
   const where: Record<string, unknown> = {};
   if (status) where.status = status;
 
+  const staffInclude: Record<string, unknown> = { model: Staff, as: 'staff', attributes: ['id', 'firstName', 'lastName', 'employeeId'] };
+  if (isDepartmentScopedOnly(req, PermissionCode.HR_PROMOTION_READ_ALL, PermissionCode.HR_PROMOTION_READ_OWN_DEPARTMENT)) {
+    const ownStaff = await getOwnStaff(req);
+    (staffInclude as any).where = { departmentId: ownStaff?.departmentId ?? -1 };
+    (staffInclude as any).required = true;
+  }
+
   const promotions = await EmployeePromotion.findAll({
     where,
     include: [
-      { model: Staff, as: 'staff', attributes: ['id', 'firstName', 'lastName', 'employeeId'] },
+      staffInclude,
       { association: 'fromDesignation', attributes: ['id', 'name'] },
       { association: 'toDesignation', attributes: ['id', 'name'] },
     ],
@@ -29,7 +57,7 @@ router.get('/', AuthMiddleware.requirePermission(PermissionCode.HR_PROMOTION_REA
 }));
 
 // POST /api/promotions — propose a promotion (typically from an approved appraisal)
-router.post('/', AuthMiddleware.requirePermission(PermissionCode.HR_PROMOTION_CREATE_ALL), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.post('/', AuthMiddleware.requirePermission(PermissionCode.HR_PROMOTION_CREATE_ALL, PermissionCode.HR_PROMOTION_CREATE_OWN_DEPARTMENT), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const { staffId, toDesignationId, toDepartmentId, effectiveDate, reason, salaryIncreasePercentage, newSalary } = req.body;
   if (!staffId || !toDesignationId || !effectiveDate) {
     return ResponseFormatter.error(res, 'staffId, toDesignationId and effectiveDate are required', 400);
@@ -38,12 +66,24 @@ router.post('/', AuthMiddleware.requirePermission(PermissionCode.HR_PROMOTION_CR
   const staff = await Staff.findByPk(staffId);
   if (!staff) return ResponseFormatter.notFound(res, 'Staff not found');
 
+  const deptScopedCreate = isDepartmentScopedOnly(req, PermissionCode.HR_PROMOTION_CREATE_ALL, PermissionCode.HR_PROMOTION_CREATE_OWN_DEPARTMENT);
+  if (deptScopedCreate) {
+    const ownStaff = await getOwnStaff(req);
+    if (String(ownStaff?.id) === String(staffId)) {
+      return ResponseFormatter.forbidden(res, 'You cannot recommend yourself for promotion', req.path);
+    }
+    if (!ownStaff?.departmentId || String((staff as any).departmentId) !== String(ownStaff.departmentId)) {
+      return ResponseFormatter.forbidden(res, 'You can only recommend staff in your own department', req.path);
+    }
+  }
+
   const promotion = await EmployeePromotion.create({
     staffId: BigInt(staffId),
     fromDesignationId: (staff as any).designationId,
     toDesignationId: BigInt(toDesignationId),
     fromDepartmentId: (staff as any).departmentId,
-    toDepartmentId: toDepartmentId ? BigInt(toDepartmentId) : (staff as any).departmentId,
+    // Department-scoped recommenders (HOD) can never move the staff member to a different department.
+    toDepartmentId: (!deptScopedCreate && toDepartmentId) ? BigInt(toDepartmentId) : (staff as any).departmentId,
     effectiveDate: new Date(effectiveDate),
     reason,
     promotedBy: BigInt((req as any).user.id),

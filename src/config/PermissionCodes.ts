@@ -43,6 +43,7 @@ export enum PermissionCode {
   ORG_LOCATION_DELETE_ALL = 'org.location.delete.all',
 
   ORG_STAFF_CREATE_ALL = 'org.staff.create.all',
+  ORG_STAFF_CREATE_OWN_DEPARTMENT = 'org.staff.create.own_department',
   ORG_STAFF_READ_ALL = 'org.staff.read.all',
   ORG_STAFF_READ_OWN = 'org.staff.read.own',
   ORG_STAFF_READ_OWN_DEPARTMENT = 'org.staff.read.own_department',
@@ -50,6 +51,7 @@ export enum PermissionCode {
   ORG_STAFF_UPDATE_OWN = 'org.staff.update.own',
   ORG_STAFF_UPDATE_OWN_DEPARTMENT = 'org.staff.update.own_department',
   ORG_STAFF_DELETE_ALL = 'org.staff.delete.all',
+  ORG_STAFF_DELETE_OWN_DEPARTMENT = 'org.staff.delete.own_department',
 
   ORG_BRANCH_CREATE_ALL = 'org.branch.create.all',
   ORG_BRANCH_READ_ALL = 'org.branch.read.all',
@@ -436,7 +438,9 @@ export enum PermissionCode {
   HR_RECORDS_UPDATE_OWN = 'hr.records.update.own',
 
   HR_PROMOTION_CREATE_ALL = 'hr.promotion.create.all',
+  HR_PROMOTION_CREATE_OWN_DEPARTMENT = 'hr.promotion.create.own_department',
   HR_PROMOTION_READ_ALL = 'hr.promotion.read.all',
+  HR_PROMOTION_READ_OWN_DEPARTMENT = 'hr.promotion.read.own_department',
   HR_PROMOTION_APPROVE_ALL = 'hr.promotion.approve.all',
   HR_PROMOTION_DELETE_ALL = 'hr.promotion.delete.all',
 

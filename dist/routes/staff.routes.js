@@ -22,6 +22,19 @@ const PasswordService_1 = __importDefault(require("../services/PasswordService")
 const CommunicationService_1 = require("../services/CommunicationService");
 const multer_1 = require("../config/multer");
 const router = (0, express_1.Router)();
+function isBypassRole(req) {
+    const roles = (req.user?.roles || []).map((r) => r.toLowerCase().replace(/[^a-z]/g, ''));
+    return roles.includes('superadmin') || roles.includes('admin') || roles.includes('headofadmin');
+}
+function hasPermission(req, code) {
+    if (isBypassRole(req))
+        return true;
+    const perms = new Set((req.user?.permissions || []).map((p) => String(p).toLowerCase()));
+    return perms.has(code.toLowerCase());
+}
+function isDepartmentScopedOnly(req, allCode, deptCode) {
+    return !hasPermission(req, allCode) && hasPermission(req, deptCode);
+}
 async function searchStaff(filters) {
     const where = {};
     if (filters.status)
@@ -59,10 +72,14 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
     const page = req.pagination?.page || 1;
     const limit = req.pagination?.limit || 20;
     const offset = (page - 1) * limit;
+    const departmentScoped = isDepartmentScopedOnly(req, 'org.staff.read.all', 'org.staff.read.own_department');
+    const departmentId = departmentScoped
+        ? req.user?.departmentId ?? undefined
+        : req.query.departmentId;
     const { count, rows } = await searchStaff({
         search: req.query.search,
         status: req.query.status,
-        departmentId: req.query.departmentId,
+        departmentId,
         branchId: req.query.branchId,
         unitId: req.query.unitId,
         limit, offset,
@@ -89,10 +106,18 @@ router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, re
     });
     if (!staff)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Staff member not found');
+    if (isDepartmentScopedOnly(req, 'org.staff.read.all', 'org.staff.read.own_department')) {
+        if (String(staff.departmentId) !== String(req.user?.departmentId)) {
+            return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Staff member not found');
+        }
+    }
     ResponseFormatter_1.ResponseFormatter.success(res, staff.toJSON());
 }));
-router.post('/', AuthMiddleware_1.default.requirePermission('org.staff.create.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const { firstName, lastName, email, phone, employeeId, departmentId, designationId, locationId, joiningDate, dateOfBirth, gender, alternatePhone, whatsappNumber, socialMediaHandle, homeAddress, position, customPosition, businessUnit, additionalUnits, branchId, unitId, jobTitle, hireDate, employmentStatus, educationLevel, degree, institution, major, graduationYear, nyscCompleted, emergencyContactName, emergencyContactPhone, emergencyRelationship, emergencyHomeAddress, emergencyOfficeAddress, validIdType, validIdNumber, idDocument, utilityBillDocument, certificateDocument, signatureImage, hasCertification, certifications, previousWorkHistory, skills, guarantor1Name, guarantor1Relationship, guarantor1Phone, guarantor1Address, guarantor1Email, guarantor1Occupation, guarantor1DurationKnown, guarantor2Name, guarantor2Relationship, guarantor2Phone, guarantor2Address, guarantor2Email, guarantor2Occupation, guarantor2DurationKnown, bankName, accountType, accountName, accountNumber, hasMedicalCondition, medicalConditions, medications, readJobDescription, acceptedCompanyPolicy, receivedCompanyAssets, assignedAssets, bloodGroup, maritalStatus, nationality, } = req.body;
+router.post('/', AuthMiddleware_1.default.requirePermission('org.staff.create.all', 'org.staff.create.own_department'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const { firstName, lastName, email, phone, employeeId, departmentId: bodyDepartmentId, designationId, locationId, joiningDate, dateOfBirth, gender, alternatePhone, whatsappNumber, socialMediaHandle, homeAddress, position, customPosition, businessUnit, additionalUnits, branchId, unitId, jobTitle, hireDate, employmentStatus, educationLevel, degree, institution, major, graduationYear, nyscCompleted, emergencyContactName, emergencyContactPhone, emergencyRelationship, emergencyHomeAddress, emergencyOfficeAddress, validIdType, validIdNumber, idDocument, utilityBillDocument, certificateDocument, signatureImage, hasCertification, certifications, previousWorkHistory, skills, guarantor1Name, guarantor1Relationship, guarantor1Phone, guarantor1Address, guarantor1Email, guarantor1Occupation, guarantor1DurationKnown, guarantor2Name, guarantor2Relationship, guarantor2Phone, guarantor2Address, guarantor2Email, guarantor2Occupation, guarantor2DurationKnown, bankName, accountType, accountName, accountNumber, hasMedicalCondition, medicalConditions, medications, readJobDescription, acceptedCompanyPolicy, receivedCompanyAssets, assignedAssets, bloodGroup, maritalStatus, nationality, } = req.body;
+    const departmentId = isDepartmentScopedOnly(req, 'org.staff.create.all', 'org.staff.create.own_department')
+        ? req.user?.departmentId
+        : bodyDepartmentId;
     const [existingStaff, existingUser] = await Promise.all([
         Staff_model_1.Staff.findOne({ where: { email } }),
         User_model_1.User.findOne({ where: { email } }),
@@ -204,12 +229,16 @@ router.post('/', AuthMiddleware_1.default.requirePermission('org.staff.create.al
     }).catch(err => console.error('[Staff] Welcome email failed:', err));
     ResponseFormatter_1.ResponseFormatter.success(res, { ...staff.toJSON(), temporaryPassword }, 'Staff member created successfully', 201);
 }));
-router.patch('/:id', AuthMiddleware_1.default.requirePermission('org.staff.update.all', 'org.staff.update.own'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.patch('/:id', AuthMiddleware_1.default.requirePermission('org.staff.update.all', 'org.staff.update.own', 'org.staff.update.own_department'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const staff = await Staff_model_1.Staff.findOne({
         where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!staff)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Staff member not found');
+    const departmentScoped = isDepartmentScopedOnly(req, 'org.staff.update.all', 'org.staff.update.own_department');
+    if (departmentScoped && String(staff.departmentId) !== String(req.user?.departmentId)) {
+        return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Staff member not found');
+    }
     const updatableFields = [
         'firstName', 'lastName', 'phone', 'alternatePhone', 'whatsappNumber', 'socialMediaHandle',
         'status', 'gender', 'homeAddress', 'validIdType', 'validIdNumber',
@@ -234,7 +263,7 @@ router.patch('/:id', AuthMiddleware_1.default.requirePermission('org.staff.updat
         if (req.body[k] !== undefined)
             updates[k] = req.body[k];
     });
-    if (req.body.departmentId !== undefined)
+    if (req.body.departmentId !== undefined && !departmentScoped)
         updates.departmentId = BigInt(req.body.departmentId);
     if (req.body.designationId !== undefined)
         updates.designationId = BigInt(req.body.designationId);
@@ -249,12 +278,16 @@ router.patch('/:id', AuthMiddleware_1.default.requirePermission('org.staff.updat
     await staff.update(updates);
     ResponseFormatter_1.ResponseFormatter.success(res, staff.toJSON(), 'Staff member updated successfully');
 }));
-router.delete('/:id', AuthMiddleware_1.default.requirePermission('org.staff.delete.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.delete('/:id', AuthMiddleware_1.default.requirePermission('org.staff.delete.all', 'org.staff.delete.own_department'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const staff = await Staff_model_1.Staff.findOne({
         where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
     });
     if (!staff)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Staff member not found');
+    if (isDepartmentScopedOnly(req, 'org.staff.delete.all', 'org.staff.delete.own_department')
+        && String(staff.departmentId) !== String(req.user?.departmentId)) {
+        return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Staff member not found');
+    }
     await staff.destroy();
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Staff member deleted successfully');
 }));

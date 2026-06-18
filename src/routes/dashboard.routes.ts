@@ -33,9 +33,9 @@ router.get('/hr/stats', AuthMiddleware.verifyToken, DashboardController.getHRSta
 router.get('/hr/recruitment', AuthMiddleware.verifyToken, DashboardController.getHRRecruitment);
 router.get('/hr/approvals-queue', AuthMiddleware.verifyToken, DashboardController.getApprovalsQueue);
 
-// HOD Dashboard
+// HOD Dashboard (no approvals-queue — HOD approves leave/timesheets/appraisals/expenses
+// from their own dedicated pages, not a dashboard widget)
 router.get('/hod/stats', AuthMiddleware.verifyToken, DashboardController.getHODStats);
-router.get('/hod/approvals-queue', AuthMiddleware.verifyToken, DashboardController.getApprovalsQueue);
 
 // Staff Dashboard
 router.get('/staff/stats', AuthMiddleware.verifyToken, DashboardController.getStaffStats);

@@ -4,6 +4,7 @@ import { idOrUuidWhere } from '@utils/idOrUuid';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import AuthMiddleware from '@middleware/AuthMiddleware';
+import { getRoleBucket } from '@utils/RoleBucket';
 import { Staff } from '@models/Staff.model';
 import { Department } from '@models/Department.model';
 import { Designation } from '@models/Designation.model';
@@ -17,6 +18,22 @@ import { sendWelcomeEmail } from '@services/CommunicationService';
 import { upload, getFileUrl } from '@config/multer';
 
 const router = Router();
+
+function isBypassRole(req: Request): boolean {
+  const roles = ((req as any).user?.roles || []).map((r: string) => r.toLowerCase().replace(/[^a-z]/g, ''));
+  return roles.includes('superadmin') || roles.includes('admin') || roles.includes('headofadmin');
+}
+
+function hasPermission(req: Request, code: string): boolean {
+  if (isBypassRole(req)) return true;
+  const perms = new Set(((req as any).user?.permissions || []).map((p: string) => String(p).toLowerCase()));
+  return perms.has(code.toLowerCase());
+}
+
+/** True when the caller's only path to this action is the own_department-scoped permission (e.g. HOD). */
+function isDepartmentScopedOnly(req: Request, allCode: string, deptCode: string): boolean {
+  return !hasPermission(req, allCode) && hasPermission(req, deptCode);
+}
 
 /**
  * Core staff search/filter query — shared by the /api/staff route and the AI
@@ -65,10 +82,15 @@ router.get(
     const limit = req.pagination?.limit || 20;
     const offset = (page - 1) * limit;
 
+    const departmentScoped = isDepartmentScopedOnly(req, 'org.staff.read.all', 'org.staff.read.own_department');
+    const departmentId = departmentScoped
+      ? (req as any).user?.departmentId ?? undefined
+      : (req.query.departmentId as string | undefined);
+
     const { count, rows } = await searchStaff({
       search: req.query.search as string | undefined,
       status: req.query.status as string | undefined,
-      departmentId: req.query.departmentId as string | undefined,
+      departmentId,
       branchId: req.query.branchId as string | undefined,
       unitId: req.query.unitId as string | undefined,
       limit, offset,
@@ -101,6 +123,13 @@ router.get(
     });
 
     if (!staff) return ResponseFormatter.notFound(res, 'Staff member not found');
+
+    if (isDepartmentScopedOnly(req, 'org.staff.read.all', 'org.staff.read.own_department')) {
+      if (String((staff as any).departmentId) !== String((req as any).user?.departmentId)) {
+        return ResponseFormatter.notFound(res, 'Staff member not found');
+      }
+    }
+
     ResponseFormatter.success(res, staff.toJSON());
   })
 );
@@ -108,11 +137,11 @@ router.get(
 // ─── POST /api/staff ─────────────────────────────────────────────────────────
 router.post(
   '/',
-  AuthMiddleware.requirePermission('org.staff.create.all'),
+  AuthMiddleware.requirePermission('org.staff.create.all', 'org.staff.create.own_department'),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const {
       firstName, lastName, email, phone, employeeId,
-      departmentId, designationId, locationId,
+      departmentId: bodyDepartmentId, designationId, locationId,
       joiningDate, dateOfBirth, gender, alternatePhone,
       whatsappNumber, socialMediaHandle, homeAddress,
       position, customPosition, businessUnit, additionalUnits,
@@ -145,6 +174,11 @@ router.post(
       // Other
       bloodGroup, maritalStatus, nationality,
     } = req.body;
+
+    // HOD-style callers (create.own_department only) can only ever create staff in their own department.
+    const departmentId = isDepartmentScopedOnly(req, 'org.staff.create.all', 'org.staff.create.own_department')
+      ? (req as any).user?.departmentId
+      : bodyDepartmentId;
 
     const [existingStaff, existingUser] = await Promise.all([
       Staff.findOne({ where: { email } }),
@@ -268,12 +302,17 @@ router.post(
 // ─── PATCH /api/staff/:id ─────────────────────────────────────────────────────
 router.patch(
   '/:id',
-  AuthMiddleware.requirePermission('org.staff.update.all', 'org.staff.update.own'),
+  AuthMiddleware.requirePermission('org.staff.update.all', 'org.staff.update.own', 'org.staff.update.own_department'),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const staff = await Staff.findOne({
       where: { ...idOrUuidWhere(req.params.id) },
     });
     if (!staff) return ResponseFormatter.notFound(res, 'Staff member not found');
+
+    const departmentScoped = isDepartmentScopedOnly(req, 'org.staff.update.all', 'org.staff.update.own_department');
+    if (departmentScoped && String((staff as any).departmentId) !== String((req as any).user?.departmentId)) {
+      return ResponseFormatter.notFound(res, 'Staff member not found');
+    }
 
     const updatableFields = [
       'firstName', 'lastName', 'phone', 'alternatePhone', 'whatsappNumber', 'socialMediaHandle',
@@ -300,8 +339,8 @@ router.patch(
       if (req.body[k] !== undefined) updates[k] = req.body[k];
     });
 
-    // BigInt FK updates
-    if (req.body.departmentId !== undefined) updates.departmentId = BigInt(req.body.departmentId);
+    // BigInt FK updates — department-scoped callers (HOD) can never move a staff member to another department
+    if (req.body.departmentId !== undefined && !departmentScoped) updates.departmentId = BigInt(req.body.departmentId);
     if (req.body.designationId !== undefined) updates.designationId = BigInt(req.body.designationId);
     if (req.body.locationId !== undefined) updates.locationId = BigInt(req.body.locationId);
     if (req.body.branchId !== undefined) updates.branchId = req.body.branchId ? BigInt(req.body.branchId) : null;
@@ -318,12 +357,18 @@ router.patch(
 // ─── DELETE /api/staff/:id ───────────────────────────────────────────────────
 router.delete(
   '/:id',
-  AuthMiddleware.requirePermission('org.staff.delete.all'),
+  AuthMiddleware.requirePermission('org.staff.delete.all', 'org.staff.delete.own_department'),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const staff = await Staff.findOne({
       where: { ...idOrUuidWhere(req.params.id) },
     });
     if (!staff) return ResponseFormatter.notFound(res, 'Staff member not found');
+
+    if (isDepartmentScopedOnly(req, 'org.staff.delete.all', 'org.staff.delete.own_department')
+        && String((staff as any).departmentId) !== String((req as any).user?.departmentId)) {
+      return ResponseFormatter.notFound(res, 'Staff member not found');
+    }
+
     await staff.destroy();
     ResponseFormatter.success(res, null, 'Staff member deleted successfully');
   })

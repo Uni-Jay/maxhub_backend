@@ -31,7 +31,6 @@ router.get('/hr/stats', AuthMiddleware_1.default.verifyToken, DashboardControlle
 router.get('/hr/recruitment', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getHRRecruitment);
 router.get('/hr/approvals-queue', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getApprovalsQueue);
 router.get('/hod/stats', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getHODStats);
-router.get('/hod/approvals-queue', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getApprovalsQueue);
 router.get('/staff/stats', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getStaffStats);
 router.get('/accountant/stats', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getAccountantStats);
 router.get('/receptionist/stats', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getReceptionistStats);
