@@ -78,6 +78,7 @@ const LeaveRequest_model_1 = require("./models/LeaveRequest.model");
 const Project_model_1 = require("./models/Project.model");
 const Milestone_model_1 = require("./models/Milestone.model");
 const Task_model_1 = require("./models/Task.model");
+const ProjectComment_model_1 = require("./models/ProjectComment.model");
 const Contact_model_1 = require("./models/Contact.model");
 const Opportunity_model_1 = require("./models/Opportunity.model");
 const SalaryStructure_model_1 = require("./models/SalaryStructure.model");
@@ -246,6 +247,7 @@ class AppBootstrapper {
         Project_model_1.Project.initModel(this.sequelize);
         Milestone_model_1.Milestone.initModel(this.sequelize);
         Task_model_1.Task.initModel(this.sequelize);
+        ProjectComment_model_1.ProjectComment.initModel(this.sequelize);
         Contact_model_1.Contact.initModel(this.sequelize);
         Opportunity_model_1.Opportunity.initModel(this.sequelize);
         SalaryStructure_model_1.SalaryStructure.initModel(this.sequelize);

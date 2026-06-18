@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 interface TaskAttributes {
   id: bigint;
   uuid: string;
-  projectId: bigint;
+  projectId?: bigint;
   taskCode: string;
   title: string;
   description?: string;
@@ -28,7 +28,7 @@ interface TaskCreationAttributes extends Optional<TaskAttributes, 'id' | 'uuid'>
 export class Task extends Model<TaskAttributes, TaskCreationAttributes> implements TaskAttributes {
   public id!: bigint;
   public uuid!: string;
-  public projectId!: bigint;
+  public projectId?: bigint;
   public taskCode!: string;
   public title!: string;
   public description?: string;
@@ -67,8 +67,8 @@ export class Task extends Model<TaskAttributes, TaskCreationAttributes> implemen
         },
         projectId: {
           type: DataTypes.BIGINT.UNSIGNED,
-          allowNull: false,
-          comment: 'Reference to projects table',
+          allowNull: true,
+          comment: 'Reference to projects table (null = personal task)',
         },
         taskCode: {
           type: DataTypes.STRING(50),

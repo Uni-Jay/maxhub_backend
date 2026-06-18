@@ -2,7 +2,7 @@ import { Model, Optional, Sequelize } from 'sequelize';
 interface TaskAttributes {
     id: bigint;
     uuid: string;
-    projectId: bigint;
+    projectId?: bigint;
     taskCode: string;
     title: string;
     description?: string;
@@ -25,7 +25,7 @@ interface TaskCreationAttributes extends Optional<TaskAttributes, 'id' | 'uuid'>
 export declare class Task extends Model<TaskAttributes, TaskCreationAttributes> implements TaskAttributes {
     id: bigint;
     uuid: string;
-    projectId: bigint;
+    projectId?: bigint;
     taskCode: string;
     title: string;
     description?: string;

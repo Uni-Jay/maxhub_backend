@@ -116,6 +116,7 @@ export enum PermissionCode {
 
   // ==================== PROJECT MANAGEMENT ====================
   PROJECT_CREATE_ALL = 'project.create.all',
+  PROJECT_CREATE_OWN = 'project.create.own',
   PROJECT_READ_ALL = 'project.read.all',
   PROJECT_READ_OWN = 'project.read.own',
   PROJECT_UPDATE_ALL = 'project.update.all',
@@ -130,6 +131,7 @@ export enum PermissionCode {
   MILESTONE_DELETE_ALL = 'milestone.delete.all',
 
   TASK_CREATE_ALL = 'task.create.all',
+  TASK_CREATE_OWN = 'task.create.own',
   TASK_READ_ALL = 'task.read.all',
   TASK_READ_OWN = 'task.read.own',
   TASK_UPDATE_ALL = 'task.update.all',

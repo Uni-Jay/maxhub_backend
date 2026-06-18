@@ -11,18 +11,50 @@ import { upload, getFileUrl } from '@config/multer';
 
 const router = Router();
 
+// Ensures (and lazily creates) the single shared General Folder and the
+// caller's own private My Folder. These are the only two folders in the system.
+async function ensureFolders(req: Request) {
+  const user = (req as any).user;
+  const [general] = await FileRecord.findOrCreate({
+    where: { isFolder: true, folderType: 'General' },
+    defaults: {
+      uuid: uuidv4(), name: 'General Folder', isFolder: true, folderType: 'General', icon: '📁', size: 0,
+    } as any,
+  });
+  const [mine] = await FileRecord.findOrCreate({
+    where: { isFolder: true, folderType: 'Personal', uploadedById: user?.id },
+    defaults: {
+      uuid: uuidv4(), name: 'My Folder', isFolder: true, folderType: 'Personal', icon: '🔒', size: 0,
+      uploadedById: user?.id,
+      uploadedByName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
+    } as any,
+  });
+  return { general, mine };
+}
+
+// A folder is accessible unless it's someone else's Personal folder — strictly private, no role exception.
+async function isFolderAccessible(folderUuid: string | undefined, user: any): Promise<boolean> {
+  if (!folderUuid) return true;
+  const folder = await FileRecord.findOne({ where: { uuid: folderUuid, isFolder: true } });
+  if (!folder) return true;
+  if (folder.folderType === 'Personal' && String(folder.uploadedById) !== String(user?.id)) return false;
+  return true;
+}
+
 // GET /api/files/folders
 router.get('/folders', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const folders = await FileRecord.findAll({
-    where: { isFolder: true },
-    order: [['name', 'ASC']],
-  });
-  ResponseFormatter.success(res, folders);
+  const { general, mine } = await ensureFolders(req);
+  ResponseFormatter.success(res, [general, mine]);
 }));
 
-// POST /api/files/folders
+// POST /api/files/folders — Super Admin only; the system is fixed at exactly 2 folders otherwise
 router.post('/folders', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
+  const roles = (user?.roles || []).map((r: string) => r.toLowerCase().replace(/[^a-z]/g, ''));
+  if (!roles.includes('superadmin')) {
+    return ResponseFormatter.forbidden(res, 'Only Super Admin can create additional folders', req.path);
+  }
+
   const { name, parentId } = req.body;
   if (!name) return ResponseFormatter.error(res, 'Folder name is required', 400);
 
@@ -62,9 +94,19 @@ router.delete('/folders/:id', ErrorMiddleware.asyncHandler(async (req: Request, 
 
 // GET /api/files
 router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
   const { folderId, search } = req.query;
+  const { general, mine } = await ensureFolders(req);
+
   const where: any = { isFolder: false };
-  if (folderId) where.folderId = folderId as string;
+  if (folderId) {
+    if (!(await isFolderAccessible(folderId as string, user))) {
+      return ResponseFormatter.forbidden(res, 'You do not have access to this folder', req.path);
+    }
+    where.folderId = folderId as string;
+  } else {
+    where.folderId = { [Op.in]: [general.uuid, mine.uuid] };
+  }
   if (search) where.name = { [Op.iLike]: `%${search}%` };
 
   const files = await FileRecord.findAll({ where, order: [['createdAt', 'DESC']] });
@@ -75,6 +117,10 @@ router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response)
 router.post('/upload', upload.single('file'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
   const { folderId } = req.body;
+
+  if (!(await isFolderAccessible(folderId, user))) {
+    return ResponseFormatter.forbidden(res, 'You do not have access to this folder', req.path);
+  }
 
   if (req.file) {
     const record = await FileRecord.create({
@@ -128,8 +174,13 @@ router.post('/upload', upload.single('file'), ErrorMiddleware.asyncHandler(async
 
 // GET /api/files/:id/download
 router.get('/:id/download', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
   const file = await FileRecord.findOne({ where: { uuid: req.params.id, isFolder: false } });
   if (!file) return ResponseFormatter.notFound(res, 'File not found');
+
+  if (!(await isFolderAccessible(file.folderId, user))) {
+    return ResponseFormatter.forbidden(res, 'You do not have access to this file', req.path);
+  }
 
   if (file.path) {
     const localPath = path.join(process.cwd(), file.path.replace(/^\//, ''));
@@ -143,8 +194,13 @@ router.get('/:id/download', ErrorMiddleware.asyncHandler(async (req: Request, re
 
 // DELETE /api/files/:id
 router.delete('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
   const file = await FileRecord.findOne({ where: { uuid: req.params.id } });
   if (!file) return ResponseFormatter.notFound(res, 'File not found');
+
+  if (!file.isFolder && !(await isFolderAccessible(file.folderId, user))) {
+    return ResponseFormatter.forbidden(res, 'You do not have access to this file', req.path);
+  }
 
   if (!file.isFolder && file.path) {
     const localPath = path.join(process.cwd(), file.path.replace(/^\//, ''));
@@ -157,11 +213,16 @@ router.delete('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Res
 
 // PATCH /api/files/:id/rename
 router.patch('/:id/rename', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
   const { name } = req.body;
   if (!name) return ResponseFormatter.error(res, 'New name is required', 400);
 
   const file = await FileRecord.findOne({ where: { uuid: req.params.id } });
   if (!file) return ResponseFormatter.notFound(res, 'File not found');
+
+  if (!file.isFolder && !(await isFolderAccessible(file.folderId, user))) {
+    return ResponseFormatter.forbidden(res, 'You do not have access to this file', req.path);
+  }
 
   await file.update({ name });
   ResponseFormatter.success(res, file, 'File renamed');

@@ -19,17 +19,17 @@ class ProjectComment extends sequelize_1.Model {
             },
             taskId: {
                 type: sequelize_1.DataTypes.BIGINT,
-                allowNull: false,
+                allowNull: true,
                 references: {
-                    model: 'task',
+                    model: 'tasks',
                     key: 'id',
                 },
             },
             projectId: {
                 type: sequelize_1.DataTypes.BIGINT,
-                allowNull: false,
+                allowNull: true,
                 references: {
-                    model: 'project',
+                    model: 'projects',
                     key: 'id',
                 },
             },

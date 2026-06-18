@@ -20,8 +20,8 @@ class Task extends sequelize_1.Model {
             },
             projectId: {
                 type: sequelize_1.DataTypes.BIGINT.UNSIGNED,
-                allowNull: false,
-                comment: 'Reference to projects table',
+                allowNull: true,
+                comment: 'Reference to projects table (null = personal task)',
             },
             taskCode: {
                 type: sequelize_1.DataTypes.STRING(50),

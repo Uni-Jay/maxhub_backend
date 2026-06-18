@@ -2,8 +2,8 @@ import { Model, Optional, Sequelize } from 'sequelize';
 interface ProjectCommentAttributes {
     id: bigint;
     uuid: string;
-    taskId: bigint;
-    projectId: bigint;
+    taskId?: bigint;
+    projectId?: bigint;
     staffId: bigint;
     content: string;
     mentionedStaffIds?: string;
@@ -20,8 +20,8 @@ interface ProjectCommentCreationAttributes extends Optional<ProjectCommentAttrib
 export declare class ProjectComment extends Model<ProjectCommentAttributes, ProjectCommentCreationAttributes> implements ProjectCommentAttributes {
     id: bigint;
     uuid: string;
-    taskId: bigint;
-    projectId: bigint;
+    taskId?: bigint;
+    projectId?: bigint;
     staffId: bigint;
     content: string;
     mentionedStaffIds?: string;

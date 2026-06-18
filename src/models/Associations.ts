@@ -31,6 +31,7 @@ import { LeaveRequest } from './LeaveRequest.model';
 import { Project } from './Project.model';
 import { Milestone } from './Milestone.model';
 import { Task } from './Task.model';
+import { ProjectComment } from './ProjectComment.model';
 import { Contact } from './Contact.model';
 import { Opportunity } from './Opportunity.model';
 import { SalaryStructure } from './SalaryStructure.model';
@@ -234,6 +235,13 @@ export class AssociationManager {
     Task.belongsTo(Task, { foreignKey: 'parentTaskId', as: 'parentTask' });
     Task.hasMany(Task, { foreignKey: 'parentTaskId', as: 'subtasks' });
     Task.belongsTo(Milestone, { foreignKey: 'milestoneId' });
+    Task.hasMany(ProjectComment, { foreignKey: 'taskId', as: 'comments' });
+
+    // ProjectComment associations
+    ProjectComment.belongsTo(Task, { foreignKey: 'taskId' });
+    ProjectComment.belongsTo(Project, { foreignKey: 'projectId' });
+    ProjectComment.belongsTo(Staff, { foreignKey: 'staffId', as: 'author' });
+    Project.hasMany(ProjectComment, { foreignKey: 'projectId', as: 'comments' });
 
     // ======== CRM ========
 

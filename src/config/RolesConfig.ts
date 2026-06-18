@@ -241,6 +241,15 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.HR_HOLIDAY_READ_ALL,
     PermissionCode.HR_HOLIDAY_UPDATE_ALL,
     PermissionCode.HR_LEAVE_MANAGE_ALL,
+    // Projects & Tasks (HR can assign tasks/projects to staff)
+    PermissionCode.PROJECT_CREATE_ALL,
+    PermissionCode.PROJECT_READ_ALL,
+    PermissionCode.PROJECT_UPDATE_ALL,
+    PermissionCode.TASK_CREATE_ALL,
+    PermissionCode.TASK_READ_ALL,
+    PermissionCode.TASK_UPDATE_ALL,
+    PermissionCode.PROJECT_COMMENT_CREATE_ALL,
+    PermissionCode.PROJECT_COMMENT_READ_ALL,
     // Leave
     PermissionCode.LEAVE_TYPE_CREATE_ALL,
     PermissionCode.LEAVE_TYPE_READ_ALL,
@@ -330,6 +339,8 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.TASK_CREATE_ALL,
     PermissionCode.TASK_READ_ALL,
     PermissionCode.TASK_UPDATE_ALL,
+    PermissionCode.PROJECT_COMMENT_CREATE_ALL,
+    PermissionCode.PROJECT_COMMENT_READ_ALL,
     // Budget (read own dept)
     PermissionCode.FIN_BUDGET_READ_OWN_DEPARTMENT,
     // CRM
@@ -400,9 +411,13 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.LEAVE_REQUEST_CREATE_OWN,
     PermissionCode.LEAVE_REQUEST_READ_OWN,
     PermissionCode.LEAVE_TYPE_READ_ALL,
+    PermissionCode.TASK_CREATE_OWN,
     PermissionCode.TASK_READ_OWN,
     PermissionCode.TASK_UPDATE_OWN,
+    PermissionCode.PROJECT_CREATE_OWN,
     PermissionCode.PROJECT_READ_OWN,
+    PermissionCode.PROJECT_COMMENT_CREATE_ALL,
+    PermissionCode.PROJECT_COMMENT_READ_OWN,
     PermissionCode.CRM_CONTACT_READ_ALL,
     PermissionCode.CRM_ACTIVITY_READ_OWN,
     PermissionCode.LMS_COURSE_READ_ALL,

@@ -13,15 +13,44 @@ const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const FileRecord_model_1 = require("../models/FileRecord.model");
 const multer_1 = require("../config/multer");
 const router = (0, express_1.Router)();
-router.get('/folders', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const folders = await FileRecord_model_1.FileRecord.findAll({
-        where: { isFolder: true },
-        order: [['name', 'ASC']],
+async function ensureFolders(req) {
+    const user = req.user;
+    const [general] = await FileRecord_model_1.FileRecord.findOrCreate({
+        where: { isFolder: true, folderType: 'General' },
+        defaults: {
+            uuid: (0, uuid_1.v4)(), name: 'General Folder', isFolder: true, folderType: 'General', icon: '📁', size: 0,
+        },
     });
-    ResponseFormatter_1.ResponseFormatter.success(res, folders);
+    const [mine] = await FileRecord_model_1.FileRecord.findOrCreate({
+        where: { isFolder: true, folderType: 'Personal', uploadedById: user?.id },
+        defaults: {
+            uuid: (0, uuid_1.v4)(), name: 'My Folder', isFolder: true, folderType: 'Personal', icon: '🔒', size: 0,
+            uploadedById: user?.id,
+            uploadedByName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
+        },
+    });
+    return { general, mine };
+}
+async function isFolderAccessible(folderUuid, user) {
+    if (!folderUuid)
+        return true;
+    const folder = await FileRecord_model_1.FileRecord.findOne({ where: { uuid: folderUuid, isFolder: true } });
+    if (!folder)
+        return true;
+    if (folder.folderType === 'Personal' && String(folder.uploadedById) !== String(user?.id))
+        return false;
+    return true;
+}
+router.get('/folders', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const { general, mine } = await ensureFolders(req);
+    ResponseFormatter_1.ResponseFormatter.success(res, [general, mine]);
 }));
 router.post('/folders', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
+    const roles = (user?.roles || []).map((r) => r.toLowerCase().replace(/[^a-z]/g, ''));
+    if (!roles.includes('superadmin')) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only Super Admin can create additional folders', req.path);
+    }
     const { name, parentId } = req.body;
     if (!name)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Folder name is required', 400);
@@ -55,10 +84,19 @@ router.delete('/folders/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asy
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Folder deleted');
 }));
 router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const user = req.user;
     const { folderId, search } = req.query;
+    const { general, mine } = await ensureFolders(req);
     const where = { isFolder: false };
-    if (folderId)
+    if (folderId) {
+        if (!(await isFolderAccessible(folderId, user))) {
+            return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You do not have access to this folder', req.path);
+        }
         where.folderId = folderId;
+    }
+    else {
+        where.folderId = { [sequelize_1.Op.in]: [general.uuid, mine.uuid] };
+    }
     if (search)
         where.name = { [sequelize_1.Op.iLike]: `%${search}%` };
     const files = await FileRecord_model_1.FileRecord.findAll({ where, order: [['createdAt', 'DESC']] });
@@ -67,6 +105,9 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
 router.post('/upload', multer_1.upload.single('file'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
     const { folderId } = req.body;
+    if (!(await isFolderAccessible(folderId, user))) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You do not have access to this folder', req.path);
+    }
     if (req.file) {
         const record = await FileRecord_model_1.FileRecord.create({
             uuid: (0, uuid_1.v4)(),
@@ -112,9 +153,13 @@ router.post('/upload', multer_1.upload.single('file'), ErrorMiddleware_1.ErrorMi
     ResponseFormatter_1.ResponseFormatter.success(res, record, 'File uploaded', 201);
 }));
 router.get('/:id/download', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const user = req.user;
     const file = await FileRecord_model_1.FileRecord.findOne({ where: { uuid: req.params.id, isFolder: false } });
     if (!file)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'File not found');
+    if (!(await isFolderAccessible(file.folderId, user))) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You do not have access to this file', req.path);
+    }
     if (file.path) {
         const localPath = path_1.default.join(process.cwd(), file.path.replace(/^\//, ''));
         if (fs_1.default.existsSync(localPath)) {
@@ -124,9 +169,13 @@ router.get('/:id/download', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async
     ResponseFormatter_1.ResponseFormatter.error(res, 'File content not available on disk', 404);
 }));
 router.delete('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const user = req.user;
     const file = await FileRecord_model_1.FileRecord.findOne({ where: { uuid: req.params.id } });
     if (!file)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'File not found');
+    if (!file.isFolder && !(await isFolderAccessible(file.folderId, user))) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You do not have access to this file', req.path);
+    }
     if (!file.isFolder && file.path) {
         const localPath = path_1.default.join(process.cwd(), file.path.replace(/^\//, ''));
         if (fs_1.default.existsSync(localPath))
@@ -136,12 +185,16 @@ router.delete('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req,
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'File deleted');
 }));
 router.patch('/:id/rename', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const user = req.user;
     const { name } = req.body;
     if (!name)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'New name is required', 400);
     const file = await FileRecord_model_1.FileRecord.findOne({ where: { uuid: req.params.id } });
     if (!file)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'File not found');
+    if (!file.isFolder && !(await isFolderAccessible(file.folderId, user))) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You do not have access to this file', req.path);
+    }
     await file.update({ name });
     ResponseFormatter_1.ResponseFormatter.success(res, file, 'File renamed');
 }));

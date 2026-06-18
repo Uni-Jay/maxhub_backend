@@ -4,8 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 interface ProjectCommentAttributes {
   id: bigint;
   uuid: string;
-  taskId: bigint;
-  projectId: bigint;
+  taskId?: bigint;
+  projectId?: bigint;
   staffId: bigint;
   content: string;
   mentionedStaffIds?: string; // JSON array of mentioned staff IDs
@@ -26,8 +26,8 @@ export class ProjectComment
 {
   public id!: bigint;
   public uuid!: string;
-  public taskId!: bigint;
-  public projectId!: bigint;
+  public taskId?: bigint;
+  public projectId?: bigint;
   public staffId!: bigint;
   public content!: string;
   public mentionedStaffIds?: string;
@@ -55,17 +55,17 @@ export class ProjectComment
         },
         taskId: {
           type: DataTypes.BIGINT,
-          allowNull: false,
+          allowNull: true,
           references: {
-            model: 'task',
+            model: 'tasks',
             key: 'id',
           },
         },
         projectId: {
           type: DataTypes.BIGINT,
-          allowNull: false,
+          allowNull: true,
           references: {
-            model: 'project',
+            model: 'projects',
             key: 'id',
           },
         },

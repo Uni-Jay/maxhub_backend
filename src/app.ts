@@ -44,6 +44,7 @@ import { LeaveRequest } from '@models/LeaveRequest.model';
 import { Project } from '@models/Project.model';
 import { Milestone } from '@models/Milestone.model';
 import { Task } from '@models/Task.model';
+import { ProjectComment } from '@models/ProjectComment.model';
 import { Contact } from '@models/Contact.model';
 import { Opportunity } from '@models/Opportunity.model';
 import { SalaryStructure } from '@models/SalaryStructure.model';
@@ -279,6 +280,7 @@ class AppBootstrapper {
     Project.initModel(this.sequelize);
     Milestone.initModel(this.sequelize);
     Task.initModel(this.sequelize);
+    ProjectComment.initModel(this.sequelize);
 
     // CRM models
     Contact.initModel(this.sequelize);

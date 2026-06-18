@@ -11,6 +11,7 @@ interface FileRecordAttributes {
   size: number;
   folderId?: string;
   isFolder: boolean;
+  folderType?: 'Personal' | 'General';
   icon?: string;
   uploadedById?: bigint;
   uploadedByName?: string;
@@ -31,6 +32,7 @@ export class FileRecord
   declare size: number;
   declare folderId?: string;
   declare isFolder: boolean;
+  declare folderType?: 'Personal' | 'General';
   declare icon?: string;
   declare uploadedById?: bigint;
   declare uploadedByName?: string;
@@ -50,6 +52,7 @@ export class FileRecord
         size: { type: DataTypes.BIGINT, defaultValue: 0 },
         folderId: { type: DataTypes.STRING(36), allowNull: true },
         isFolder: { type: DataTypes.BOOLEAN, defaultValue: false },
+        folderType: { type: DataTypes.ENUM('Personal', 'General'), allowNull: true },
         icon: { type: DataTypes.STRING(10), allowNull: true },
         uploadedById: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
         uploadedByName: { type: DataTypes.STRING(200), allowNull: true },

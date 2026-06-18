@@ -46,6 +46,7 @@ import { LeaveRequest } from '../models/LeaveRequest.model';
 import { Project } from '../models/Project.model';
 import { Milestone } from '../models/Milestone.model';
 import { Task } from '../models/Task.model';
+import { ProjectComment } from '../models/ProjectComment.model';
 import { Contact } from '../models/Contact.model';
 import { Opportunity } from '../models/Opportunity.model';
 import { SalaryStructure } from '../models/SalaryStructure.model';
@@ -265,6 +266,7 @@ async function main() {
   Project.initModel(sequelize);
   Milestone.initModel(sequelize);
   Task.initModel(sequelize);
+  ProjectComment.initModel(sequelize);
   Contact.initModel(sequelize);
   Opportunity.initModel(sequelize);
   SalaryStructure.initModel(sequelize);
