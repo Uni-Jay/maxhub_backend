@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
+import { getRoleBucket } from '@utils/RoleBucket';
 import AIAssistantService from '../services/AIAssistantService';
 import { getActiveProvider, getActiveProviderName } from '../providers/ProviderFactory';
 import { ERP_TOOL_DECLARATIONS, createToolExecutor } from '../tools/ERPTools';
@@ -47,7 +48,7 @@ export class AIController {
     }
 
     const user = getUser(req);
-    const roleName = user.roles?.[0] ?? 'staff';
+    const roleName = getRoleBucket(req);
 
     const result = await AIAssistantService.chat(
       { messages, model: model as GeminiModel, conversationId },

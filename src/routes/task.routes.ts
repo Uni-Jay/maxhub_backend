@@ -4,6 +4,7 @@ import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import { AuthMiddleware } from '@middleware/AuthMiddleware';
 import { PermissionCode } from '@config/PermissionCodes';
+import { getRoleBucket } from '@utils/RoleBucket';
 import { Task } from '@models/Task.model';
 import { Project } from '@models/Project.model';
 import { Staff } from '@models/Staff.model';
@@ -299,5 +300,52 @@ router.get(
     ResponseFormatter.success(res, comments.map(c => c.toJSON()));
   })
 );
+
+/**
+ * Role-scoped "pending tasks" summary — used by the AI assistant's getMyTasks
+ * tool, mirroring the same OWN/department/company-wide scoping as the GET /
+ * list route above so the AI never sees more than the user's dashboard would.
+ */
+export async function getPendingTasksSummary(req: Request) {
+  const bucket = getRoleBucket(req);
+  const where: Record<string, unknown> = { status: { [Op.notIn]: ['Done', 'Cancelled'] } };
+
+  if (bucket === 'staff') {
+    const staffId = await getOwnStaffId(req);
+    where[Op.or as unknown as string] = [{ assigneeId: staffId ?? -1 }, { reporterId: staffId ?? -1 }];
+  } else if (bucket === 'hod') {
+    const departmentId = (req as any).user?.departmentId;
+    const deptStaff = await Staff.findAll({ where: { departmentId: departmentId ?? -1 }, attributes: ['id'] });
+    const staffIds = deptStaff.map((s: any) => s.id);
+    where.assigneeId = { [Op.in]: staffIds.length ? staffIds : [-1] };
+  }
+  // hr / admin / superadmin: company-wide, no extra filter.
+
+  const tasks = await Task.findAll({
+    where,
+    include: [
+      { model: Project, attributes: ['id', 'name'], required: false },
+      { model: Staff, as: 'assignee', attributes: ['id', 'firstName', 'lastName'], required: false },
+    ],
+    order: [['dueDate', 'ASC']],
+    limit: 25,
+  });
+
+  const todayStr = new Date().toDateString();
+  return {
+    scope: bucket,
+    total: tasks.length,
+    tasks: tasks.map((t) => ({
+      title: t.title,
+      status: t.status,
+      priority: t.priority,
+      dueDate: t.dueDate,
+      dueToday: t.dueDate ? new Date(t.dueDate).toDateString() === todayStr : false,
+      overdue: !!t.dueDate && new Date(t.dueDate) < new Date(todayStr) && t.status !== 'Done',
+      project: (t as any).project?.name ?? (t.projectId ? undefined : 'Personal task'),
+      assignee: (t as any).assignee ? `${(t as any).assignee.firstName} ${(t as any).assignee.lastName}` : undefined,
+    })),
+  };
+}
 
 export default router;

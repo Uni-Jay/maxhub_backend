@@ -7,6 +7,7 @@ const reports_routes_1 = require("../../../routes/reports.routes");
 const staff_routes_1 = require("../../../routes/staff.routes");
 const payroll_routes_1 = require("../../../routes/payroll.routes");
 const leave_routes_1 = require("../../../routes/leave.routes");
+const task_routes_1 = require("../../../routes/task.routes");
 const Staff_model_1 = require("../../../models/Staff.model");
 const Department_model_1 = require("../../../models/Department.model");
 const Attendance_model_1 = require("../../../models/Attendance.model");
@@ -66,6 +67,11 @@ exports.ERP_TOOL_DECLARATIONS = [
     {
         name: 'getDashboardInsights',
         description: 'Get high-level organizational dashboard metrics (headcount, attendance rate, active projects, revenue, pending approvals). Scope of data depends on the asking user\'s role. Use this for broad "how are we doing" questions.',
+        parameters: { type: 'object', properties: {} },
+    },
+    {
+        name: 'getMyTasks',
+        description: 'Get the asking user\'s pending (not Done/Cancelled) tasks, sorted by due date, including which are overdue or due today. For a Staff member this is their own assigned tasks plus any personal tasks they created; for a Head of Department it is their department\'s pending tasks; for HR/Admin/Super Admin it is company-wide. Use this for questions like "summarize today\'s pending tasks", "what tasks do I have", "what is overdue", or "what is my team working on".',
         parameters: { type: 'object', properties: {} },
     },
 ];
@@ -146,6 +152,10 @@ async function handleGetDashboardInsights(req) {
         activeProjects,
     });
 }
+async function handleGetMyTasks(req) {
+    const data = await (0, task_routes_1.getPendingTasksSummary)(req);
+    return JSON.stringify(data);
+}
 function createToolExecutor(req) {
     return async (name, args) => {
         try {
@@ -155,6 +165,7 @@ function createToolExecutor(req) {
                 case 'getPayrollSummary': return await handleGetPayrollSummary(req);
                 case 'getLeaveSummary': return await handleGetLeaveSummary(req);
                 case 'getDashboardInsights': return await handleGetDashboardInsights(req);
+                case 'getMyTasks': return await handleGetMyTasks(req);
                 default: return `Unknown tool: ${name}`;
             }
         }

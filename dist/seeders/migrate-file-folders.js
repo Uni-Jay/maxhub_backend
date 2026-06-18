@@ -62,7 +62,15 @@ async function main() {
     await sequelize.authenticate();
     console.log('\n🔄  Adding file_records.folderType column...\n');
     FileRecord_model_1.FileRecord.initModel(sequelize);
-    await sequelize.sync();
+    await sequelize.query(`
+    DO $$ BEGIN
+      CREATE TYPE "enum_file_records_folderType" AS ENUM ('Personal', 'General');
+    EXCEPTION WHEN duplicate_object THEN null;
+    END $$;
+  `);
+    await sequelize.query(`
+    ALTER TABLE file_records ADD COLUMN IF NOT EXISTS "folderType" "enum_file_records_folderType";
+  `);
     console.log('✅  folderType column ready\n');
     console.log('🔄  Ensuring General Folder exists...\n');
     let general = await FileRecord_model_1.FileRecord.findOne({ where: { isFolder: true, folderType: 'General' } });

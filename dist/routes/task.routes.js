@@ -1,11 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getPendingTasksSummary = getPendingTasksSummary;
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = require("../middleware/AuthMiddleware");
 const PermissionCodes_1 = require("../config/PermissionCodes");
+const RoleBucket_1 = require("../utils/RoleBucket");
 const Task_model_1 = require("../models/Task.model");
 const Project_model_1 = require("../models/Project.model");
 const Staff_model_1 = require("../models/Staff.model");
@@ -241,5 +243,43 @@ router.get('/:id/comments', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async
     });
     ResponseFormatter_1.ResponseFormatter.success(res, comments.map(c => c.toJSON()));
 }));
+async function getPendingTasksSummary(req) {
+    const bucket = (0, RoleBucket_1.getRoleBucket)(req);
+    const where = { status: { [sequelize_1.Op.notIn]: ['Done', 'Cancelled'] } };
+    if (bucket === 'staff') {
+        const staffId = await getOwnStaffId(req);
+        where[sequelize_1.Op.or] = [{ assigneeId: staffId ?? -1 }, { reporterId: staffId ?? -1 }];
+    }
+    else if (bucket === 'hod') {
+        const departmentId = req.user?.departmentId;
+        const deptStaff = await Staff_model_1.Staff.findAll({ where: { departmentId: departmentId ?? -1 }, attributes: ['id'] });
+        const staffIds = deptStaff.map((s) => s.id);
+        where.assigneeId = { [sequelize_1.Op.in]: staffIds.length ? staffIds : [-1] };
+    }
+    const tasks = await Task_model_1.Task.findAll({
+        where,
+        include: [
+            { model: Project_model_1.Project, attributes: ['id', 'name'], required: false },
+            { model: Staff_model_1.Staff, as: 'assignee', attributes: ['id', 'firstName', 'lastName'], required: false },
+        ],
+        order: [['dueDate', 'ASC']],
+        limit: 25,
+    });
+    const todayStr = new Date().toDateString();
+    return {
+        scope: bucket,
+        total: tasks.length,
+        tasks: tasks.map((t) => ({
+            title: t.title,
+            status: t.status,
+            priority: t.priority,
+            dueDate: t.dueDate,
+            dueToday: t.dueDate ? new Date(t.dueDate).toDateString() === todayStr : false,
+            overdue: !!t.dueDate && new Date(t.dueDate) < new Date(todayStr) && t.status !== 'Done',
+            project: t.project?.name ?? (t.projectId ? undefined : 'Personal task'),
+            assignee: t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}` : undefined,
+        })),
+    };
+}
 exports.default = router;
 //# sourceMappingURL=task.routes.js.map

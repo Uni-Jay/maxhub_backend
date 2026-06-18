@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AIController = void 0;
 const ResponseFormatter_1 = require("../../../utils/ResponseFormatter");
+const RoleBucket_1 = require("../../../utils/RoleBucket");
 const AIAssistantService_1 = __importDefault(require("../services/AIAssistantService"));
 const ProviderFactory_1 = require("../providers/ProviderFactory");
 const ERPTools_1 = require("../tools/ERPTools");
@@ -32,7 +33,7 @@ class AIController {
             return;
         }
         const user = getUser(req);
-        const roleName = user.roles?.[0] ?? 'staff';
+        const roleName = (0, RoleBucket_1.getRoleBucket)(req);
         const result = await AIAssistantService_1.default.chat({ messages, model: model, conversationId }, user.id, roleName, user.name, user.businessUnit, { tools: ERPTools_1.ERP_TOOL_DECLARATIONS, executeTool: (0, ERPTools_1.createToolExecutor)(req) });
         ResponseFormatter_1.ResponseFormatter.success(res, result, 'AI response generated');
     }
