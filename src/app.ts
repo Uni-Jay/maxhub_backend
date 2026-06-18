@@ -56,6 +56,7 @@ import { CalendarEvent } from '@models/CalendarEvent.model';
 import { FileRecord } from '@models/FileRecord.model';
 import { Customer } from '@models/Customer.model';
 import { OrderTracking } from '@models/OrderTracking.model';
+import { Broadcast } from '@models/Broadcast.model';
 // Extended recruitment models
 import { JobApplication } from '@models/JobApplication.model';
 import { Interview } from '@models/Interview.model';
@@ -101,6 +102,7 @@ import { PurchaseOrder } from '@models/PurchaseOrder.model';
 import { Budget } from '@models/Budget.model';
 // HR models
 import { Appraisal } from '@models/Appraisal.model';
+import { EmployeePromotion } from '@models/EmployeePromotion.model';
 import { Goal } from '@models/Goal.model';
 import { Feedback } from '@models/Feedback.model';
 import { EmployeeDocument } from '@models/EmployeeDocument.model';
@@ -305,6 +307,7 @@ class AppBootstrapper {
     FileRecord.initModel(this.sequelize);
     Customer.initModel(this.sequelize);
     OrderTracking.initModel(this.sequelize);
+    Broadcast.initModel(this.sequelize);
     JobApplication.initModel(this.sequelize);
     Interview.initModel(this.sequelize);
     JobOffer.initModel(this.sequelize);
@@ -346,6 +349,7 @@ class AppBootstrapper {
 
     // HR and employee models
     Appraisal.initModel(this.sequelize);
+    EmployeePromotion.initModel(this.sequelize);
     Goal.initModel(this.sequelize);
     Feedback.initModel(this.sequelize);
     EmployeeDocument.initModel(this.sequelize);

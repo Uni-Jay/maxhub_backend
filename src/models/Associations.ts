@@ -58,6 +58,7 @@ import { Question } from './Question.model';
 import { ExamResult } from './ExamResult.model';
 import { Certificate } from './Certificate.model';
 import { Appraisal } from './Appraisal.model';
+import { EmployeePromotion } from './EmployeePromotion.model';
 import { TrainingAttendance } from './TrainingAttendance.model';
 import { InventoryCategory } from './InventoryCategory.model';
 import { InventoryItem } from './InventoryItem.model';
@@ -301,6 +302,13 @@ export class AssociationManager {
     // ======== PERFORMANCE & TRAINING ========
     Appraisal.belongsTo(Staff, { foreignKey: 'staffId', as: 'staff' });
     TrainingAttendance.belongsTo(Staff, { foreignKey: 'staffId', as: 'staff' });
+
+    // ======== PROMOTIONS ========
+    EmployeePromotion.belongsTo(Staff, { foreignKey: 'staffId', as: 'staff' });
+    EmployeePromotion.belongsTo(Designation, { foreignKey: 'fromDesignationId', as: 'fromDesignation' });
+    EmployeePromotion.belongsTo(Designation, { foreignKey: 'toDesignationId', as: 'toDesignation' });
+    EmployeePromotion.belongsTo(Department, { foreignKey: 'fromDepartmentId', as: 'fromDepartment' });
+    EmployeePromotion.belongsTo(Department, { foreignKey: 'toDepartmentId', as: 'toDepartment' });
 
     // ======== PAYROLL ========
     EmployeeSalary.belongsTo(Staff, { foreignKey: 'staffId', as: 'staff' });

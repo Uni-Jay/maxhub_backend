@@ -22,6 +22,7 @@ class WeeklyReport extends sequelize_1.Model {
             approvedById: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Reference to users table' },
             approvedDate: { type: sequelize_1.DataTypes.DATE, allowNull: true },
             rejectionReason: { type: sequelize_1.DataTypes.TEXT, allowNull: true },
+            comments: { type: sequelize_1.DataTypes.TEXT, allowNull: true, comment: 'Super Admin feedback, independent of approve/reject' },
             deletedAt: { type: sequelize_1.DataTypes.DATE, allowNull: true, comment: 'Soft delete timestamp' },
         }, {
             sequelize, tableName: 'weekly_reports', timestamps: true, paranoid: true, underscored: false, freezeTableName: true,

@@ -29,7 +29,7 @@ class EmployeePromotion extends sequelize_1.Model {
                 type: sequelize_1.DataTypes.BIGINT,
                 allowNull: false,
                 references: {
-                    model: 'designation',
+                    model: 'designations',
                     key: 'id',
                 },
             },
@@ -37,7 +37,7 @@ class EmployeePromotion extends sequelize_1.Model {
                 type: sequelize_1.DataTypes.BIGINT,
                 allowNull: false,
                 references: {
-                    model: 'designation',
+                    model: 'designations',
                     key: 'id',
                 },
             },
@@ -45,7 +45,7 @@ class EmployeePromotion extends sequelize_1.Model {
                 type: sequelize_1.DataTypes.BIGINT,
                 allowNull: true,
                 references: {
-                    model: 'department',
+                    model: 'departments',
                     key: 'id',
                 },
             },
@@ -53,7 +53,7 @@ class EmployeePromotion extends sequelize_1.Model {
                 type: sequelize_1.DataTypes.BIGINT,
                 allowNull: true,
                 references: {
-                    model: 'department',
+                    model: 'departments',
                     key: 'id',
                 },
             },

@@ -14,6 +14,9 @@ import { Enrollment } from '@models/Enrollment.model';
 import { Contact } from '@models/Contact.model';
 import { Opportunity } from '@models/Opportunity.model';
 import { LeaveType } from '@models/LeaveType.model';
+import { WeeklyReport } from '@models/WeeklyReport.model';
+import { EmployeePromotion } from '@models/EmployeePromotion.model';
+import { JobPosting } from '@models/JobPosting.model';
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -284,6 +287,56 @@ export class DashboardController {
       }
 
       ResponseFormatter.success(res, notifications.slice(0, limit), 'Notifications retrieved');
+    }
+  );
+
+  static getSuperAdminApprovalsQueue = ErrorMiddleware.asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      if (!isSuperAdmin(req)) {
+        return ResponseFormatter.forbidden(res, 'Insufficient permissions');
+      }
+
+      const [
+        weeklyReportCount, weeklyReports,
+        leaveCount, leaveRequests,
+        promotionCount, promotions,
+        jobPostingCount, jobPostings,
+      ] = await Promise.all([
+        WeeklyReport.count({ where: { approvalStatus: 'Pending' } }),
+        WeeklyReport.findAll({
+          where: { approvalStatus: 'Pending' },
+          include: [{ model: Staff, as: 'staff', attributes: ['firstName', 'lastName'] }],
+          order: [['createdAt', 'DESC']],
+          limit: 5,
+        }),
+        LeaveRequest.count({ where: { status: 'Pending' } }),
+        LeaveRequest.findAll({
+          where: { status: 'Pending' },
+          include: [{ model: Staff, as: 'staff', attributes: ['firstName', 'lastName'] }],
+          order: [['createdAt', 'DESC']],
+          limit: 5,
+        }),
+        EmployeePromotion.count({ where: { status: 'Proposed' } }),
+        EmployeePromotion.findAll({
+          where: { status: 'Proposed' },
+          include: [{ model: Staff, as: 'staff', attributes: ['firstName', 'lastName'] }],
+          order: [['createdAt', 'DESC']],
+          limit: 5,
+        }),
+        JobPosting.count({ where: { status: 'Draft' } }),
+        JobPosting.findAll({
+          where: { status: 'Draft' },
+          order: [['createdAt', 'DESC']],
+          limit: 5,
+        }),
+      ]);
+
+      ResponseFormatter.success(res, {
+        weeklyReports: { count: weeklyReportCount, items: weeklyReports },
+        leaveRequests: { count: leaveCount, items: leaveRequests },
+        promotions: { count: promotionCount, items: promotions },
+        jobPostings: { count: jobPostingCount, items: jobPostings },
+      }, 'Approvals queue retrieved');
     }
   );
 

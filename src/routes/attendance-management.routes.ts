@@ -118,6 +118,44 @@ router.post(
 );
 
 /**
+ * POST /api/attendance/manual-mark
+ * Mark (or correct) attendance for any staff member on any date — for
+ * superadmin / HOD use when a record needs to be entered outside the normal
+ * self clock-in/out flow.
+ */
+router.post(
+  '/manual-mark',
+  AuthMiddleware.verifyToken,
+  AuthMiddleware.requirePermission(PermissionCode.ATT_ATTENDANCE_MARK_ALL),
+  async (req: Request, res: Response) => {
+    try {
+      const { staffId, attendanceDate, status, checkInTime, checkOutTime, remarks } = req.body;
+      if (!staffId || !attendanceDate || !status) {
+        return res.status(400).json({ success: false, message: 'staffId, attendanceDate and status are required' });
+      }
+
+      const [record] = await Attendance.findOrCreate({
+        where: { staffId, attendanceDate },
+        defaults: { staffId, attendanceDate, status, approvalStatus: 'Pending' } as any,
+      });
+
+      await record.update({
+        status,
+        checkInTime: checkInTime ? new Date(checkInTime) : record.checkInTime,
+        checkOutTime: checkOutTime ? new Date(checkOutTime) : record.checkOutTime,
+        remarks,
+        approvedBy: (req as any).user.id,
+        approvalStatus: 'Approved',
+      } as any);
+
+      res.json({ success: true, data: record });
+    } catch (error) {
+      res.status(400).json({ success: false, error: (error as Error).message });
+    }
+  }
+);
+
+/**
  * GET /api/attendance/gps/track
  * Get GPS tracking data
  */

@@ -77,7 +77,7 @@ export class EmployeePromotion
           type: DataTypes.BIGINT,
           allowNull: false,
           references: {
-            model: 'designation',
+            model: 'designations',
             key: 'id',
           },
         },
@@ -85,7 +85,7 @@ export class EmployeePromotion
           type: DataTypes.BIGINT,
           allowNull: false,
           references: {
-            model: 'designation',
+            model: 'designations',
             key: 'id',
           },
         },
@@ -93,7 +93,7 @@ export class EmployeePromotion
           type: DataTypes.BIGINT,
           allowNull: true,
           references: {
-            model: 'department',
+            model: 'departments',
             key: 'id',
           },
         },
@@ -101,7 +101,7 @@ export class EmployeePromotion
           type: DataTypes.BIGINT,
           allowNull: true,
           references: {
-            model: 'department',
+            model: 'departments',
             key: 'id',
           },
         },

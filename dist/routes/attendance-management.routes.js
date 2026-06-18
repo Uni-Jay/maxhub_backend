@@ -83,6 +83,30 @@ router.post('/clock-out', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1
         res.status(400).json({ success: false, error: error.message });
     }
 });
+router.post('/manual-mark', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.ATT_ATTENDANCE_MARK_ALL), async (req, res) => {
+    try {
+        const { staffId, attendanceDate, status, checkInTime, checkOutTime, remarks } = req.body;
+        if (!staffId || !attendanceDate || !status) {
+            return res.status(400).json({ success: false, message: 'staffId, attendanceDate and status are required' });
+        }
+        const [record] = await Attendance_model_1.Attendance.findOrCreate({
+            where: { staffId, attendanceDate },
+            defaults: { staffId, attendanceDate, status, approvalStatus: 'Pending' },
+        });
+        await record.update({
+            status,
+            checkInTime: checkInTime ? new Date(checkInTime) : record.checkInTime,
+            checkOutTime: checkOutTime ? new Date(checkOutTime) : record.checkOutTime,
+            remarks,
+            approvedBy: req.user.id,
+            approvalStatus: 'Approved',
+        });
+        res.json({ success: true, data: record });
+    }
+    catch (error) {
+        res.status(400).json({ success: false, error: error.message });
+    }
+});
 router.get('/gps/track', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.ATT_GPS_READ_OWN), async (req, res) => {
     try {
         res.json({

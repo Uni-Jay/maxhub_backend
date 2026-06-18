@@ -1,4 +1,7 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
@@ -9,6 +12,8 @@ const Customer_model_1 = require("../models/Customer.model");
 const WarehouseStock_model_1 = require("../models/WarehouseStock.model");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
+const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
+const PermissionCodes_1 = require("../config/PermissionCodes");
 const router = (0, express_1.Router)();
 function deliveryStage(status) {
     const map = { New: 0, Confirmed: 0, Processing: 1, Shipped: 2, Delivered: 3, Cancelled: 0, Refunded: 0 };
@@ -34,7 +39,7 @@ function toFrontendOrder(o) {
         international: customer?.country && customer.country !== 'Nigeria',
     };
 }
-router.get('/products', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.get('/products', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.BM_PRODUCT_READ_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { category, status, search, limit = 100, page = 1 } = req.query;
     const where = {};
     if (status)
@@ -80,7 +85,7 @@ router.get('/products', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (re
     });
     ResponseFormatter_1.ResponseFormatter.success(res, { data: products, pagination: { total: count, page: Number(page), limit: Number(limit) } });
 }));
-router.post('/products', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.post('/products', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.BM_PRODUCT_CREATE_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { name, categoryId, sku, price, stock, description } = req.body;
     if (!name || !categoryId)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'name and categoryId are required', 400);
@@ -94,14 +99,14 @@ router.post('/products', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (r
     });
     ResponseFormatter_1.ResponseFormatter.success(res, { id: Number(item.id), name: item.itemName }, 'Product created', 201);
 }));
-router.delete('/products/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.delete('/products/:id', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.BM_PRODUCT_DELETE_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const item = await InventoryItem_model_1.InventoryItem.findByPk(req.params.id);
     if (!item)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Product not found');
     await item.destroy();
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Product deleted');
 }));
-router.get('/orders', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.get('/orders', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.BM_ORDER_READ_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { status, limit = 100, page = 1 } = req.query;
     const where = {};
     if (status) {
@@ -122,7 +127,7 @@ router.get('/orders', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req,
     });
     ResponseFormatter_1.ResponseFormatter.success(res, { data: rows.map(toFrontendOrder), pagination: { total: count, page: Number(page), limit: Number(limit) } });
 }));
-router.post('/orders', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.post('/orders', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.BM_ORDER_CREATE_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { customerId, total, items, address, notes, paymentStatus } = req.body;
     if (!customerId || !total)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'customerId and total are required', 400);
@@ -143,7 +148,7 @@ router.post('/orders', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req
     });
     ResponseFormatter_1.ResponseFormatter.success(res, toFrontendOrder(order), 'Order created', 201);
 }));
-router.patch('/orders/:id/status', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.patch('/orders/:id/status', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.BM_ORDER_UPDATE_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { deliveryStatus, paymentStatus } = req.body;
     const order = await OrderTracking_model_1.OrderTracking.findByPk(req.params.id);
     if (!order)
@@ -157,7 +162,7 @@ router.patch('/orders/:id/status', ErrorMiddleware_1.ErrorMiddleware.asyncHandle
     await order.update(updates);
     ResponseFormatter_1.ResponseFormatter.success(res, toFrontendOrder(order), 'Order updated');
 }));
-router.get('/deliveries', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.get('/deliveries', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.BM_ORDER_READ_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const orders = await OrderTracking_model_1.OrderTracking.findAll({
         where: { orderStatus: { [sequelize_1.Op.in]: ['Confirmed', 'Processing', 'Shipped'] } },
         include: [{ model: Customer_model_1.Customer, as: 'customer', attributes: ['id', 'firstName', 'lastName', 'country', 'address', 'city', 'state'], required: false }],
@@ -179,7 +184,7 @@ router.get('/deliveries', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (
     });
     ResponseFormatter_1.ResponseFormatter.success(res, deliveries);
 }));
-router.get('/analytics', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.get('/analytics', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.BM_ANALYTICS_READ_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const now = new Date();
     const startOfYear = new Date(now.getFullYear(), 0, 1);
     const monthlyRaw = await OrderTracking_model_1.OrderTracking.findAll({

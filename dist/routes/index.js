@@ -36,6 +36,7 @@ function setupRoutes(app) {
     apiRouter.use('/designations', require('./designation.routes').default);
     apiRouter.use('/hr', require('./hr-management.routes').default);
     apiRouter.use('/hr/weekly-reports', require('./weekly-report.routes').default);
+    apiRouter.use('/promotions', require('./promotion.routes').default);
     apiRouter.use('/attendance', require('./attendance-management.routes').default);
     apiRouter.use('/leave', require('./leave.routes').default);
     apiRouter.use('/projects', require('./project.routes').default);
@@ -61,6 +62,7 @@ function setupRoutes(app) {
     apiRouter.use('/queries', require('./query.routes').default);
     apiRouter.use('/clients', require('./client.routes').default);
     apiRouter.use('/communication', require('./communication.routes').default);
+    apiRouter.use('/broadcasts', require('./broadcast.routes').default);
     apiRouter.use('/students', require('./student-management.routes').default);
     apiRouter.use('/meetings', require('./meeting.routes').default);
     apiRouter.use('/calls', require('./call.routes').default);

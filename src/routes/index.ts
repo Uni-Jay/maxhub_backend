@@ -52,6 +52,7 @@ function setupRoutes(app: any): void {
   // HR Management routes
   apiRouter.use('/hr', require('./hr-management.routes').default);
   apiRouter.use('/hr/weekly-reports', require('./weekly-report.routes').default);
+  apiRouter.use('/promotions', require('./promotion.routes').default);
 
   // Attendance & Leave routes
   apiRouter.use('/attendance', require('./attendance-management.routes').default);
@@ -104,6 +105,7 @@ function setupRoutes(app: any): void {
 
   // Communication
   apiRouter.use('/communication', require('./communication.routes').default);
+  apiRouter.use('/broadcasts', require('./broadcast.routes').default);
 
   // Student Management (Beadmax Vocational School)
   apiRouter.use('/students', require('./student-management.routes').default);

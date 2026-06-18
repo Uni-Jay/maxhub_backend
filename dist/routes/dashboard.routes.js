@@ -16,6 +16,7 @@ router.get('/super-admin/students', AuthMiddleware_1.default.verifyToken, Dashbo
 router.get('/super-admin/projects', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getSuperAdminProjects);
 router.get('/super-admin/crm', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getSuperAdminCRM);
 router.get('/super-admin/notifications', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getSuperAdminNotifications);
+router.get('/super-admin/approvals-queue', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getSuperAdminApprovalsQueue);
 router.get('/head-of-admin/stats', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getHeadOfAdminStats);
 router.get('/head-of-admin/leave-approvals/pending', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getHeadOfAdminLeaveApprovals);
 router.post('/head-of-admin/leave-approvals/:leaveId/approve', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.approveLeave);

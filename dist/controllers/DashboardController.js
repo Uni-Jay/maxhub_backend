@@ -16,6 +16,9 @@ const Enrollment_model_1 = require("../models/Enrollment.model");
 const Contact_model_1 = require("../models/Contact.model");
 const Opportunity_model_1 = require("../models/Opportunity.model");
 const LeaveType_model_1 = require("../models/LeaveType.model");
+const WeeklyReport_model_1 = require("../models/WeeklyReport.model");
+const EmployeePromotion_model_1 = require("../models/EmployeePromotion.model");
+const JobPosting_model_1 = require("../models/JobPosting.model");
 function normaliseRole(r) {
     return r.toLowerCase().replace(/[^a-z]/g, '');
 }
@@ -202,6 +205,46 @@ DashboardController.getSuperAdminNotifications = ErrorMiddleware_1.ErrorMiddlewa
         notifications.push({ id: 'invoice', title: 'Overdue Invoices', message: `${overdueInvoices} invoice${overdueInvoices !== 1 ? 's' : ''} are overdue`, type: 'error', read: false, created_at: now });
     }
     ResponseFormatter_1.ResponseFormatter.success(res, notifications.slice(0, limit), 'Notifications retrieved');
+});
+DashboardController.getSuperAdminApprovalsQueue = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    if (!isSuperAdmin(req)) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Insufficient permissions');
+    }
+    const [weeklyReportCount, weeklyReports, leaveCount, leaveRequests, promotionCount, promotions, jobPostingCount, jobPostings,] = await Promise.all([
+        WeeklyReport_model_1.WeeklyReport.count({ where: { approvalStatus: 'Pending' } }),
+        WeeklyReport_model_1.WeeklyReport.findAll({
+            where: { approvalStatus: 'Pending' },
+            include: [{ model: Staff_model_1.Staff, as: 'staff', attributes: ['firstName', 'lastName'] }],
+            order: [['createdAt', 'DESC']],
+            limit: 5,
+        }),
+        LeaveRequest_model_1.LeaveRequest.count({ where: { status: 'Pending' } }),
+        LeaveRequest_model_1.LeaveRequest.findAll({
+            where: { status: 'Pending' },
+            include: [{ model: Staff_model_1.Staff, as: 'staff', attributes: ['firstName', 'lastName'] }],
+            order: [['createdAt', 'DESC']],
+            limit: 5,
+        }),
+        EmployeePromotion_model_1.EmployeePromotion.count({ where: { status: 'Proposed' } }),
+        EmployeePromotion_model_1.EmployeePromotion.findAll({
+            where: { status: 'Proposed' },
+            include: [{ model: Staff_model_1.Staff, as: 'staff', attributes: ['firstName', 'lastName'] }],
+            order: [['createdAt', 'DESC']],
+            limit: 5,
+        }),
+        JobPosting_model_1.JobPosting.count({ where: { status: 'Draft' } }),
+        JobPosting_model_1.JobPosting.findAll({
+            where: { status: 'Draft' },
+            order: [['createdAt', 'DESC']],
+            limit: 5,
+        }),
+    ]);
+    ResponseFormatter_1.ResponseFormatter.success(res, {
+        weeklyReports: { count: weeklyReportCount, items: weeklyReports },
+        leaveRequests: { count: leaveCount, items: leaveRequests },
+        promotions: { count: promotionCount, items: promotions },
+        jobPostings: { count: jobPostingCount, items: jobPostings },
+    }, 'Approvals queue retrieved');
 });
 DashboardController.getHeadOfAdminStats = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     if (!isAuthenticated(req)) {

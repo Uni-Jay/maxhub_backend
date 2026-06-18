@@ -32,6 +32,7 @@ interface WeeklyReportAttributes {
   approvedById?: bigint;
   approvedDate?: Date;
   rejectionReason?: string;
+  comments?: string;
   deletedAt?: Date;
 }
 
@@ -57,6 +58,7 @@ export class WeeklyReport
   public approvedById?: bigint;
   public approvedDate?: Date;
   public rejectionReason?: string;
+  public comments?: string;
   public deletedAt?: Date;
 
   public readonly createdAt!: Date;
@@ -81,6 +83,7 @@ export class WeeklyReport
         approvedById: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Reference to users table' },
         approvedDate: { type: DataTypes.DATE, allowNull: true },
         rejectionReason: { type: DataTypes.TEXT, allowNull: true },
+        comments: { type: DataTypes.TEXT, allowNull: true, comment: 'Super Admin feedback, independent of approve/reject' },
         deletedAt: { type: DataTypes.DATE, allowNull: true, comment: 'Soft delete timestamp' },
       },
       {

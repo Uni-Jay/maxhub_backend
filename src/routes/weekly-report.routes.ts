@@ -59,6 +59,7 @@ router.get('/', AuthMiddleware.requirePermission('hr.weeklyreport.read.own'), Er
     approvalStatus: r.approvalStatus,
     approvedBy: r.approvedById ? `User #${r.approvedById}` : undefined,
     rejectionReason: r.rejectionReason,
+    comments: r.comments,
     staffName: r.staff ? `${r.staff.firstName} ${r.staff.lastName}` : undefined,
   }));
 
@@ -99,6 +100,16 @@ router.patch('/:id/approve', AuthMiddleware.requireRole('superadmin'), ErrorMidd
     approvalStatus: 'Approved', approvedById: (req as any).user.id, approvedDate: new Date(), rejectionReason: null,
   } as any);
   ResponseFormatter.success(res, report, 'Weekly report approved');
+}));
+
+// PATCH /api/hr/weekly-reports/:id/comment — feedback only, never touches the report content or approval status
+router.patch('/:id/comment', AuthMiddleware.requireRole('superadmin'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const report = await WeeklyReport.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
+  if (!report) return ResponseFormatter.notFound(res, 'Weekly report not found');
+
+  const { comments } = req.body;
+  await report.update({ comments } as any);
+  ResponseFormatter.success(res, report, 'Comment saved');
 }));
 
 // PATCH /api/hr/weekly-reports/:id/reject

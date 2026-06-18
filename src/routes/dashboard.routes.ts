@@ -14,6 +14,7 @@ router.get('/super-admin/students', AuthMiddleware.verifyToken, DashboardControl
 router.get('/super-admin/projects', AuthMiddleware.verifyToken, DashboardController.getSuperAdminProjects);
 router.get('/super-admin/crm', AuthMiddleware.verifyToken, DashboardController.getSuperAdminCRM);
 router.get('/super-admin/notifications', AuthMiddleware.verifyToken, DashboardController.getSuperAdminNotifications);
+router.get('/super-admin/approvals-queue', AuthMiddleware.verifyToken, DashboardController.getSuperAdminApprovalsQueue);
 
 // Head of Admin Dashboard
 router.get('/head-of-admin/stats', AuthMiddleware.verifyToken, DashboardController.getHeadOfAdminStats);

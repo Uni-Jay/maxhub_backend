@@ -90,6 +90,13 @@ router.patch('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, 
     });
     ResponseFormatter_1.ResponseFormatter.success(res, project.toJSON(), 'Project updated successfully');
 }));
+router.delete('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const project = await Project_model_1.Project.findByPk(req.params.id);
+    if (!project)
+        return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Project not found');
+    await project.destroy();
+    ResponseFormatter_1.ResponseFormatter.success(res, null, 'Project deleted successfully');
+}));
 router.get('/:id/tasks', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const project = await Project_model_1.Project.findByPk(req.params.id);
     if (!project)

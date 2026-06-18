@@ -8,6 +8,8 @@ import { Customer } from '@models/Customer.model';
 import { WarehouseStock } from '@models/WarehouseStock.model';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
+import AuthMiddleware from '@middleware/AuthMiddleware';
+import { PermissionCode } from '@config/PermissionCodes';
 import sequelize from '@config/Database';
 
 const router = Router();
@@ -39,7 +41,7 @@ function toFrontendOrder(o: any): object {
 }
 
 // GET /api/beadmax/products — inventory items as products
-router.get('/products', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.get('/products', AuthMiddleware.requirePermission(PermissionCode.BM_PRODUCT_READ_ALL), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const { category, status, search, limit = 100, page = 1 } = req.query;
   const where: any = {};
   if (status) where.status = status;
@@ -88,7 +90,7 @@ router.get('/products', ErrorMiddleware.asyncHandler(async (req: Request, res: R
 }));
 
 // POST /api/beadmax/products — create inventory item
-router.post('/products', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.post('/products', AuthMiddleware.requirePermission(PermissionCode.BM_PRODUCT_CREATE_ALL), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const { name, categoryId, sku, price, stock, description } = req.body;
   if (!name || !categoryId) return ResponseFormatter.error(res, 'name and categoryId are required', 400);
 
@@ -106,7 +108,7 @@ router.post('/products', ErrorMiddleware.asyncHandler(async (req: Request, res: 
 }));
 
 // DELETE /api/beadmax/products/:id
-router.delete('/products/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.delete('/products/:id', AuthMiddleware.requirePermission(PermissionCode.BM_PRODUCT_DELETE_ALL), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const item = await InventoryItem.findByPk(req.params.id);
   if (!item) return ResponseFormatter.notFound(res, 'Product not found');
   await item.destroy();
@@ -114,7 +116,7 @@ router.delete('/products/:id', ErrorMiddleware.asyncHandler(async (req: Request,
 }));
 
 // GET /api/beadmax/orders — order tracking as sales orders
-router.get('/orders', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.get('/orders', AuthMiddleware.requirePermission(PermissionCode.BM_ORDER_READ_ALL), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const { status, limit = 100, page = 1 } = req.query;
   const where: any = {};
   if (status) {
@@ -136,7 +138,7 @@ router.get('/orders', ErrorMiddleware.asyncHandler(async (req: Request, res: Res
 }));
 
 // POST /api/beadmax/orders — create new order
-router.post('/orders', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.post('/orders', AuthMiddleware.requirePermission(PermissionCode.BM_ORDER_CREATE_ALL), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const { customerId, total, items, address, notes, paymentStatus } = req.body;
   if (!customerId || !total) return ResponseFormatter.error(res, 'customerId and total are required', 400);
 
@@ -161,7 +163,7 @@ router.post('/orders', ErrorMiddleware.asyncHandler(async (req: Request, res: Re
 }));
 
 // PATCH /api/beadmax/orders/:id/status
-router.patch('/orders/:id/status', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.patch('/orders/:id/status', AuthMiddleware.requirePermission(PermissionCode.BM_ORDER_UPDATE_ALL), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const { deliveryStatus, paymentStatus } = req.body;
   const order = await OrderTracking.findByPk(req.params.id);
   if (!order) return ResponseFormatter.notFound(res, 'Order not found');
@@ -176,7 +178,7 @@ router.patch('/orders/:id/status', ErrorMiddleware.asyncHandler(async (req: Requ
 }));
 
 // GET /api/beadmax/deliveries — active shipments
-router.get('/deliveries', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.get('/deliveries', AuthMiddleware.requirePermission(PermissionCode.BM_ORDER_READ_ALL), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const orders = await OrderTracking.findAll({
     where: { orderStatus: { [Op.in]: ['Confirmed', 'Processing', 'Shipped'] } },
     include: [{ model: Customer, as: 'customer', attributes: ['id', 'firstName', 'lastName', 'country', 'address', 'city', 'state'], required: false }],
@@ -202,7 +204,7 @@ router.get('/deliveries', ErrorMiddleware.asyncHandler(async (req: Request, res:
 }));
 
 // GET /api/beadmax/analytics — revenue + category breakdown
-router.get('/analytics', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.get('/analytics', AuthMiddleware.requirePermission(PermissionCode.BM_ANALYTICS_READ_ALL), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const now = new Date();
   const startOfYear = new Date(now.getFullYear(), 0, 1);
 

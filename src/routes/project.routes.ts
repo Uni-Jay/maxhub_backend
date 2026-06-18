@@ -117,6 +117,16 @@ router.patch(
   })
 );
 
+router.delete(
+  '/:id',
+  ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+    const project = await Project.findByPk(req.params.id);
+    if (!project) return ResponseFormatter.notFound(res, 'Project not found');
+    await project.destroy();
+    ResponseFormatter.success(res, null, 'Project deleted successfully');
+  })
+);
+
 router.get(
   '/:id/tasks',
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {

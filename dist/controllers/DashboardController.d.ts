@@ -9,6 +9,7 @@ export declare class DashboardController {
     static getSuperAdminProjects: (req: Request, res: Response, next: NextFunction) => void;
     static getSuperAdminCRM: (req: Request, res: Response, next: NextFunction) => void;
     static getSuperAdminNotifications: (req: Request, res: Response, next: NextFunction) => void;
+    static getSuperAdminApprovalsQueue: (req: Request, res: Response, next: NextFunction) => void;
     static getHeadOfAdminStats: (req: Request, res: Response, next: NextFunction) => void;
     static getHeadOfAdminLeaveApprovals: (req: Request, res: Response, next: NextFunction) => void;
     static approveLeave: (req: Request, res: Response, next: NextFunction) => void;

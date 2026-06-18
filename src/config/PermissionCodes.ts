@@ -414,6 +414,7 @@ export enum PermissionCode {
   ATT_OVERTIME_READ_OWN = 'att.overtime.read.own',
   ATT_OVERTIME_APPROVE_ALL = 'att.overtime.approve.all',
   ATT_REPORTS_GENERATE_ALL = 'att.reports.generate.all',
+  ATT_ATTENDANCE_MARK_ALL = 'att.attendance.mark.all',
 
   // ==================== HR MANAGEMENT ====================
   HR_RECRUITMENT_CREATE_ALL = 'hr.recruitment.create.all',
@@ -832,4 +833,21 @@ export enum PermissionCode {
   RECEP_ENQUIRY_CREATE_ALL = 'recep.enquiry.create.all',
   RECEP_ENQUIRY_READ_ALL = 'recep.enquiry.read.all',
   RECEP_STUDENT_REGISTER = 'recep.student.register',
+
+  // ==================== BEADMAX SALES ====================
+  BM_PRODUCT_CREATE_ALL = 'bm.product.create.all',
+  BM_PRODUCT_READ_ALL = 'bm.product.read.all',
+  BM_PRODUCT_UPDATE_ALL = 'bm.product.update.all',
+  BM_PRODUCT_DELETE_ALL = 'bm.product.delete.all',
+
+  BM_ORDER_CREATE_ALL = 'bm.order.create.all',
+  BM_ORDER_READ_ALL = 'bm.order.read.all',
+  BM_ORDER_UPDATE_ALL = 'bm.order.update.all',
+
+  BM_ANALYTICS_READ_ALL = 'bm.analytics.read.all',
+
+  // ==================== BROADCAST ====================
+  BROADCAST_CREATE_ALL = 'broadcast.create.all',
+  BROADCAST_READ_ALL = 'broadcast.read.all',
+  BROADCAST_DELETE_ALL = 'broadcast.delete.all',
 }

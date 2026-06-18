@@ -28,6 +28,7 @@ interface WeeklyReportAttributes {
     approvedById?: bigint;
     approvedDate?: Date;
     rejectionReason?: string;
+    comments?: string;
     deletedAt?: Date;
 }
 interface WeeklyReportCreationAttributes extends Optional<WeeklyReportAttributes, 'id' | 'uuid' | 'hasBlocker' | 'approvalStatus'> {
@@ -49,6 +50,7 @@ export declare class WeeklyReport extends Model<WeeklyReportAttributes, WeeklyRe
     approvedById?: bigint;
     approvedDate?: Date;
     rejectionReason?: string;
+    comments?: string;
     deletedAt?: Date;
     readonly createdAt: Date;
     readonly updatedAt: Date;

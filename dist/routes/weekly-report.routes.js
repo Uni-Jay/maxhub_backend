@@ -56,6 +56,7 @@ router.get('/', AuthMiddleware_1.default.requirePermission('hr.weeklyreport.read
         approvalStatus: r.approvalStatus,
         approvedBy: r.approvedById ? `User #${r.approvedById}` : undefined,
         rejectionReason: r.rejectionReason,
+        comments: r.comments,
         staffName: r.staff ? `${r.staff.firstName} ${r.staff.lastName}` : undefined,
     }));
     ResponseFormatter_1.ResponseFormatter.success(res, mapped);
@@ -88,6 +89,14 @@ router.patch('/:id/approve', AuthMiddleware_1.default.requireRole('superadmin'),
         approvalStatus: 'Approved', approvedById: req.user.id, approvedDate: new Date(), rejectionReason: null,
     });
     ResponseFormatter_1.ResponseFormatter.success(res, report, 'Weekly report approved');
+}));
+router.patch('/:id/comment', AuthMiddleware_1.default.requireRole('superadmin'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const report = await WeeklyReport_model_1.WeeklyReport.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
+    if (!report)
+        return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Weekly report not found');
+    const { comments } = req.body;
+    await report.update({ comments });
+    ResponseFormatter_1.ResponseFormatter.success(res, report, 'Comment saved');
 }));
 router.patch('/:id/reject', AuthMiddleware_1.default.requireRole('superadmin'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const report = await WeeklyReport_model_1.WeeklyReport.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
