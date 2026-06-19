@@ -16,6 +16,7 @@ class FileRecord extends sequelize_1.Model {
             folderId: { type: sequelize_1.DataTypes.STRING(36), allowNull: true },
             isFolder: { type: sequelize_1.DataTypes.BOOLEAN, defaultValue: false },
             folderType: { type: sequelize_1.DataTypes.ENUM('Personal', 'General'), allowNull: true },
+            restrictedToRoles: { type: sequelize_1.DataTypes.TEXT, allowNull: true },
             icon: { type: sequelize_1.DataTypes.STRING(10), allowNull: true },
             uploadedById: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true },
             uploadedByName: { type: sequelize_1.DataTypes.STRING(200), allowNull: true },

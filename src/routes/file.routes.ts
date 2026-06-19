@@ -8,11 +8,38 @@ import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import { FileRecord } from '@models/FileRecord.model';
 import { upload, getFileUrl } from '@config/multer';
+import { getRoleBucket } from '@utils/RoleBucket';
 
 const router = Router();
 
-// Ensures (and lazily creates) the single shared General Folder and the
-// caller's own private My Folder. These are the only two folders in the system.
+// Named, shared folders beyond the personal/general pair — some restricted to
+// HR-domain roles. Lazily ensured (findOrCreate) so re-running this never duplicates them.
+const NAMED_FOLDERS: { name: string; icon: string; restrictedToRoles?: string[] }[] = [
+  { name: 'Projects', icon: '📁' },
+  { name: 'Certificates', icon: '🎓' },
+  { name: 'Shared', icon: '📁' },
+  { name: 'Company Documents', icon: '🏢', restrictedToRoles: ['admin', 'hr', 'superadmin'] },
+  { name: 'HR Documents', icon: '🗂️', restrictedToRoles: ['admin', 'hr', 'superadmin'] },
+];
+
+function isBypassRole(req: Request): boolean {
+  const bucket = getRoleBucket(req);
+  return bucket === 'superadmin' || bucket === 'admin';
+}
+
+function canSeeNamedFolder(req: Request, folder: any): boolean {
+  if (!folder.restrictedToRoles) return true;
+  if (isBypassRole(req)) return true;
+  try {
+    const allowed: string[] = JSON.parse(folder.restrictedToRoles);
+    return allowed.includes(getRoleBucket(req));
+  } catch {
+    return true;
+  }
+}
+
+// Ensures (and lazily creates) the shared General Folder, the caller's own
+// private My Folder, and the fixed set of named shared folders.
 async function ensureFolders(req: Request) {
   const user = (req as any).user;
   const [general] = await FileRecord.findOrCreate({
@@ -29,25 +56,41 @@ async function ensureFolders(req: Request) {
       uploadedByName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
     } as any,
   });
-  return { general, mine };
+
+  const named = [];
+  for (const def of NAMED_FOLDERS) {
+    const [folder] = await FileRecord.findOrCreate({
+      where: { isFolder: true, name: def.name, folderType: { [Op.is]: null } },
+      defaults: {
+        uuid: uuidv4(), name: def.name, isFolder: true, icon: def.icon, size: 0,
+        restrictedToRoles: def.restrictedToRoles ? JSON.stringify(def.restrictedToRoles) : undefined,
+      } as any,
+    });
+    named.push(folder);
+  }
+
+  return { general, mine, named: named.filter((f) => canSeeNamedFolder(req, f)) };
 }
 
-// A folder is accessible unless it's someone else's Personal folder — strictly private, no role exception.
-async function isFolderAccessible(folderUuid: string | undefined, user: any): Promise<boolean> {
+// A folder is accessible unless it's someone else's Personal folder (strictly
+// private, no role exception) or a named folder restricted to other roles.
+async function isFolderAccessible(req: Request, folderUuid: string | undefined, user: any): Promise<boolean> {
   if (!folderUuid) return true;
   const folder = await FileRecord.findOne({ where: { uuid: folderUuid, isFolder: true } });
   if (!folder) return true;
   if (folder.folderType === 'Personal' && String(folder.uploadedById) !== String(user?.id)) return false;
+  if (!folder.folderType && !canSeeNamedFolder(req, folder)) return false;
   return true;
 }
 
 // GET /api/files/folders
 router.get('/folders', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const { general, mine } = await ensureFolders(req);
-  ResponseFormatter.success(res, [general, mine]);
+  const { general, mine, named } = await ensureFolders(req);
+  ResponseFormatter.success(res, [mine, general, ...named]);
 }));
 
-// POST /api/files/folders — Super Admin only; the system is fixed at exactly 2 folders otherwise
+// POST /api/files/folders — Super Admin only; ad-hoc folders beyond the fixed
+// My Folder/General/NAMED_FOLDERS set are not exposed in the UI.
 router.post('/folders', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
   const roles = (user?.roles || []).map((r: string) => r.toLowerCase().replace(/[^a-z]/g, ''));
@@ -96,16 +139,16 @@ router.delete('/folders/:id', ErrorMiddleware.asyncHandler(async (req: Request, 
 router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
   const { folderId, search } = req.query;
-  const { general, mine } = await ensureFolders(req);
+  const { general, mine, named } = await ensureFolders(req);
 
   const where: any = { isFolder: false };
   if (folderId) {
-    if (!(await isFolderAccessible(folderId as string, user))) {
+    if (!(await isFolderAccessible(req, folderId as string, user))) {
       return ResponseFormatter.forbidden(res, 'You do not have access to this folder', req.path);
     }
     where.folderId = folderId as string;
   } else {
-    where.folderId = { [Op.in]: [general.uuid, mine.uuid] };
+    where.folderId = { [Op.in]: [general.uuid, mine.uuid, ...named.map((f: any) => f.uuid)] };
   }
   if (search) where.name = { [Op.iLike]: `%${search}%` };
 
@@ -118,7 +161,7 @@ router.post('/upload', upload.single('file'), ErrorMiddleware.asyncHandler(async
   const user = (req as any).user;
   const { folderId } = req.body;
 
-  if (!(await isFolderAccessible(folderId, user))) {
+  if (!(await isFolderAccessible(req, folderId, user))) {
     return ResponseFormatter.forbidden(res, 'You do not have access to this folder', req.path);
   }
 
@@ -178,7 +221,7 @@ router.get('/:id/download', ErrorMiddleware.asyncHandler(async (req: Request, re
   const file = await FileRecord.findOne({ where: { uuid: req.params.id, isFolder: false } });
   if (!file) return ResponseFormatter.notFound(res, 'File not found');
 
-  if (!(await isFolderAccessible(file.folderId, user))) {
+  if (!(await isFolderAccessible(req, file.folderId, user))) {
     return ResponseFormatter.forbidden(res, 'You do not have access to this file', req.path);
   }
 
@@ -198,7 +241,7 @@ router.delete('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Res
   const file = await FileRecord.findOne({ where: { uuid: req.params.id } });
   if (!file) return ResponseFormatter.notFound(res, 'File not found');
 
-  if (!file.isFolder && !(await isFolderAccessible(file.folderId, user))) {
+  if (!file.isFolder && !(await isFolderAccessible(req, file.folderId, user))) {
     return ResponseFormatter.forbidden(res, 'You do not have access to this file', req.path);
   }
 
@@ -220,7 +263,7 @@ router.patch('/:id/rename', ErrorMiddleware.asyncHandler(async (req: Request, re
   const file = await FileRecord.findOne({ where: { uuid: req.params.id } });
   if (!file) return ResponseFormatter.notFound(res, 'File not found');
 
-  if (!file.isFolder && !(await isFolderAccessible(file.folderId, user))) {
+  if (!file.isFolder && !(await isFolderAccessible(req, file.folderId, user))) {
     return ResponseFormatter.forbidden(res, 'You do not have access to this file', req.path);
   }
 

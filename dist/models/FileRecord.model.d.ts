@@ -10,6 +10,7 @@ interface FileRecordAttributes {
     folderId?: string;
     isFolder: boolean;
     folderType?: 'Personal' | 'General';
+    restrictedToRoles?: string;
     icon?: string;
     uploadedById?: bigint;
     uploadedByName?: string;
@@ -28,6 +29,7 @@ export declare class FileRecord extends Model<FileRecordAttributes, FileRecordCr
     folderId?: string;
     isFolder: boolean;
     folderType?: 'Personal' | 'General';
+    restrictedToRoles?: string;
     icon?: string;
     uploadedById?: bigint;
     uploadedByName?: string;

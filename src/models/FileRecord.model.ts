@@ -12,6 +12,8 @@ interface FileRecordAttributes {
   folderId?: string;
   isFolder: boolean;
   folderType?: 'Personal' | 'General';
+  /** JSON array of canonical role buckets allowed to see this folder (e.g. '["admin","hr","superadmin"]'). Null/undefined = visible to everyone. Only meaningful on isFolder rows; never applies to Personal folders, which use ownership instead. */
+  restrictedToRoles?: string;
   icon?: string;
   uploadedById?: bigint;
   uploadedByName?: string;
@@ -33,6 +35,7 @@ export class FileRecord
   declare folderId?: string;
   declare isFolder: boolean;
   declare folderType?: 'Personal' | 'General';
+  declare restrictedToRoles?: string;
   declare icon?: string;
   declare uploadedById?: bigint;
   declare uploadedByName?: string;
@@ -53,6 +56,7 @@ export class FileRecord
         folderId: { type: DataTypes.STRING(36), allowNull: true },
         isFolder: { type: DataTypes.BOOLEAN, defaultValue: false },
         folderType: { type: DataTypes.ENUM('Personal', 'General'), allowNull: true },
+        restrictedToRoles: { type: DataTypes.TEXT, allowNull: true },
         icon: { type: DataTypes.STRING(10), allowNull: true },
         uploadedById: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
         uploadedByName: { type: DataTypes.STRING(200), allowNull: true },
