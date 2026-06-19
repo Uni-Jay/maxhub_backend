@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { Op } from 'sequelize';
 import AuthMiddleware from '../middleware/AuthMiddleware';
 import { PermissionCode } from '../config/PermissionCodes';
 import { AttendanceService, ClockInRequest, ClockOutRequest } from '../services/AttendanceService';
@@ -9,14 +10,31 @@ import { Overtime } from '../models/Overtime.model';
 const router = Router();
 const attendanceService = new AttendanceService();
 
+function isBypassRole(req: Request): boolean {
+  const roles = ((req as any).user?.roles || []).map((r: string) => r.toLowerCase().replace(/[^a-z]/g, ''));
+  return roles.includes('superadmin') || roles.includes('admin') || roles.includes('headofadmin');
+}
+
+function hasPermission(req: Request, code: string): boolean {
+  if (isBypassRole(req)) return true;
+  const perms = new Set(((req as any).user?.permissions || []).map((p: string) => String(p).toLowerCase()));
+  return perms.has(code.toLowerCase());
+}
+
 /**
  * GET /api/attendance
- * List attendance records with optional date filter
+ * List attendance records with optional date filter.
+ * Scoped by whichever read permission the caller actually has: ALL (everyone),
+ * OWN_DEPARTMENT (HOD — her department's staff only), or OWN (staff — herself only).
  */
 router.get(
   '/',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission(PermissionCode.ATT_ATTENDANCE_READ_ALL),
+  AuthMiddleware.requirePermission(
+    PermissionCode.ATT_ATTENDANCE_READ_ALL,
+    PermissionCode.ATT_ATTENDANCE_READ_OWN_DEPARTMENT,
+    PermissionCode.ATT_ATTENDANCE_READ_OWN
+  ),
   async (req: Request, res: Response) => {
     try {
       const { date, page = '1', limit = '20' } = req.query as Record<string, string>;
@@ -26,6 +44,20 @@ router.get(
 
       const where: Record<string, unknown> = {};
       if (date) where.attendanceDate = date;
+
+      if (!hasPermission(req, PermissionCode.ATT_ATTENDANCE_READ_ALL)) {
+        const userId = (req as any).user?.id;
+        const ownStaff = await Staff.findOne({ where: { userId }, attributes: ['id', 'departmentId'] });
+        if (!ownStaff) {
+          return res.json({ success: true, data: [], pagination: { total: 0, page: pageNum, limit: limitNum, totalPages: 0 } });
+        }
+        if (hasPermission(req, PermissionCode.ATT_ATTENDANCE_READ_OWN_DEPARTMENT)) {
+          const deptStaff = await Staff.findAll({ where: { departmentId: (ownStaff as any).departmentId }, attributes: ['id'] });
+          where.staffId = { [Op.in]: deptStaff.map((s: any) => s.id) };
+        } else {
+          where.staffId = (ownStaff as any).id;
+        }
+      }
 
       const { count, rows } = await Attendance.findAndCountAll({
         where,

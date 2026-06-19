@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const sequelize_1 = require("sequelize");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
 const PermissionCodes_1 = require("../config/PermissionCodes");
 const AttendanceService_1 = require("../services/AttendanceService");
@@ -12,7 +13,17 @@ const Staff_model_1 = require("../models/Staff.model");
 const Overtime_model_1 = require("../models/Overtime.model");
 const router = (0, express_1.Router)();
 const attendanceService = new AttendanceService_1.AttendanceService();
-router.get('/', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.ATT_ATTENDANCE_READ_ALL), async (req, res) => {
+function isBypassRole(req) {
+    const roles = (req.user?.roles || []).map((r) => r.toLowerCase().replace(/[^a-z]/g, ''));
+    return roles.includes('superadmin') || roles.includes('admin') || roles.includes('headofadmin');
+}
+function hasPermission(req, code) {
+    if (isBypassRole(req))
+        return true;
+    const perms = new Set((req.user?.permissions || []).map((p) => String(p).toLowerCase()));
+    return perms.has(code.toLowerCase());
+}
+router.get('/', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.ATT_ATTENDANCE_READ_ALL, PermissionCodes_1.PermissionCode.ATT_ATTENDANCE_READ_OWN_DEPARTMENT, PermissionCodes_1.PermissionCode.ATT_ATTENDANCE_READ_OWN), async (req, res) => {
     try {
         const { date, page = '1', limit = '20' } = req.query;
         const pageNum = Math.max(1, parseInt(page));
@@ -21,6 +32,20 @@ router.get('/', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.r
         const where = {};
         if (date)
             where.attendanceDate = date;
+        if (!hasPermission(req, PermissionCodes_1.PermissionCode.ATT_ATTENDANCE_READ_ALL)) {
+            const userId = req.user?.id;
+            const ownStaff = await Staff_model_1.Staff.findOne({ where: { userId }, attributes: ['id', 'departmentId'] });
+            if (!ownStaff) {
+                return res.json({ success: true, data: [], pagination: { total: 0, page: pageNum, limit: limitNum, totalPages: 0 } });
+            }
+            if (hasPermission(req, PermissionCodes_1.PermissionCode.ATT_ATTENDANCE_READ_OWN_DEPARTMENT)) {
+                const deptStaff = await Staff_model_1.Staff.findAll({ where: { departmentId: ownStaff.departmentId }, attributes: ['id'] });
+                where.staffId = { [sequelize_1.Op.in]: deptStaff.map((s) => s.id) };
+            }
+            else {
+                where.staffId = ownStaff.id;
+            }
+        }
         const { count, rows } = await Attendance_model_1.Attendance.findAndCountAll({
             where,
             include: [{ model: Staff_model_1.Staff, as: 'staff', attributes: ['id', 'firstName', 'lastName', 'employeeId'] }],
