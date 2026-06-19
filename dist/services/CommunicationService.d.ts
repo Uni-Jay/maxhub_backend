@@ -16,6 +16,15 @@ export declare function sendWelcomeEmail(params: {
     businessUnit?: string;
     department?: string;
 }): Promise<boolean>;
+export declare function sendPromotionEmail(params: {
+    to: string;
+    firstName: string;
+    lastName: string;
+    newDesignation?: string;
+    newDepartment?: string;
+    effectiveDate?: string | Date;
+    approvalRemarks?: string;
+}): Promise<boolean>;
 export declare function sendBirthdayEmail(params: {
     to: string;
     fullName: string;

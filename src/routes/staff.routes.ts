@@ -16,6 +16,7 @@ import { StaffDepartment } from '@models/StaffDepartment.model';
 import PasswordService from '@services/PasswordService';
 import { sendWelcomeEmail } from '@services/CommunicationService';
 import { upload, getFileUrl } from '@config/multer';
+import { resolveRoleForPosition } from '@config/PositionRoleMap';
 
 const router = Router();
 
@@ -146,7 +147,7 @@ router.post(
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const {
       firstName, lastName, email, phone, employeeId,
-      departmentId: bodyDepartmentId, designationId, locationId,
+      departmentId: bodyDepartmentId, additionalDepartmentIds, designationId, locationId,
       joiningDate, dateOfBirth, gender, alternatePhone,
       whatsappNumber, socialMediaHandle, homeAddress,
       position, customPosition, businessUnit, additionalUnits,
@@ -215,7 +216,8 @@ router.post(
       emailVerified: true,
     } as any);
 
-    const staffRole = await Role.findOne({ where: { code: 'staff' } });
+    const assignedRoleCode = resolveRoleForPosition(resolvedPosition);
+    const staffRole = await Role.findOne({ where: { code: assignedRoleCode } });
     if (staffRole) {
       await (user as any).addRole(staffRole);
     }
@@ -289,6 +291,21 @@ router.post(
 
     const dept = departmentId ? await Department.findByPk(departmentId, { attributes: ['name'] }) : null;
 
+    // Short-staffed teams often have one person covering up to 3 departments —
+    // departmentId stays her primary, additionalDepartmentIds are secondary.
+    if (departmentId) {
+      const secondaryIds: number[] = Array.isArray(additionalDepartmentIds)
+        ? [...new Set(additionalDepartmentIds.map(Number).filter((id: number) => id && id !== Number(departmentId)))].slice(0, 2)
+        : [];
+      await StaffDepartment.bulkCreate(
+        [
+          { staffId: staff.id, departmentId: BigInt(departmentId), isPrimary: true, assignedAt: new Date() },
+          ...secondaryIds.map((id) => ({ staffId: staff.id, departmentId: BigInt(id), isPrimary: false, assignedAt: new Date() })),
+        ] as any,
+        { ignoreDuplicates: true }
+      );
+    }
+
     sendWelcomeEmail({
       to: email,
       firstName,
@@ -355,6 +372,29 @@ router.patch(
     if (req.body.customPosition?.trim()) updates.position = req.body.customPosition.trim();
 
     await staff.update(updates as any);
+
+    // Keep the RBAC role in sync if the position changed to/from one that maps to a role.
+    // Never touch a Super Admin's role this way — position edits must not be able to demote one.
+    if (updates.position !== undefined) {
+      const targetRoleCode = resolveRoleForPosition(updates.position as string);
+      const targetRole = await Role.findOne({ where: { code: targetRoleCode } });
+      const staffUser = await User.findByPk((staff as any).userId);
+      if (targetRole && staffUser) {
+        const currentRoles = await (staffUser as any).getRoles();
+        const alreadyHasIt = currentRoles.some((r: any) => r.code === targetRoleCode);
+        const isSuperAdmin = currentRoles.some((r: any) => r.code === 'superadmin');
+        if (!alreadyHasIt && !isSuperAdmin) {
+          // Replace any of the 5 canonical roles with the new one — a staff
+          // member should hold exactly one of superadmin/admin/hr/hod/staff
+          // at a time, position changes shouldn't stack roles.
+          const canonicalCodes = ['superadmin', 'admin', 'hr', 'hod', 'staff'];
+          const toRemove = currentRoles.filter((r: any) => canonicalCodes.includes(r.code));
+          if (toRemove.length) await (staffUser as any).removeRoles(toRemove);
+          await (staffUser as any).addRole(targetRole);
+        }
+      }
+    }
+
     ResponseFormatter.success(res, staff.toJSON(), 'Staff member updated successfully');
   })
 );

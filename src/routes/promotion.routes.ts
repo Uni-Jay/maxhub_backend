@@ -1,11 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { EmployeePromotion } from '@models/EmployeePromotion.model';
 import { Staff } from '@models/Staff.model';
+import { Designation } from '@models/Designation.model';
+import { Department } from '@models/Department.model';
 import { idOrUuidWhere } from '@utils/idOrUuid';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import AuthMiddleware from '@middleware/AuthMiddleware';
 import { PermissionCode } from '@config/PermissionCodes';
+import { sendPromotionEmail } from '@services/CommunicationService';
 
 const router = Router();
 
@@ -22,6 +25,18 @@ function hasPermission(req: Request, code: string): boolean {
 
 function isDepartmentScopedOnly(req: Request, allCode: string, deptCode: string): boolean {
   return !hasPermission(req, allCode) && hasPermission(req, deptCode);
+}
+
+/**
+ * Approving a promotion is deliberately Super Admin-only — HR and Admin can
+ * both recommend, but neither can approve their own (or each other's)
+ * recommendation. Admin normally bypasses every requirePermission() check,
+ * so that bypass is intentionally NOT used here — this checks the literal
+ * role string instead of going through hasPermission()/isBypassRole().
+ */
+function isSuperAdminOnly(req: Request): boolean {
+  const roles = ((req as any).user?.roles || []).map((r: string) => r.toLowerCase().replace(/[^a-z]/g, ''));
+  return roles.includes('superadmin');
 }
 
 async function getOwnStaff(req: Request) {
@@ -95,8 +110,13 @@ router.post('/', AuthMiddleware.requirePermission(PermissionCode.HR_PROMOTION_CR
   ResponseFormatter.success(res, promotion, 'Promotion proposed', 201);
 }));
 
-// PATCH /api/promotions/:id/approve — approves and immediately applies the promotion to the staff record
+// PATCH /api/promotions/:id/approve — Super Admin only. Approves, applies the
+// promotion to the staff record, and emails the promoted staff member.
 router.patch('/:id/approve', AuthMiddleware.requirePermission(PermissionCode.HR_PROMOTION_APPROVE_ALL), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  if (!isSuperAdminOnly(req)) {
+    return ResponseFormatter.forbidden(res, 'Only Super Admin can approve promotions', req.path);
+  }
+
   const promotion = await EmployeePromotion.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!promotion) return ResponseFormatter.notFound(res, 'Promotion not found');
   if (promotion.status !== 'Proposed') {
@@ -115,13 +135,34 @@ router.patch('/:id/approve', AuthMiddleware.requirePermission(PermissionCode.HR_
       designationId: promotion.toDesignationId,
       ...(promotion.toDepartmentId && { departmentId: promotion.toDepartmentId }),
     } as any);
+
+    const [designation, department] = await Promise.all([
+      promotion.toDesignationId ? Designation.findByPk(promotion.toDesignationId, { attributes: ['name'] }) : null,
+      promotion.toDepartmentId ? Department.findByPk(promotion.toDepartmentId, { attributes: ['name'] }) : null,
+    ]);
+
+    if ((staff as any).email) {
+      sendPromotionEmail({
+        to: (staff as any).email,
+        firstName: (staff as any).firstName,
+        lastName: (staff as any).lastName,
+        newDesignation: (designation as any)?.name,
+        newDepartment: (department as any)?.name,
+        effectiveDate: promotion.effectiveDate,
+        approvalRemarks: req.body.approvalRemarks,
+      }).catch(err => console.error('[Promotion] Approval email failed:', err));
+    }
   }
 
-  ResponseFormatter.success(res, promotion, 'Promotion approved and applied');
+  ResponseFormatter.success(res, promotion, 'Promotion approved, applied, and the staff member has been notified');
 }));
 
-// PATCH /api/promotions/:id/reject
+// PATCH /api/promotions/:id/reject — Super Admin only.
 router.patch('/:id/reject', AuthMiddleware.requirePermission(PermissionCode.HR_PROMOTION_APPROVE_ALL), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  if (!isSuperAdminOnly(req)) {
+    return ResponseFormatter.forbidden(res, 'Only Super Admin can reject promotions', req.path);
+  }
+
   const promotion = await EmployeePromotion.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!promotion) return ResponseFormatter.notFound(res, 'Promotion not found');
   if (promotion.status !== 'Proposed') {

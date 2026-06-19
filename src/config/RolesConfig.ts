@@ -80,7 +80,7 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.HR_RECORDS_UPDATE_ALL,
     PermissionCode.HR_PROMOTION_CREATE_ALL,
     PermissionCode.HR_PROMOTION_READ_ALL,
-    PermissionCode.HR_PROMOTION_APPROVE_ALL,
+    // Approve is Super Admin-only (enforced in promotion.routes.ts, not just here) — Admin can recommend, not approve.
     PermissionCode.HR_WARNING_CREATE_ALL,
     PermissionCode.HR_WARNING_READ_ALL,
     PermissionCode.HR_RESIGNATION_READ_ALL,
@@ -381,9 +381,7 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.HR_APPRAISAL_READ_ALL,
     PermissionCode.HR_APPRAISAL_UPDATE_ALL,
     PermissionCode.HR_APPRAISAL_APPROVE_ALL,
-    // Promotion (recommend own department staff, never herself)
-    PermissionCode.HR_PROMOTION_CREATE_OWN_DEPARTMENT,
-    PermissionCode.HR_PROMOTION_READ_OWN_DEPARTMENT,
+    // Promotions: HR/Admin recommend, Super Admin approves — HOD is view-only via no grant at all here.
     PermissionCode.HR_WEEKLY_REPORT_CREATE_OWN,
     PermissionCode.HR_WEEKLY_REPORT_READ_OWN,
     PermissionCode.HR_WEEKLY_REPORT_READ_ALL,

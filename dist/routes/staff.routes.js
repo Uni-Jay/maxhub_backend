@@ -21,6 +21,7 @@ const StaffDepartment_model_1 = require("../models/StaffDepartment.model");
 const PasswordService_1 = __importDefault(require("../services/PasswordService"));
 const CommunicationService_1 = require("../services/CommunicationService");
 const multer_1 = require("../config/multer");
+const PositionRoleMap_1 = require("../config/PositionRoleMap");
 const router = (0, express_1.Router)();
 function isBypassRole(req) {
     const roles = (req.user?.roles || []).map((r) => r.toLowerCase().replace(/[^a-z]/g, ''));
@@ -118,7 +119,7 @@ router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, re
     ResponseFormatter_1.ResponseFormatter.success(res, staff.toJSON());
 }));
 router.post('/', AuthMiddleware_1.default.requirePermission('org.staff.create.all', 'org.staff.create.own_department'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const { firstName, lastName, email, phone, employeeId, departmentId: bodyDepartmentId, designationId, locationId, joiningDate, dateOfBirth, gender, alternatePhone, whatsappNumber, socialMediaHandle, homeAddress, position, customPosition, businessUnit, additionalUnits, branchId, unitId, jobTitle, hireDate, employmentStatus, educationLevel, degree, institution, major, graduationYear, nyscCompleted, emergencyContactName, emergencyContactPhone, emergencyRelationship, emergencyHomeAddress, emergencyOfficeAddress, validIdType, validIdNumber, idDocument, utilityBillDocument, certificateDocument, signatureImage, hasCertification, certifications, previousWorkHistory, skills, guarantor1Name, guarantor1Relationship, guarantor1Phone, guarantor1Address, guarantor1Email, guarantor1Occupation, guarantor1DurationKnown, guarantor2Name, guarantor2Relationship, guarantor2Phone, guarantor2Address, guarantor2Email, guarantor2Occupation, guarantor2DurationKnown, bankName, accountType, accountName, accountNumber, hasMedicalCondition, medicalConditions, medications, readJobDescription, acceptedCompanyPolicy, receivedCompanyAssets, assignedAssets, bloodGroup, maritalStatus, nationality, } = req.body;
+    const { firstName, lastName, email, phone, employeeId, departmentId: bodyDepartmentId, additionalDepartmentIds, designationId, locationId, joiningDate, dateOfBirth, gender, alternatePhone, whatsappNumber, socialMediaHandle, homeAddress, position, customPosition, businessUnit, additionalUnits, branchId, unitId, jobTitle, hireDate, employmentStatus, educationLevel, degree, institution, major, graduationYear, nyscCompleted, emergencyContactName, emergencyContactPhone, emergencyRelationship, emergencyHomeAddress, emergencyOfficeAddress, validIdType, validIdNumber, idDocument, utilityBillDocument, certificateDocument, signatureImage, hasCertification, certifications, previousWorkHistory, skills, guarantor1Name, guarantor1Relationship, guarantor1Phone, guarantor1Address, guarantor1Email, guarantor1Occupation, guarantor1DurationKnown, guarantor2Name, guarantor2Relationship, guarantor2Phone, guarantor2Address, guarantor2Email, guarantor2Occupation, guarantor2DurationKnown, bankName, accountType, accountName, accountNumber, hasMedicalCondition, medicalConditions, medications, readJobDescription, acceptedCompanyPolicy, receivedCompanyAssets, assignedAssets, bloodGroup, maritalStatus, nationality, } = req.body;
     const departmentId = isDepartmentScopedOnly(req, 'org.staff.create.all', 'org.staff.create.own_department')
         ? req.user?.departmentId
         : bodyDepartmentId;
@@ -150,7 +151,8 @@ router.post('/', AuthMiddleware_1.default.requirePermission('org.staff.create.al
         status: 'Active',
         emailVerified: true,
     });
-    const staffRole = await Role_model_1.Role.findOne({ where: { code: 'staff' } });
+    const assignedRoleCode = (0, PositionRoleMap_1.resolveRoleForPosition)(resolvedPosition);
+    const staffRole = await Role_model_1.Role.findOne({ where: { code: assignedRoleCode } });
     if (staffRole) {
         await user.addRole(staffRole);
     }
@@ -221,6 +223,15 @@ router.post('/', AuthMiddleware_1.default.requirePermission('org.staff.create.al
         nationality,
     });
     const dept = departmentId ? await Department_model_1.Department.findByPk(departmentId, { attributes: ['name'] }) : null;
+    if (departmentId) {
+        const secondaryIds = Array.isArray(additionalDepartmentIds)
+            ? [...new Set(additionalDepartmentIds.map(Number).filter((id) => id && id !== Number(departmentId)))].slice(0, 2)
+            : [];
+        await StaffDepartment_model_1.StaffDepartment.bulkCreate([
+            { staffId: staff.id, departmentId: BigInt(departmentId), isPrimary: true, assignedAt: new Date() },
+            ...secondaryIds.map((id) => ({ staffId: staff.id, departmentId: BigInt(id), isPrimary: false, assignedAt: new Date() })),
+        ], { ignoreDuplicates: true });
+    }
     (0, CommunicationService_1.sendWelcomeEmail)({
         to: email,
         firstName,
@@ -280,6 +291,23 @@ router.patch('/:id', AuthMiddleware_1.default.requirePermission('org.staff.updat
     if (req.body.customPosition?.trim())
         updates.position = req.body.customPosition.trim();
     await staff.update(updates);
+    if (updates.position !== undefined) {
+        const targetRoleCode = (0, PositionRoleMap_1.resolveRoleForPosition)(updates.position);
+        const targetRole = await Role_model_1.Role.findOne({ where: { code: targetRoleCode } });
+        const staffUser = await User_model_1.User.findByPk(staff.userId);
+        if (targetRole && staffUser) {
+            const currentRoles = await staffUser.getRoles();
+            const alreadyHasIt = currentRoles.some((r) => r.code === targetRoleCode);
+            const isSuperAdmin = currentRoles.some((r) => r.code === 'superadmin');
+            if (!alreadyHasIt && !isSuperAdmin) {
+                const canonicalCodes = ['superadmin', 'admin', 'hr', 'hod', 'staff'];
+                const toRemove = currentRoles.filter((r) => canonicalCodes.includes(r.code));
+                if (toRemove.length)
+                    await staffUser.removeRoles(toRemove);
+                await staffUser.addRole(targetRole);
+            }
+        }
+    }
     ResponseFormatter_1.ResponseFormatter.success(res, staff.toJSON(), 'Staff member updated successfully');
 }));
 router.delete('/:id', AuthMiddleware_1.default.requirePermission('org.staff.delete.all', 'org.staff.delete.own_department'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {

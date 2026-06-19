@@ -113,6 +113,9 @@ function setupRoutes(app: any): void {
   // Meetings (Google Meet links — one-to-one calling removed)
   apiRouter.use('/meetings', require('./meeting.routes').default);
 
+  // Direct per-user permission overrides (grant a specific PermissionCode without changing role)
+  apiRouter.use('/users', require('./user-permission.routes').default);
+
   // VisaMax
   apiRouter.use('/visamax', require('./visamax.routes').default);
 

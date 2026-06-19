@@ -6,6 +6,7 @@ import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { PermissionCode } from '@config/PermissionCodes';
 import { Staff } from '@models/Staff.model';
 import { Department } from '@models/Department.model';
+import { StaffDepartment } from '@models/StaffDepartment.model';
 import { Attendance } from '@models/Attendance.model';
 import { Project } from '@models/Project.model';
 import { Invoice } from '@models/Invoice.model';
@@ -533,8 +534,29 @@ export class DashboardController {
       // Staff sees only their own data.
       const ownStaff = await getOwnStaff(req);
       if (!ownStaff) {
-        return ResponseFormatter.success(res, { myTasks: 0, pendingTasks: 0, leaveAvailable: 0, notifications: 0 }, 'Staff dashboard statistics retrieved');
+        return ResponseFormatter.success(res, { myTasks: 0, pendingTasks: 0, leaveAvailable: 0, notifications: 0, departments: [] }, 'Staff dashboard statistics retrieved');
       }
+
+      // A staff member can belong to up to 3 departments while short-staffed
+      // (StaffDepartment join table) with one marked primary — show all of
+      // them on her dashboard, not just the primary one.
+      const deptLinks = await StaffDepartment.findAll({ where: { staffId: ownStaff.id }, attributes: ['departmentId', 'isPrimary'] });
+      const deptIds = new Set<number>(deptLinks.map((l: any) => Number(l.departmentId)));
+      if (ownStaff.departmentId) deptIds.add(Number(ownStaff.departmentId));
+      const isPrimaryByDeptId = new Map<number, boolean>(deptLinks.map((l: any) => [Number(l.departmentId), !!l.isPrimary]));
+
+      const departments = await Promise.all(
+        [...deptIds].map(async (deptId) => {
+          const dept = await Department.findByPk(deptId, { attributes: ['id', 'name', 'code'] });
+          return {
+            id: deptId,
+            name: (dept as any)?.name,
+            code: (dept as any)?.code,
+            isPrimary: isPrimaryByDeptId.get(deptId) ?? deptId === Number(ownStaff.departmentId),
+            teamSize: await Staff.count({ where: { departmentId: deptId } }),
+          };
+        })
+      );
 
       const [myTasks, pendingTasks, leaveBalance] = await Promise.all([
         Task.count({ where: { assigneeId: ownStaff.id } }),
@@ -547,6 +569,7 @@ export class DashboardController {
         pendingTasks,
         leaveAvailable: leaveBalance,
         notifications: 0,
+        departments,
       }, 'Staff dashboard statistics retrieved');
     }
   );

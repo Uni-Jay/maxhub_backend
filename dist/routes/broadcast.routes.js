@@ -7,6 +7,7 @@ const express_1 = require("express");
 const sequelize_1 = require("sequelize");
 const Broadcast_model_1 = require("../models/Broadcast.model");
 const Staff_model_1 = require("../models/Staff.model");
+const StaffDepartment_model_1 = require("../models/StaffDepartment.model");
 const Notification_model_1 = require("../models/Notification.model");
 const Role_model_1 = require("../models/Role.model");
 const UserRole_model_1 = require("../models/UserRole.model");
@@ -59,13 +60,28 @@ router.post('/', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.Pe
         audienceValue,
         createdById: BigInt(user.id),
     });
-    const where = {};
-    if (audienceType === 'BusinessUnit')
-        where.businessUnit = audienceValue;
-    if (audienceType === 'Department')
-        where.departmentId = BigInt(audienceValue);
-    const recipients = await Staff_model_1.Staff.findAll({ where, attributes: ['userId'] });
-    const recipientUserIds = new Set(recipients.map((s) => s.userId).filter(Boolean));
+    const recipientUserIds = new Set();
+    if (audienceType === 'BusinessUnit') {
+        const recipients = await Staff_model_1.Staff.findAll({ where: { businessUnit: audienceValue }, attributes: ['userId'] });
+        recipients.forEach((s) => s.userId && recipientUserIds.add(s.userId));
+    }
+    else if (audienceType === 'Department') {
+        const deptId = BigInt(audienceValue);
+        const [primaryStaff, secondaryLinks] = await Promise.all([
+            Staff_model_1.Staff.findAll({ where: { departmentId: deptId }, attributes: ['userId'] }),
+            StaffDepartment_model_1.StaffDepartment.findAll({ where: { departmentId: deptId }, attributes: ['staffId'] }),
+        ]);
+        primaryStaff.forEach((s) => s.userId && recipientUserIds.add(s.userId));
+        const secondaryStaffIds = secondaryLinks.map((l) => l.staffId);
+        if (secondaryStaffIds.length) {
+            const secondaryStaff = await Staff_model_1.Staff.findAll({ where: { id: { [sequelize_1.Op.in]: secondaryStaffIds } }, attributes: ['userId'] });
+            secondaryStaff.forEach((s) => s.userId && recipientUserIds.add(s.userId));
+        }
+    }
+    else if (audienceType === 'All') {
+        const recipients = await Staff_model_1.Staff.findAll({ attributes: ['userId'] });
+        recipients.forEach((s) => s.userId && recipientUserIds.add(s.userId));
+    }
     if (!canCreateAll) {
         const ccUserIds = await getUserIdsForRoles(['hr', 'admin', 'superadmin']);
         ccUserIds.forEach((id) => recipientUserIds.add(id));

@@ -6,11 +6,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const EmployeePromotion_model_1 = require("../models/EmployeePromotion.model");
 const Staff_model_1 = require("../models/Staff.model");
+const Designation_model_1 = require("../models/Designation.model");
+const Department_model_1 = require("../models/Department.model");
 const idOrUuid_1 = require("../utils/idOrUuid");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
 const PermissionCodes_1 = require("../config/PermissionCodes");
+const CommunicationService_1 = require("../services/CommunicationService");
 const router = (0, express_1.Router)();
 function isBypassRole(req) {
     const roles = (req.user?.roles || []).map((r) => r.toLowerCase().replace(/[^a-z]/g, ''));
@@ -24,6 +27,10 @@ function hasPermission(req, code) {
 }
 function isDepartmentScopedOnly(req, allCode, deptCode) {
     return !hasPermission(req, allCode) && hasPermission(req, deptCode);
+}
+function isSuperAdminOnly(req) {
+    const roles = (req.user?.roles || []).map((r) => r.toLowerCase().replace(/[^a-z]/g, ''));
+    return roles.includes('superadmin');
 }
 async function getOwnStaff(req) {
     const userId = req.user?.id;
@@ -87,6 +94,9 @@ router.post('/', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.Pe
     ResponseFormatter_1.ResponseFormatter.success(res, promotion, 'Promotion proposed', 201);
 }));
 router.patch('/:id/approve', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.HR_PROMOTION_APPROVE_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    if (!isSuperAdminOnly(req)) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only Super Admin can approve promotions', req.path);
+    }
     const promotion = await EmployeePromotion_model_1.EmployeePromotion.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!promotion)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Promotion not found');
@@ -104,10 +114,28 @@ router.patch('/:id/approve', AuthMiddleware_1.default.requirePermission(Permissi
             designationId: promotion.toDesignationId,
             ...(promotion.toDepartmentId && { departmentId: promotion.toDepartmentId }),
         });
+        const [designation, department] = await Promise.all([
+            promotion.toDesignationId ? Designation_model_1.Designation.findByPk(promotion.toDesignationId, { attributes: ['name'] }) : null,
+            promotion.toDepartmentId ? Department_model_1.Department.findByPk(promotion.toDepartmentId, { attributes: ['name'] }) : null,
+        ]);
+        if (staff.email) {
+            (0, CommunicationService_1.sendPromotionEmail)({
+                to: staff.email,
+                firstName: staff.firstName,
+                lastName: staff.lastName,
+                newDesignation: designation?.name,
+                newDepartment: department?.name,
+                effectiveDate: promotion.effectiveDate,
+                approvalRemarks: req.body.approvalRemarks,
+            }).catch(err => console.error('[Promotion] Approval email failed:', err));
+        }
     }
-    ResponseFormatter_1.ResponseFormatter.success(res, promotion, 'Promotion approved and applied');
+    ResponseFormatter_1.ResponseFormatter.success(res, promotion, 'Promotion approved, applied, and the staff member has been notified');
 }));
 router.patch('/:id/reject', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.HR_PROMOTION_APPROVE_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    if (!isSuperAdminOnly(req)) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only Super Admin can reject promotions', req.path);
+    }
     const promotion = await EmployeePromotion_model_1.EmployeePromotion.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!promotion)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Promotion not found');

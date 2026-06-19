@@ -210,6 +210,96 @@ export async function sendWelcomeEmail(params: {
 }
 
 /**
+ * Send a promotion confirmation email once a Super Admin approves it.
+ */
+export async function sendPromotionEmail(params: {
+  to: string;
+  firstName: string;
+  lastName: string;
+  newDesignation?: string;
+  newDepartment?: string;
+  effectiveDate?: string | Date;
+  approvalRemarks?: string;
+}): Promise<boolean> {
+  const { to, firstName, lastName, newDesignation, newDepartment, effectiveDate, approvalRemarks } = params;
+  const loginUrl = process.env.FRONTEND_URL || 'https://www.maxhubng.company';
+  const companyName = process.env.COMPANY_NAME || 'MaxHub';
+  const effectiveDateStr = effectiveDate ? new Date(effectiveDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : undefined;
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Congratulations on Your Promotion</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f8;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f8;padding:32px 0;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+
+        <tr>
+          <td style="background:linear-gradient(135deg,#059669 0%,#10b981 100%);padding:36px 40px;text-align:center;">
+            <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.5px;">🎉 Congratulations, ${firstName}!</h1>
+            <p style="margin:6px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">Your promotion has been approved</p>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:40px;">
+            <p style="margin:0 0 28px;font-size:15px;color:#6b7280;line-height:1.6;">
+              We're delighted to let you know that your promotion at ${companyName} has been reviewed and approved by Super Admin.
+              Thank you for your continued hard work and dedication.
+            </p>
+
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;margin-bottom:28px;">
+              <tr>
+                <td style="padding:24px 28px;">
+                  <p style="margin:0 0 16px;font-size:11px;font-weight:700;letter-spacing:1px;color:#059669;text-transform:uppercase;">Promotion Details</p>
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="padding:8px 0;border-bottom:1px solid #d1fae5;font-size:13px;color:#6b7280;width:140px;">Name</td>
+                      <td style="padding:8px 0;border-bottom:1px solid #d1fae5;font-size:14px;font-weight:600;color:#111827;">${firstName} ${lastName}</td>
+                    </tr>
+                    ${newDesignation ? `<tr><td style="padding:8px 0;border-bottom:1px solid #d1fae5;font-size:13px;color:#6b7280;">New Position</td><td style="padding:8px 0;border-bottom:1px solid #d1fae5;font-size:14px;font-weight:700;color:#059669;">${newDesignation}</td></tr>` : ''}
+                    ${newDepartment ? `<tr><td style="padding:8px 0;border-bottom:1px solid #d1fae5;font-size:13px;color:#6b7280;">Department</td><td style="padding:8px 0;border-bottom:1px solid #d1fae5;font-size:14px;color:#111827;">${newDepartment}</td></tr>` : ''}
+                    ${effectiveDateStr ? `<tr><td style="padding:8px 0;${approvalRemarks ? 'border-bottom:1px solid #d1fae5;' : ''}font-size:13px;color:#6b7280;">Effective Date</td><td style="padding:8px 0;${approvalRemarks ? 'border-bottom:1px solid #d1fae5;' : ''}font-size:14px;color:#111827;">${effectiveDateStr}</td></tr>` : ''}
+                    ${approvalRemarks ? `<tr><td style="padding:8px 0;font-size:13px;color:#6b7280;">Remarks</td><td style="padding:8px 0;font-size:14px;color:#111827;">${approvalRemarks}</td></tr>` : ''}
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="center">
+                  <a href="${loginUrl}" style="display:inline-block;background:linear-gradient(135deg,#059669,#10b981);color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:14px 36px;border-radius:10px;">
+                    Sign In to MaxHub
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="background:#f9fafb;border-top:1px solid #f3f4f6;padding:20px 40px;text-align:center;">
+            <p style="margin:0;font-size:12px;color:#9ca3af;">
+              This is an automated email from ${companyName} ERP. Please do not reply to this email.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  return sendEmail(to, `Congratulations on your promotion at ${companyName}!`, html);
+}
+
+/**
  * Send a branded birthday wish email.
  */
 export async function sendBirthdayEmail(params: {

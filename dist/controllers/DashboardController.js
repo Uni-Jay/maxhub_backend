@@ -8,6 +8,7 @@ const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const PermissionCodes_1 = require("../config/PermissionCodes");
 const Staff_model_1 = require("../models/Staff.model");
 const Department_model_1 = require("../models/Department.model");
+const StaffDepartment_model_1 = require("../models/StaffDepartment.model");
 const Attendance_model_1 = require("../models/Attendance.model");
 const Project_model_1 = require("../models/Project.model");
 const Invoice_model_1 = require("../models/Invoice.model");
@@ -401,8 +402,23 @@ DashboardController.getStaffStats = ErrorMiddleware_1.ErrorMiddleware.asyncHandl
     }
     const ownStaff = await getOwnStaff(req);
     if (!ownStaff) {
-        return ResponseFormatter_1.ResponseFormatter.success(res, { myTasks: 0, pendingTasks: 0, leaveAvailable: 0, notifications: 0 }, 'Staff dashboard statistics retrieved');
+        return ResponseFormatter_1.ResponseFormatter.success(res, { myTasks: 0, pendingTasks: 0, leaveAvailable: 0, notifications: 0, departments: [] }, 'Staff dashboard statistics retrieved');
     }
+    const deptLinks = await StaffDepartment_model_1.StaffDepartment.findAll({ where: { staffId: ownStaff.id }, attributes: ['departmentId', 'isPrimary'] });
+    const deptIds = new Set(deptLinks.map((l) => Number(l.departmentId)));
+    if (ownStaff.departmentId)
+        deptIds.add(Number(ownStaff.departmentId));
+    const isPrimaryByDeptId = new Map(deptLinks.map((l) => [Number(l.departmentId), !!l.isPrimary]));
+    const departments = await Promise.all([...deptIds].map(async (deptId) => {
+        const dept = await Department_model_1.Department.findByPk(deptId, { attributes: ['id', 'name', 'code'] });
+        return {
+            id: deptId,
+            name: dept?.name,
+            code: dept?.code,
+            isPrimary: isPrimaryByDeptId.get(deptId) ?? deptId === Number(ownStaff.departmentId),
+            teamSize: await Staff_model_1.Staff.count({ where: { departmentId: deptId } }),
+        };
+    }));
     const [myTasks, pendingTasks, leaveBalance] = await Promise.all([
         Task_model_1.Task.count({ where: { assigneeId: ownStaff.id } }),
         Task_model_1.Task.count({ where: { assigneeId: ownStaff.id, status: { [sequelize_1.Op.notIn]: ['Done', 'Cancelled'] } } }),
@@ -413,6 +429,7 @@ DashboardController.getStaffStats = ErrorMiddleware_1.ErrorMiddleware.asyncHandl
         pendingTasks,
         leaveAvailable: leaveBalance,
         notifications: 0,
+        departments,
     }, 'Staff dashboard statistics retrieved');
 });
 DashboardController.getAccountantStats = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
