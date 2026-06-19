@@ -81,8 +81,8 @@ interface StaffAttributes {
   signedDate?: Date;
   // Org FK fields (existing)
   departmentId: bigint;
-  designationId: bigint;
-  locationId: bigint;
+  designationId?: bigint;
+  locationId?: bigint;
   reportingManagerId?: bigint;
   branchId?: bigint;
   unitId?: bigint;
@@ -167,8 +167,8 @@ export class Staff extends Model<StaffAttributes, StaffCreationAttributes> imple
   public signatureImage?: string;
   public signedDate?: Date;
   public departmentId!: bigint;
-  public designationId!: bigint;
-  public locationId!: bigint;
+  public designationId?: bigint;
+  public locationId?: bigint;
   public reportingManagerId?: bigint;
   public branchId?: bigint;
   public unitId?: bigint;
@@ -478,11 +478,11 @@ export class Staff extends Model<StaffAttributes, StaffCreationAttributes> imple
         },
         designationId: {
           type: DataTypes.BIGINT.UNSIGNED,
-          allowNull: false,
+          allowNull: true,
         },
         locationId: {
           type: DataTypes.BIGINT.UNSIGNED,
-          allowNull: false,
+          allowNull: true,
         },
         reportingManagerId: {
           type: DataTypes.BIGINT.UNSIGNED,

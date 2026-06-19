@@ -295,11 +295,11 @@ class Staff extends sequelize_1.Model {
             },
             designationId: {
                 type: sequelize_1.DataTypes.BIGINT.UNSIGNED,
-                allowNull: false,
+                allowNull: true,
             },
             locationId: {
                 type: sequelize_1.DataTypes.BIGINT.UNSIGNED,
-                allowNull: false,
+                allowNull: true,
             },
             reportingManagerId: {
                 type: sequelize_1.DataTypes.BIGINT.UNSIGNED,

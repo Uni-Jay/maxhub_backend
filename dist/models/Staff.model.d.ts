@@ -65,8 +65,8 @@ interface StaffAttributes {
     signatureImage?: string;
     signedDate?: Date;
     departmentId: bigint;
-    designationId: bigint;
-    locationId: bigint;
+    designationId?: bigint;
+    locationId?: bigint;
     reportingManagerId?: bigint;
     branchId?: bigint;
     unitId?: bigint;
@@ -149,8 +149,8 @@ export declare class Staff extends Model<StaffAttributes, StaffCreationAttribute
     signatureImage?: string;
     signedDate?: Date;
     departmentId: bigint;
-    designationId: bigint;
-    locationId: bigint;
+    designationId?: bigint;
+    locationId?: bigint;
     reportingManagerId?: bigint;
     branchId?: bigint;
     unitId?: bigint;
