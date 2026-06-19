@@ -72,6 +72,8 @@ export class MessageTemplate
         tableName: 'message_templates',
         paranoid: true,
         timestamps: true,
+        underscored: false,
+        freezeTableName: true,
       }
     );
   }

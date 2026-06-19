@@ -195,6 +195,7 @@ export declare enum PermissionCode {
     COMM_MESSAGE_DELETE_ALL = "comm.message.delete.all",
     COMM_NOTIFICATION_READ_OWN = "comm.notification.read.own",
     COMM_NOTIFICATION_DELETE_OWN = "comm.notification.delete.own",
+    COMM_CLIENT_MESSAGING_ALL = "comm.clientmessaging.all",
     PAY_STRUCTURE_CREATE_ALL = "pay.structure.create.all",
     PAY_STRUCTURE_READ_ALL = "pay.structure.read.all",
     PAY_STRUCTURE_UPDATE_ALL = "pay.structure.update.all",
@@ -652,6 +653,7 @@ export declare enum PermissionCode {
     BM_ORDER_UPDATE_ALL = "bm.order.update.all",
     BM_ANALYTICS_READ_ALL = "bm.analytics.read.all",
     BROADCAST_CREATE_ALL = "broadcast.create.all",
+    BROADCAST_CREATE_OWN_DEPARTMENT = "broadcast.create.own_department",
     BROADCAST_READ_ALL = "broadcast.read.all",
     BROADCAST_DELETE_ALL = "broadcast.delete.all"
 }

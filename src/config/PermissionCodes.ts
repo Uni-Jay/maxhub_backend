@@ -248,6 +248,9 @@ export enum PermissionCode {
   COMM_NOTIFICATION_READ_OWN = 'comm.notification.read.own',
   COMM_NOTIFICATION_DELETE_OWN = 'comm.notification.delete.own',
 
+  /** Client-facing mass messaging (templates, send, logs, stats) — distinct from the internal Conversation/Message chat above. */
+  COMM_CLIENT_MESSAGING_ALL = 'comm.clientmessaging.all',
+
   // ==================== PAYROLL & ACCOUNTING ====================
   PAY_STRUCTURE_CREATE_ALL = 'pay.structure.create.all',
   PAY_STRUCTURE_READ_ALL = 'pay.structure.read.all',
@@ -855,6 +858,7 @@ export enum PermissionCode {
 
   // ==================== BROADCAST ====================
   BROADCAST_CREATE_ALL = 'broadcast.create.all',
+  BROADCAST_CREATE_OWN_DEPARTMENT = 'broadcast.create.own_department',
   BROADCAST_READ_ALL = 'broadcast.read.all',
   BROADCAST_DELETE_ALL = 'broadcast.delete.all',
 }

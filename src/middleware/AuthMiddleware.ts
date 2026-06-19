@@ -117,12 +117,17 @@ export class AuthMiddleware {
       };
 
       const normalise = (p: string): string[] => {
-        // Convert DOMAIN_RESOURCE_ACTION_SCOPE → domain.resource.action.scope
-        const lower = p.toLowerCase().replace(/_/g, '.');
-        const variants: string[] = [lower];
+        const lower = p.toLowerCase();
+        // Modern PermissionCode values are already lowercase.dotted (e.g.
+        // 'broadcast.create.own_department') — the underscore there is part of
+        // the scope literal (own_department/own_warehouse), not a separator, so
+        // it must be left alone. Only legacy DOMAIN_RESOURCE_ACTION_SCOPE codes
+        // (all-underscore, no dots at all, e.g. 'PAYROLL_VIEW') get converted.
+        const converted = lower.includes('.') ? lower : lower.replace(/_/g, '.');
+        const variants: string[] = [converted];
         for (const [alias, real] of Object.entries(PREFIX_ALIASES)) {
-          if (lower.startsWith(alias)) {
-            variants.push(lower.replace(alias, real));
+          if (converted.startsWith(alias)) {
+            variants.push(converted.replace(alias, real));
           }
         }
         return variants;

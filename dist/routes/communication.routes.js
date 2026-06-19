@@ -12,12 +12,13 @@ const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const sequelize_1 = require("sequelize");
 const CommunicationService_1 = require("../services/CommunicationService");
+const PermissionCodes_1 = require("../config/PermissionCodes");
 const router = express_1.default.Router();
-router.get('/templates', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (_req, res) => {
+router.get('/templates', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.COMM_CLIENT_MESSAGING_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (_req, res) => {
     const templates = await MessageTemplate_model_1.MessageTemplate.findAll({ order: [['createdAt', 'DESC']] });
     ResponseFormatter_1.ResponseFormatter.success(res, templates.map((t) => t.toJSON()));
 }));
-router.post('/templates', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.post('/templates', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.COMM_CLIENT_MESSAGING_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { name, type, subject, emailContent, smsContent, whatsappContent } = req.body;
     const userId = req.user?.id || 1;
     const template = await MessageTemplate_model_1.MessageTemplate.create({
@@ -32,21 +33,21 @@ router.post('/templates', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_
     });
     ResponseFormatter_1.ResponseFormatter.success(res, template.toJSON(), 'Template created', 201);
 }));
-router.patch('/templates/:id', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.patch('/templates/:id', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.COMM_CLIENT_MESSAGING_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const tpl = await MessageTemplate_model_1.MessageTemplate.findByPk(req.params.id);
     if (!tpl)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Template not found');
     await tpl.update(req.body);
     ResponseFormatter_1.ResponseFormatter.success(res, tpl.toJSON(), 'Template updated');
 }));
-router.delete('/templates/:id', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.delete('/templates/:id', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.COMM_CLIENT_MESSAGING_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const tpl = await MessageTemplate_model_1.MessageTemplate.findByPk(req.params.id);
     if (!tpl)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Template not found');
     await tpl.destroy();
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Template deleted');
 }));
-router.post('/send', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.post('/send', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.COMM_CLIENT_MESSAGING_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { channel, recipientType, recipientFilter, subject, message, selectedClientIds, scheduledAt, } = req.body;
     const userId = req.user?.id || 1;
     const where = { status: 'Active' };
@@ -100,7 +101,7 @@ router.post('/send', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_1.Err
         failureCount,
     }, `Message sent to ${successCount}/${clients.length} recipients`);
 }));
-router.get('/logs', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.get('/logs', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.COMM_CLIENT_MESSAGING_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { type, channel, status, page = '1', limit = '20' } = req.query;
     const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(100, parseInt(limit));
@@ -124,7 +125,7 @@ router.get('/logs', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_1.Erro
         pagination: { total: count, page: pageNum, limit: limitNum, totalPages: Math.ceil(count / limitNum) },
     });
 }));
-router.get('/stats', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (_req, res) => {
+router.get('/stats', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.COMM_CLIENT_MESSAGING_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (_req, res) => {
     const [totalSent, emailSent, smsSent, whatsappSent, failed] = await Promise.all([
         CommunicationLog_model_1.CommunicationLog.count({ where: { status: { [sequelize_1.Op.in]: ['Completed', 'Partial'] } } }),
         CommunicationLog_model_1.CommunicationLog.count({ where: { channel: 'Email' } }),

@@ -97,6 +97,8 @@ export class CommunicationLog
         modelName: 'CommunicationLog',
         tableName: 'communication_logs',
         timestamps: true,
+        underscored: false,
+        freezeTableName: true,
       }
     );
   }

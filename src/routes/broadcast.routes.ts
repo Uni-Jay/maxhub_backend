@@ -1,7 +1,10 @@
 import { Router, Request, Response } from 'express';
+import { Op } from 'sequelize';
 import { Broadcast } from '@models/Broadcast.model';
 import { Staff } from '@models/Staff.model';
 import { Notification } from '@models/Notification.model';
+import { Role } from '@models/Role.model';
+import { UserRole } from '@models/UserRole.model';
 import { idOrUuidWhere } from '@utils/idOrUuid';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
@@ -10,6 +13,22 @@ import { PermissionCode } from '@config/PermissionCodes';
 
 const router = Router();
 
+function hasPermission(req: Request, code: string): boolean {
+  const roles = ((req as any).user?.roles || []).map((r: string) => r.toLowerCase().replace(/[^a-z]/g, ''));
+  if (roles.includes('superadmin') || roles.includes('admin') || roles.includes('headofadmin')) return true;
+  const perms = new Set(((req as any).user?.permissions || []).map((p: string) => String(p).toLowerCase()));
+  return perms.has(code.toLowerCase());
+}
+
+/** Resolves every user id holding any of the given role codes — used to auto-copy HR/Admin/Super Admin on a department announcement. */
+async function getUserIdsForRoles(roleCodes: string[]): Promise<bigint[]> {
+  const roles = await Role.findAll({ where: { code: { [Op.in]: roleCodes } }, attributes: ['id'] });
+  const roleIds = roles.map((r: any) => r.id);
+  if (!roleIds.length) return [];
+  const userRoles = await UserRole.findAll({ where: { roleId: { [Op.in]: roleIds } }, attributes: ['userId'] });
+  return [...new Set(userRoles.map((ur: any) => ur.userId))];
+}
+
 // GET /api/broadcasts
 router.get('/', AuthMiddleware.requirePermission(PermissionCode.BROADCAST_READ_ALL), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const broadcasts = await Broadcast.findAll({ order: [['createdAt', 'DESC']], limit: 100 });
@@ -17,11 +36,24 @@ router.get('/', AuthMiddleware.requirePermission(PermissionCode.BROADCAST_READ_A
 }));
 
 // POST /api/broadcasts — create and immediately deliver to the chosen audience via Notification
-router.post('/', AuthMiddleware.requirePermission(PermissionCode.BROADCAST_CREATE_ALL), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const { title, message, audienceType = 'All', audienceValue } = req.body;
+router.post('/', AuthMiddleware.requirePermission(PermissionCode.BROADCAST_CREATE_ALL, PermissionCode.BROADCAST_CREATE_OWN_DEPARTMENT), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const canCreateAll = hasPermission(req, PermissionCode.BROADCAST_CREATE_ALL);
+  const user = (req as any).user;
+  let { title, message, audienceType = 'All', audienceValue } = req.body;
+
   if (!title || !message) {
     return ResponseFormatter.error(res, 'title and message are required', 400);
   }
+
+  // HOD: always a department announcement scoped to her own department, regardless of what was submitted.
+  if (!canCreateAll) {
+    if (!user?.departmentId) {
+      return ResponseFormatter.error(res, 'No department linked to this account', 400);
+    }
+    audienceType = 'Department';
+    audienceValue = String(user.departmentId);
+  }
+
   if (audienceType !== 'All' && !audienceValue) {
     return ResponseFormatter.error(res, 'audienceValue is required for BusinessUnit/Department audiences', 400);
   }
@@ -31,7 +63,7 @@ router.post('/', AuthMiddleware.requirePermission(PermissionCode.BROADCAST_CREAT
     message,
     audienceType,
     audienceValue,
-    createdById: BigInt((req as any).user.id),
+    createdById: BigInt(user.id),
   } as any);
 
   const where: Record<string, unknown> = {};
@@ -39,11 +71,19 @@ router.post('/', AuthMiddleware.requirePermission(PermissionCode.BROADCAST_CREAT
   if (audienceType === 'Department') where.departmentId = BigInt(audienceValue);
 
   const recipients = await Staff.findAll({ where, attributes: ['userId'] });
-  const recipientUserIds = [...new Set(recipients.map((s: any) => s.userId).filter(Boolean))];
+  const recipientUserIds = new Set<bigint>(recipients.map((s: any) => s.userId).filter(Boolean));
 
-  if (recipientUserIds.length > 0) {
+  // Department announcements from a HOD are always copied to HR, Admin, and Super Admin.
+  if (!canCreateAll) {
+    const ccUserIds = await getUserIdsForRoles(['hr', 'admin', 'superadmin']);
+    ccUserIds.forEach((id) => recipientUserIds.add(id));
+  }
+
+  const recipientUserIdList = [...recipientUserIds];
+
+  if (recipientUserIdList.length > 0) {
     await Notification.bulkCreate(
-      recipientUserIds.map((userId) => ({
+      recipientUserIdList.map((userId) => ({
         recipientUserId: userId,
         notificationType: 'Alert',
         title,
@@ -56,7 +96,7 @@ router.post('/', AuthMiddleware.requirePermission(PermissionCode.BROADCAST_CREAT
     );
   }
 
-  ResponseFormatter.success(res, { ...broadcast.toJSON(), recipientCount: recipientUserIds.length }, 'Broadcast sent', 201);
+  ResponseFormatter.success(res, { ...broadcast.toJSON(), recipientCount: recipientUserIdList.length }, 'Broadcast sent', 201);
 }));
 
 // DELETE /api/broadcasts/:id

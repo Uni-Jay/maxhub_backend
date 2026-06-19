@@ -105,11 +105,12 @@ class AuthMiddleware {
                 'notify.': 'comm.',
             };
             const normalise = (p) => {
-                const lower = p.toLowerCase().replace(/_/g, '.');
-                const variants = [lower];
+                const lower = p.toLowerCase();
+                const converted = lower.includes('.') ? lower : lower.replace(/_/g, '.');
+                const variants = [converted];
                 for (const [alias, real] of Object.entries(PREFIX_ALIASES)) {
-                    if (lower.startsWith(alias)) {
-                        variants.push(lower.replace(alias, real));
+                    if (converted.startsWith(alias)) {
+                        variants.push(converted.replace(alias, real));
                     }
                 }
                 return variants;

@@ -297,6 +297,11 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     // System
     PermissionCode.SYS_AUDIT_READ_ALL,
     PermissionCode.SYS_REPORT_GENERATE_ALL,
+    // Communication (client messaging + broadcasts) — HR/Admin/Super Admin only
+    PermissionCode.COMM_CLIENT_MESSAGING_ALL,
+    PermissionCode.BROADCAST_CREATE_ALL,
+    PermissionCode.BROADCAST_READ_ALL,
+    PermissionCode.BROADCAST_DELETE_ALL,
     // Messaging
     PermissionCode.MSG_DIRECT_MESSAGE_CREATE_OWN,
     PermissionCode.MSG_DIRECT_MESSAGE_READ_OWN,
@@ -347,6 +352,8 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.PROJECT_COMMENT_READ_ALL,
     // Budget (read own dept)
     PermissionCode.FIN_BUDGET_READ_OWN_DEPARTMENT,
+    // Department announcements only — auto-copied to HR/Admin/Super Admin server-side
+    PermissionCode.BROADCAST_CREATE_OWN_DEPARTMENT,
     // CRM
     PermissionCode.CRM_CONTACT_READ_ALL,
     PermissionCode.CRM_OPPORTUNITY_READ_ALL,

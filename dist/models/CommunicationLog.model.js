@@ -35,6 +35,8 @@ class CommunicationLog extends sequelize_1.Model {
             modelName: 'CommunicationLog',
             tableName: 'communication_logs',
             timestamps: true,
+            underscored: false,
+            freezeTableName: true,
         });
     }
 }

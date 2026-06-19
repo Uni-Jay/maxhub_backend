@@ -24,6 +24,8 @@ class MessageTemplate extends sequelize_1.Model {
             tableName: 'message_templates',
             paranoid: true,
             timestamps: true,
+            underscored: false,
+            freezeTableName: true,
         });
     }
 }
