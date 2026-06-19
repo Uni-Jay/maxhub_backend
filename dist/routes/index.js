@@ -65,7 +65,6 @@ function setupRoutes(app) {
     apiRouter.use('/broadcasts', require('./broadcast.routes').default);
     apiRouter.use('/students', require('./student-management.routes').default);
     apiRouter.use('/meetings', require('./meeting.routes').default);
-    apiRouter.use('/calls', require('./call.routes').default);
     apiRouter.use('/visamax', require('./visamax.routes').default);
     apiRouter.use('/beadmax', require('./beadmax.routes').default);
     apiRouter.use('/calendar', require('./calendar.routes').default);

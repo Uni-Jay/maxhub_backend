@@ -12,10 +12,11 @@ class Meeting extends sequelize_1.Model {
             title: { type: sequelize_1.DataTypes.STRING(200), allowNull: false },
             description: { type: sequelize_1.DataTypes.TEXT, allowNull: true },
             meetingType: {
-                type: sequelize_1.DataTypes.ENUM('OneToOne', 'Group', 'Department', 'Classroom', 'Interview', 'Training'),
+                type: sequelize_1.DataTypes.ENUM('Group', 'Department', 'Classroom', 'Interview', 'Training'),
                 allowNull: false, defaultValue: 'Group',
             },
             roomName: { type: sequelize_1.DataTypes.STRING(300), allowNull: false },
+            meetingLink: { type: sequelize_1.DataTypes.STRING(500), allowNull: false, comment: 'Google Meet URL — provided by the host when scheduling' },
             hostUserId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: false },
             scheduledAt: { type: sequelize_1.DataTypes.DATE, allowNull: true },
             durationMinutes: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: true, defaultValue: 60 },

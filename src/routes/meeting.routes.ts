@@ -5,10 +5,16 @@ import { v4 as uuidv4 } from 'uuid';
 import { Meeting } from '@models/Meeting.model';
 import { MeetingParticipant } from '@models/MeetingParticipant.model';
 import { User } from '@models/User.model';
+import { Notification } from '@models/Notification.model';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
+import AuthMiddleware from '@middleware/AuthMiddleware';
+import { PermissionCode } from '@config/PermissionCodes';
 
 const router = Router();
+
+const ALLOWED_MEETING_TYPES = ['Group', 'Department', 'Classroom', 'Interview', 'Training'];
+const GOOGLE_MEET_URL = /^https:\/\/meet\.google\.com\/[a-z0-9-]+$/i;
 
 /* ─── Helpers ─────────────────────────────────── */
 function makeRoomName(title: string, code: string) {
@@ -87,11 +93,18 @@ router.get('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Respon
   ResponseFormatter.success(res, meeting);
 }));
 
-// POST /api/meetings — schedule
-router.post('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+// POST /api/meetings — schedule. Super Admin/Admin/HR/HOD only — everyone else
+// can join a meeting they're invited to, but can't create one.
+router.post('/', AuthMiddleware.requirePermission(PermissionCode.MEETING_CREATE_ALL), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
-  const { title, meetingType, scheduledAt, durationMinutes, description, participantUserIds, maxParticipants } = req.body;
+  const { title, meetingType, meetingLink, scheduledAt, durationMinutes, description, participantUserIds, maxParticipants } = req.body;
   if (!title) return ResponseFormatter.error(res, 'title is required', 400);
+  if (!meetingLink || !GOOGLE_MEET_URL.test(meetingLink)) {
+    return ResponseFormatter.error(res, 'A valid Google Meet link is required (e.g. https://meet.google.com/abc-defg-hij). Create one at meet.google.com/new and paste it here.', 400);
+  }
+  if (meetingType && !ALLOWED_MEETING_TYPES.includes(meetingType)) {
+    return ResponseFormatter.error(res, `meetingType must be one of: ${ALLOWED_MEETING_TYPES.join(', ')}`, 400);
+  }
 
   const count = await Meeting.count();
   const meetingCode = `MTG-${String(count + 1).padStart(6, '0')}`;
@@ -100,7 +113,7 @@ router.post('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response
   const meeting = await Meeting.create({
     uuid: uuidv4(), meetingCode, title, description,
     meetingType: meetingType || 'Group',
-    roomName, hostUserId: user.id,
+    roomName, meetingLink, hostUserId: user.id,
     scheduledAt: scheduledAt || null,
     durationMinutes: durationMinutes || 60,
     status: 'Scheduled',
@@ -114,7 +127,27 @@ router.post('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response
     } as any)
   ));
 
-  ResponseFormatter.success(res, meeting, 'Meeting scheduled', 201);
+  // Send the Google Meet link to everyone invited (host already knows it).
+  const inviteeIds = allParticipants.filter((uid: number) => uid !== user.id);
+  if (inviteeIds.length > 0) {
+    await Notification.bulkCreate(
+      inviteeIds.map((uid: number) => ({
+        recipientUserId: uid,
+        notificationType: 'System',
+        title: `Meeting invite: ${title}`,
+        message: scheduledAt
+          ? `You're invited to "${title}" on ${new Date(scheduledAt).toLocaleString()}. Join via Google Meet.`
+          : `You're invited to "${title}". Join via Google Meet.`,
+        relatedEntityType: 'Meeting',
+        relatedEntityId: (meeting as any).id,
+        actionUrl: meetingLink,
+        deliveryChannel: 'InApp',
+        priority: 'Medium',
+      })) as any
+    );
+  }
+
+  ResponseFormatter.success(res, meeting, 'Meeting scheduled and link sent to all participants', 201);
 }));
 
 // PUT /api/meetings/:id
@@ -148,7 +181,7 @@ router.post('/:id/join', ErrorMiddleware.asyncHandler(async (req: Request, res: 
   });
   await participant.update({ joinedAt: new Date(), status: 'Joined' } as any);
 
-  ResponseFormatter.success(res, { roomName: (meeting as any).roomName });
+  ResponseFormatter.success(res, { meetingLink: (meeting as any).meetingLink });
 }));
 
 // POST /api/meetings/:id/leave — record leave time + duration

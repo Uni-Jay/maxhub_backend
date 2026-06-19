@@ -7,7 +7,6 @@ import { Conversation } from '@models/Conversation.model';
 import { ConversationParticipant } from '@models/ConversationParticipant.model';
 import { Message } from '@models/Message.model';
 import { MessageRead } from '@models/MessageRead.model';
-import { Call } from '@models/Call.model';
 import { User } from '@models/User.model';
 
 // In-memory presence store: userId → socketId[]
@@ -265,113 +264,6 @@ export function initChatSocket(httpServer: HttpServer): SocketServer {
     // ── Join new conversation room ─────────────────────────────────────────
     socket.on('chat:join', ({ conversationId }: { conversationId: number }) => {
       socket.join(`conv:${conversationId}`);
-    });
-
-    // ── WebRTC Call Signaling ──────────────────────────────────────────────
-    socket.on('call:initiate', async (data: {
-      calleeUserId: number;
-      callType: 'Voice' | 'Video';
-      conversationId?: number;
-      offer: any;
-    }, ack) => {
-      try {
-        const roomName = `call-${uuidv4()}`;
-        const call = await Call.create({
-          uuid: uuidv4(),
-          callerUserId: userId,
-          calleeUserId: data.calleeUserId,
-          callType: data.callType || 'Voice',
-          status: 'Ringing',
-          roomName,
-          conversationId: data.conversationId,
-        } as any);
-
-        const callId = (call as any).id;
-        const callerUser = await User.findByPk(userId, { attributes: ['id', 'firstName', 'lastName', 'avatar'] });
-
-        // Notify callee on all their sockets
-        const calleeSockets = getUserSockets(data.calleeUserId);
-        for (const sockId of calleeSockets) {
-          io.to(sockId).emit('call:incoming', {
-            callId, callType: data.callType, roomName,
-            callerId: userId,
-            caller: callerUser?.toJSON(),
-            conversationId: data.conversationId,
-            offer: data.offer,
-          });
-        }
-
-        ack?.({ success: true, callId, roomName });
-      } catch (err: any) {
-        ack?.({ error: err.message });
-      }
-    });
-
-    socket.on('call:answer', async (data: { callId: number; answer: any }, ack) => {
-      try {
-        const call = await Call.findByPk(data.callId);
-        if (!call) return ack?.({ error: 'Call not found' });
-
-        await call.update({ status: 'Active', startedAt: new Date() } as any);
-
-        const callerSockets = getUserSockets(Number((call as any).callerUserId));
-        for (const sockId of callerSockets) {
-          io.to(sockId).emit('call:accepted', { callId: data.callId, answer: data.answer });
-        }
-        ack?.({ success: true });
-      } catch (err: any) {
-        ack?.({ error: err.message });
-      }
-    });
-
-    socket.on('call:reject', async (data: { callId: number }, ack) => {
-      try {
-        const call = await Call.findByPk(data.callId);
-        if (!call) return ack?.({ error: 'Call not found' });
-
-        await call.update({ status: 'Declined', endedAt: new Date() } as any);
-
-        const callerSockets = getUserSockets(Number((call as any).callerUserId));
-        for (const sockId of callerSockets) {
-          io.to(sockId).emit('call:rejected', { callId: data.callId, rejectedBy: userId });
-        }
-        ack?.({ success: true });
-      } catch (err: any) {
-        ack?.({ error: err.message });
-      }
-    });
-
-    socket.on('call:end', async (data: { callId: number }, ack) => {
-      try {
-        const call = await Call.findByPk(data.callId);
-        if (!call) return ack?.({ error: 'Call not found' });
-
-        const now = new Date();
-        const started = (call as any).startedAt ? new Date((call as any).startedAt) : now;
-        const duration = Math.floor((now.getTime() - started.getTime()) / 1000);
-
-        await call.update({ status: 'Ended', endedAt: now, durationSeconds: duration } as any);
-
-        const otherUserId = (call as any).callerUserId === userId
-          ? Number((call as any).calleeUserId)
-          : Number((call as any).callerUserId);
-
-        const otherSockets = getUserSockets(otherUserId);
-        for (const sockId of otherSockets) {
-          io.to(sockId).emit('call:ended', { callId: data.callId, duration, endedBy: userId });
-        }
-        ack?.({ success: true, duration });
-      } catch (err: any) {
-        ack?.({ error: err.message });
-      }
-    });
-
-    // ICE candidate relay
-    socket.on('call:ice_candidate', (data: { targetUserId: number; candidate: any; callId: number }) => {
-      const targetSockets = getUserSockets(data.targetUserId);
-      for (const sockId of targetSockets) {
-        io.to(sockId).emit('call:ice_candidate', { from: userId, candidate: data.candidate, callId: data.callId });
-      }
     });
 
     // ── Disconnect ─────────────────────────────────────────────────────────

@@ -7,8 +7,9 @@ interface MeetingAttributes {
   meetingCode: string;
   title: string;
   description?: string;
-  meetingType: 'OneToOne' | 'Group' | 'Department' | 'Classroom' | 'Interview' | 'Training';
+  meetingType: 'Group' | 'Department' | 'Classroom' | 'Interview' | 'Training';
   roomName: string;
+  meetingLink: string;
   hostUserId: bigint;
   scheduledAt?: Date;
   durationMinutes?: number;
@@ -29,8 +30,9 @@ export class Meeting extends Model<MeetingAttributes, MeetingCreationAttributes>
   public meetingCode!: string;
   public title!: string;
   public description?: string;
-  public meetingType!: 'OneToOne' | 'Group' | 'Department' | 'Classroom' | 'Interview' | 'Training';
+  public meetingType!: 'Group' | 'Department' | 'Classroom' | 'Interview' | 'Training';
   public roomName!: string;
+  public meetingLink!: string;
   public hostUserId!: bigint;
   public scheduledAt?: Date;
   public durationMinutes?: number;
@@ -53,10 +55,11 @@ export class Meeting extends Model<MeetingAttributes, MeetingCreationAttributes>
         title: { type: DataTypes.STRING(200), allowNull: false },
         description: { type: DataTypes.TEXT, allowNull: true },
         meetingType: {
-          type: DataTypes.ENUM('OneToOne', 'Group', 'Department', 'Classroom', 'Interview', 'Training'),
+          type: DataTypes.ENUM('Group', 'Department', 'Classroom', 'Interview', 'Training'),
           allowNull: false, defaultValue: 'Group',
         },
         roomName: { type: DataTypes.STRING(300), allowNull: false },
+        meetingLink: { type: DataTypes.STRING(500), allowNull: false, comment: 'Google Meet URL — provided by the host when scheduling' },
         hostUserId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
         scheduledAt: { type: DataTypes.DATE, allowNull: true },
         durationMinutes: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true, defaultValue: 60 },

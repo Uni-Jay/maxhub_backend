@@ -861,4 +861,8 @@ export enum PermissionCode {
   BROADCAST_CREATE_OWN_DEPARTMENT = 'broadcast.create.own_department',
   BROADCAST_READ_ALL = 'broadcast.read.all',
   BROADCAST_DELETE_ALL = 'broadcast.delete.all',
+
+  // ==================== MEETING ====================
+  /** Schedule a Google Meet meeting and send the link to invited staff — Super Admin/Admin/HR/HOD only. */
+  MEETING_CREATE_ALL = 'meeting.create.all',
 }

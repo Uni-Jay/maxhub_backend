@@ -660,5 +660,6 @@ var PermissionCode;
     PermissionCode["BROADCAST_CREATE_OWN_DEPARTMENT"] = "broadcast.create.own_department";
     PermissionCode["BROADCAST_READ_ALL"] = "broadcast.read.all";
     PermissionCode["BROADCAST_DELETE_ALL"] = "broadcast.delete.all";
+    PermissionCode["MEETING_CREATE_ALL"] = "meeting.create.all";
 })(PermissionCode || (exports.PermissionCode = PermissionCode = {}));
 //# sourceMappingURL=PermissionCodes.js.map

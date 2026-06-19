@@ -110,9 +110,8 @@ function setupRoutes(app: any): void {
   // Student Management (Beadmax Vocational School)
   apiRouter.use('/students', require('./student-management.routes').default);
 
-  // Video Calls & Meetings
+  // Meetings (Google Meet links — one-to-one calling removed)
   apiRouter.use('/meetings', require('./meeting.routes').default);
-  apiRouter.use('/calls', require('./call.routes').default);
 
   // VisaMax
   apiRouter.use('/visamax', require('./visamax.routes').default);

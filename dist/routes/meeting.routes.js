@@ -1,4 +1,7 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
@@ -7,9 +10,14 @@ const uuid_1 = require("uuid");
 const Meeting_model_1 = require("../models/Meeting.model");
 const MeetingParticipant_model_1 = require("../models/MeetingParticipant.model");
 const User_model_1 = require("../models/User.model");
+const Notification_model_1 = require("../models/Notification.model");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
+const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
+const PermissionCodes_1 = require("../config/PermissionCodes");
 const router = (0, express_1.Router)();
+const ALLOWED_MEETING_TYPES = ['Group', 'Department', 'Classroom', 'Interview', 'Training'];
+const GOOGLE_MEET_URL = /^https:\/\/meet\.google\.com\/[a-z0-9-]+$/i;
 function makeRoomName(title, code) {
     return `MaxHub-${code}-${title.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 20)}`;
 }
@@ -74,18 +82,24 @@ router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, re
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Meeting not found', 404);
     ResponseFormatter_1.ResponseFormatter.success(res, meeting);
 }));
-router.post('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.post('/', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.MEETING_CREATE_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
-    const { title, meetingType, scheduledAt, durationMinutes, description, participantUserIds, maxParticipants } = req.body;
+    const { title, meetingType, meetingLink, scheduledAt, durationMinutes, description, participantUserIds, maxParticipants } = req.body;
     if (!title)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'title is required', 400);
+    if (!meetingLink || !GOOGLE_MEET_URL.test(meetingLink)) {
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'A valid Google Meet link is required (e.g. https://meet.google.com/abc-defg-hij). Create one at meet.google.com/new and paste it here.', 400);
+    }
+    if (meetingType && !ALLOWED_MEETING_TYPES.includes(meetingType)) {
+        return ResponseFormatter_1.ResponseFormatter.error(res, `meetingType must be one of: ${ALLOWED_MEETING_TYPES.join(', ')}`, 400);
+    }
     const count = await Meeting_model_1.Meeting.count();
     const meetingCode = `MTG-${String(count + 1).padStart(6, '0')}`;
     const roomName = makeRoomName(title, meetingCode);
     const meeting = await Meeting_model_1.Meeting.create({
         uuid: (0, uuid_1.v4)(), meetingCode, title, description,
         meetingType: meetingType || 'Group',
-        roomName, hostUserId: user.id,
+        roomName, meetingLink, hostUserId: user.id,
         scheduledAt: scheduledAt || null,
         durationMinutes: durationMinutes || 60,
         status: 'Scheduled',
@@ -95,7 +109,23 @@ router.post('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res)
     await Promise.all(allParticipants.map((uid) => MeetingParticipant_model_1.MeetingParticipant.create({
         meetingId: meeting.id, userId: uid, status: uid === user.id ? 'Joined' : 'Invited',
     })));
-    ResponseFormatter_1.ResponseFormatter.success(res, meeting, 'Meeting scheduled', 201);
+    const inviteeIds = allParticipants.filter((uid) => uid !== user.id);
+    if (inviteeIds.length > 0) {
+        await Notification_model_1.Notification.bulkCreate(inviteeIds.map((uid) => ({
+            recipientUserId: uid,
+            notificationType: 'System',
+            title: `Meeting invite: ${title}`,
+            message: scheduledAt
+                ? `You're invited to "${title}" on ${new Date(scheduledAt).toLocaleString()}. Join via Google Meet.`
+                : `You're invited to "${title}". Join via Google Meet.`,
+            relatedEntityType: 'Meeting',
+            relatedEntityId: meeting.id,
+            actionUrl: meetingLink,
+            deliveryChannel: 'InApp',
+            priority: 'Medium',
+        })));
+    }
+    ResponseFormatter_1.ResponseFormatter.success(res, meeting, 'Meeting scheduled and link sent to all participants', 201);
 }));
 router.put('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const meeting = await Meeting_model_1.Meeting.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
@@ -123,7 +153,7 @@ router.post('/:id/join', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (r
         defaults: { meetingId: meeting.id, userId: user.id, status: 'Joined', joinedAt: new Date() },
     });
     await participant.update({ joinedAt: new Date(), status: 'Joined' });
-    ResponseFormatter_1.ResponseFormatter.success(res, { roomName: meeting.roomName });
+    ResponseFormatter_1.ResponseFormatter.success(res, { meetingLink: meeting.meetingLink });
 }));
 router.post('/:id/leave', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;

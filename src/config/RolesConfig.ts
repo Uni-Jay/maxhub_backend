@@ -302,6 +302,8 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.BROADCAST_CREATE_ALL,
     PermissionCode.BROADCAST_READ_ALL,
     PermissionCode.BROADCAST_DELETE_ALL,
+    // Meetings — schedule + send Google Meet links
+    PermissionCode.MEETING_CREATE_ALL,
     // Messaging
     PermissionCode.MSG_DIRECT_MESSAGE_CREATE_OWN,
     PermissionCode.MSG_DIRECT_MESSAGE_READ_OWN,
@@ -354,6 +356,8 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.FIN_BUDGET_READ_OWN_DEPARTMENT,
     // Department announcements only — auto-copied to HR/Admin/Super Admin server-side
     PermissionCode.BROADCAST_CREATE_OWN_DEPARTMENT,
+    // Meetings — schedule + send Google Meet links
+    PermissionCode.MEETING_CREATE_ALL,
     // CRM
     PermissionCode.CRM_CONTACT_READ_ALL,
     PermissionCode.CRM_OPPORTUNITY_READ_ALL,

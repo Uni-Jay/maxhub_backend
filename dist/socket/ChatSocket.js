@@ -13,7 +13,6 @@ const Conversation_model_1 = require("../models/Conversation.model");
 const ConversationParticipant_model_1 = require("../models/ConversationParticipant.model");
 const Message_model_1 = require("../models/Message.model");
 const MessageRead_model_1 = require("../models/MessageRead.model");
-const Call_model_1 = require("../models/Call.model");
 const User_model_1 = require("../models/User.model");
 const onlineUsers = new Map();
 exports.onlineUsers = onlineUsers;
@@ -228,96 +227,6 @@ function initChatSocket(httpServer) {
         });
         socket.on('chat:join', ({ conversationId }) => {
             socket.join(`conv:${conversationId}`);
-        });
-        socket.on('call:initiate', async (data, ack) => {
-            try {
-                const roomName = `call-${(0, uuid_1.v4)()}`;
-                const call = await Call_model_1.Call.create({
-                    uuid: (0, uuid_1.v4)(),
-                    callerUserId: userId,
-                    calleeUserId: data.calleeUserId,
-                    callType: data.callType || 'Voice',
-                    status: 'Ringing',
-                    roomName,
-                    conversationId: data.conversationId,
-                });
-                const callId = call.id;
-                const callerUser = await User_model_1.User.findByPk(userId, { attributes: ['id', 'firstName', 'lastName', 'avatar'] });
-                const calleeSockets = getUserSockets(data.calleeUserId);
-                for (const sockId of calleeSockets) {
-                    io.to(sockId).emit('call:incoming', {
-                        callId, callType: data.callType, roomName,
-                        callerId: userId,
-                        caller: callerUser?.toJSON(),
-                        conversationId: data.conversationId,
-                        offer: data.offer,
-                    });
-                }
-                ack?.({ success: true, callId, roomName });
-            }
-            catch (err) {
-                ack?.({ error: err.message });
-            }
-        });
-        socket.on('call:answer', async (data, ack) => {
-            try {
-                const call = await Call_model_1.Call.findByPk(data.callId);
-                if (!call)
-                    return ack?.({ error: 'Call not found' });
-                await call.update({ status: 'Active', startedAt: new Date() });
-                const callerSockets = getUserSockets(Number(call.callerUserId));
-                for (const sockId of callerSockets) {
-                    io.to(sockId).emit('call:accepted', { callId: data.callId, answer: data.answer });
-                }
-                ack?.({ success: true });
-            }
-            catch (err) {
-                ack?.({ error: err.message });
-            }
-        });
-        socket.on('call:reject', async (data, ack) => {
-            try {
-                const call = await Call_model_1.Call.findByPk(data.callId);
-                if (!call)
-                    return ack?.({ error: 'Call not found' });
-                await call.update({ status: 'Declined', endedAt: new Date() });
-                const callerSockets = getUserSockets(Number(call.callerUserId));
-                for (const sockId of callerSockets) {
-                    io.to(sockId).emit('call:rejected', { callId: data.callId, rejectedBy: userId });
-                }
-                ack?.({ success: true });
-            }
-            catch (err) {
-                ack?.({ error: err.message });
-            }
-        });
-        socket.on('call:end', async (data, ack) => {
-            try {
-                const call = await Call_model_1.Call.findByPk(data.callId);
-                if (!call)
-                    return ack?.({ error: 'Call not found' });
-                const now = new Date();
-                const started = call.startedAt ? new Date(call.startedAt) : now;
-                const duration = Math.floor((now.getTime() - started.getTime()) / 1000);
-                await call.update({ status: 'Ended', endedAt: now, durationSeconds: duration });
-                const otherUserId = call.callerUserId === userId
-                    ? Number(call.calleeUserId)
-                    : Number(call.callerUserId);
-                const otherSockets = getUserSockets(otherUserId);
-                for (const sockId of otherSockets) {
-                    io.to(sockId).emit('call:ended', { callId: data.callId, duration, endedBy: userId });
-                }
-                ack?.({ success: true, duration });
-            }
-            catch (err) {
-                ack?.({ error: err.message });
-            }
-        });
-        socket.on('call:ice_candidate', (data) => {
-            const targetSockets = getUserSockets(data.targetUserId);
-            for (const sockId of targetSockets) {
-                io.to(sockId).emit('call:ice_candidate', { from: userId, candidate: data.candidate, callId: data.callId });
-            }
         });
         socket.on('disconnect', () => {
             const sockets = onlineUsers.get(userId);

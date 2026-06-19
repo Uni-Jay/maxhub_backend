@@ -5,8 +5,9 @@ interface MeetingAttributes {
     meetingCode: string;
     title: string;
     description?: string;
-    meetingType: 'OneToOne' | 'Group' | 'Department' | 'Classroom' | 'Interview' | 'Training';
+    meetingType: 'Group' | 'Department' | 'Classroom' | 'Interview' | 'Training';
     roomName: string;
+    meetingLink: string;
     hostUserId: bigint;
     scheduledAt?: Date;
     durationMinutes?: number;
@@ -25,8 +26,9 @@ export declare class Meeting extends Model<MeetingAttributes, MeetingCreationAtt
     meetingCode: string;
     title: string;
     description?: string;
-    meetingType: 'OneToOne' | 'Group' | 'Department' | 'Classroom' | 'Interview' | 'Training';
+    meetingType: 'Group' | 'Department' | 'Classroom' | 'Interview' | 'Training';
     roomName: string;
+    meetingLink: string;
     hostUserId: bigint;
     scheduledAt?: Date;
     durationMinutes?: number;
