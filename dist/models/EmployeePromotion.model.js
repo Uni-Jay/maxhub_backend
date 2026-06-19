@@ -109,6 +109,8 @@ class EmployeePromotion extends sequelize_1.Model {
             tableName: 'employee_promotion',
             timestamps: true,
             paranoid: true,
+            underscored: false,
+            freezeTableName: true,
             indexes: [
                 {
                     fields: ['staffId'],

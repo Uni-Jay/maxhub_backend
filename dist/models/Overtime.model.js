@@ -81,6 +81,8 @@ class Overtime extends sequelize_1.Model {
             tableName: 'overtime',
             timestamps: true,
             paranoid: true,
+            underscored: false,
+            freezeTableName: true,
             indexes: [
                 {
                     fields: ['staffId'],

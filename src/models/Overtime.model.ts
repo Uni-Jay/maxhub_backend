@@ -122,6 +122,8 @@ export class Overtime
         tableName: 'overtime',
         timestamps: true,
         paranoid: true,
+        underscored: false,
+        freezeTableName: true,
         indexes: [
           {
             fields: ['staffId'],

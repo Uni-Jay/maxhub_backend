@@ -35,6 +35,10 @@ function hasPermission(req, code) {
 function isDepartmentScopedOnly(req, allCode, deptCode) {
     return !hasPermission(req, allCode) && hasPermission(req, deptCode);
 }
+const STAFF_SORTABLE_FIELDS = new Set([
+    'createdAt', 'updatedAt', 'firstName', 'lastName', 'employeeId',
+    'joiningDate', 'status', 'departmentId',
+]);
 async function searchStaff(filters) {
     const where = {};
     if (filters.status)
@@ -64,7 +68,7 @@ async function searchStaff(filters) {
         ],
         limit: filters.limit ?? 20,
         offset: filters.offset ?? 0,
-        order: [[filters.sortField || 'createdAt', filters.sortOrder || 'DESC']],
+        order: [[STAFF_SORTABLE_FIELDS.has(filters.sortField || '') ? filters.sortField : 'createdAt', filters.sortOrder || 'DESC']],
         paranoid: true,
     });
 }

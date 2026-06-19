@@ -35,6 +35,11 @@ function isDepartmentScopedOnly(req: Request, allCode: string, deptCode: string)
   return !hasPermission(req, allCode) && hasPermission(req, deptCode);
 }
 
+const STAFF_SORTABLE_FIELDS = new Set([
+  'createdAt', 'updatedAt', 'firstName', 'lastName', 'employeeId',
+  'joiningDate', 'status', 'departmentId',
+]);
+
 /**
  * Core staff search/filter query — shared by the /api/staff route and the AI
  * assistant's searchEmployees tool, so both surfaces stay behaviorally identical.
@@ -69,7 +74,7 @@ export async function searchStaff(filters: {
     ],
     limit: filters.limit ?? 20,
     offset: filters.offset ?? 0,
-    order: [[filters.sortField || 'createdAt', filters.sortOrder || 'DESC']],
+    order: [[STAFF_SORTABLE_FIELDS.has(filters.sortField || '') ? filters.sortField! : 'createdAt', filters.sortOrder || 'DESC']],
     paranoid: true,
   });
 }
