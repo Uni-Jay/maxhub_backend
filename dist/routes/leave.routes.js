@@ -35,7 +35,7 @@ router.get('/requests', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (re
             {
                 model: LeaveType_model_1.LeaveType,
                 as: 'leaveType',
-                attributes: ['id', 'name', 'color'],
+                attributes: ['id', 'name'],
                 required: false,
             },
         ],
@@ -69,7 +69,7 @@ router.get('/requests/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async
     const leave = await LeaveRequest_model_1.LeaveRequest.findByPk(req.params.id, {
         include: [
             { model: Staff_model_1.Staff, as: 'staff', attributes: ['id', 'firstName', 'lastName'] },
-            { model: LeaveType_model_1.LeaveType, as: 'leaveType', attributes: ['id', 'name', 'color'] },
+            { model: LeaveType_model_1.LeaveType, as: 'leaveType', attributes: ['id', 'name'] },
         ],
     });
     if (!leave)

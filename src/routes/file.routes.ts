@@ -59,8 +59,9 @@ async function ensureFolders(req: Request) {
 
   const named = [];
   for (const def of NAMED_FOLDERS) {
+    // name + isFolder is already unique among these rows — no other folder shares these names.
     const [folder] = await FileRecord.findOrCreate({
-      where: { isFolder: true, name: def.name, folderType: { [Op.is]: null } },
+      where: { isFolder: true, name: def.name },
       defaults: {
         uuid: uuidv4(), name: def.name, isFolder: true, icon: def.icon, size: 0,
         restrictedToRoles: def.restrictedToRoles ? JSON.stringify(def.restrictedToRoles) : undefined,

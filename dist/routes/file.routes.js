@@ -57,7 +57,7 @@ async function ensureFolders(req) {
     const named = [];
     for (const def of NAMED_FOLDERS) {
         const [folder] = await FileRecord_model_1.FileRecord.findOrCreate({
-            where: { isFolder: true, name: def.name, folderType: { [sequelize_1.Op.is]: null } },
+            where: { isFolder: true, name: def.name },
             defaults: {
                 uuid: (0, uuid_1.v4)(), name: def.name, isFolder: true, icon: def.icon, size: 0,
                 restrictedToRoles: def.restrictedToRoles ? JSON.stringify(def.restrictedToRoles) : undefined,

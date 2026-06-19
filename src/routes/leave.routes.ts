@@ -33,7 +33,7 @@ router.get(
         {
           model: LeaveType,
           as: 'leaveType',
-          attributes: ['id', 'name', 'color'],
+          attributes: ['id', 'name'],
           required: false,
         },
       ],
@@ -79,7 +79,7 @@ router.get(
     const leave = await LeaveRequest.findByPk(req.params.id, {
       include: [
         { model: Staff, as: 'staff', attributes: ['id', 'firstName', 'lastName'] },
-        { model: LeaveType, as: 'leaveType', attributes: ['id', 'name', 'color'] },
+        { model: LeaveType, as: 'leaveType', attributes: ['id', 'name'] },
       ],
     });
     if (!leave) return ResponseFormatter.notFound(res, 'Leave request not found');
