@@ -32,6 +32,7 @@ const StaffQuery_model_1 = require("../models/StaffQuery.model");
 const ConversationParticipant_model_1 = require("../models/ConversationParticipant.model");
 const Message_model_1 = require("../models/Message.model");
 const MessageRead_model_1 = require("../models/MessageRead.model");
+const StudentProfile_model_1 = require("../models/StudentProfile.model");
 const payroll_routes_1 = require("../routes/payroll.routes");
 function normaliseRole(r) {
     return r.toLowerCase().replace(/[^a-z]/g, '');
@@ -396,6 +397,7 @@ DashboardController.getHODStats = ErrorMiddleware_1.ErrorMiddleware.asyncHandler
     const attendancePct = todayTotal > 0 ? Math.round((presentToday / todayTotal) * 1000) / 10 : 0;
     const ownStaffForDepts = await getOwnStaff(req);
     let departments = [];
+    let studentCount = 0;
     if (ownStaffForDepts) {
         const deptLinks = await StaffDepartment_model_1.StaffDepartment.findAll({ where: { staffId: ownStaffForDepts.id }, attributes: ['departmentId', 'isPrimary'] });
         const deptIds = new Set(deptLinks.map((l) => Number(l.departmentId)));
@@ -412,9 +414,12 @@ DashboardController.getHODStats = ErrorMiddleware_1.ErrorMiddleware.asyncHandler
                 teamSize: await Staff_model_1.Staff.count({ where: { departmentId: deptId, status: 'Active' } }),
             };
         }));
+        studentCount = deptIds.size
+            ? await StudentProfile_model_1.StudentProfile.count({ where: { departmentId: { [sequelize_1.Op.in]: [...deptIds] } } })
+            : 0;
     }
     ResponseFormatter_1.ResponseFormatter.success(res, {
-        teamSize, presentToday, attendancePct, pendingApprovals, activeProjects, reportsWaitingReview, departments,
+        teamSize, presentToday, attendancePct, pendingApprovals, activeProjects, reportsWaitingReview, departments, studentCount,
     }, 'HOD dashboard statistics retrieved');
 });
 DashboardController.getStaffStats = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {

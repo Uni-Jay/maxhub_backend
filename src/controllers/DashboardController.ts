@@ -30,6 +30,7 @@ import { StaffQuery } from '@models/StaffQuery.model';
 import { ConversationParticipant } from '@models/ConversationParticipant.model';
 import { Message } from '@models/Message.model';
 import { MessageRead } from '@models/MessageRead.model';
+import { StudentProfile } from '@models/StudentProfile.model';
 import { getPayrollOverview } from '@routes/payroll.routes';
 
 interface AuthenticatedRequest extends Request {
@@ -525,6 +526,7 @@ export class DashboardController {
       // surface all of them so her dashboard isn't primary-department-only.
       const ownStaffForDepts = await getOwnStaff(req);
       let departments: { id: number; name: string; code?: string; isPrimary: boolean; teamSize: number }[] = [];
+      let studentCount = 0;
       if (ownStaffForDepts) {
         const deptLinks = await StaffDepartment.findAll({ where: { staffId: ownStaffForDepts.id }, attributes: ['departmentId', 'isPrimary'] });
         const deptIds = new Set<number>(deptLinks.map((l: any) => Number(l.departmentId)));
@@ -542,10 +544,13 @@ export class DashboardController {
             };
           })
         );
+        studentCount = deptIds.size
+          ? await StudentProfile.count({ where: { departmentId: { [Op.in]: [...deptIds] } } })
+          : 0;
       }
 
       ResponseFormatter.success(res, {
-        teamSize, presentToday, attendancePct, pendingApprovals, activeProjects, reportsWaitingReview, departments,
+        teamSize, presentToday, attendancePct, pendingApprovals, activeProjects, reportsWaitingReview, departments, studentCount,
       }, 'HOD dashboard statistics retrieved');
     }
   );
