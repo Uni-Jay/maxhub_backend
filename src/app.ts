@@ -72,6 +72,7 @@ import { Exam } from '@models/Exam.model';
 import { Question } from '@models/Question.model';
 import { ExamResult } from '@models/ExamResult.model';
 import { Certificate } from '@models/Certificate.model';
+import { FeeReceipt } from '@models/FeeReceipt.model';
 import { Assignment } from '@models/Assignment.model';
 import { Submission } from '@models/Submission.model';
 // Messaging and communication models
@@ -300,6 +301,7 @@ class AppBootstrapper {
     Question.initModel(this.sequelize);
     ExamResult.initModel(this.sequelize);
     Certificate.initModel(this.sequelize);
+    FeeReceipt.initModel(this.sequelize);
     Assignment.initModel(this.sequelize);
     Submission.initModel(this.sequelize);
 

@@ -61,6 +61,7 @@ const Exam_model_1 = require("./Exam.model");
 const Question_model_1 = require("./Question.model");
 const ExamResult_model_1 = require("./ExamResult.model");
 const Certificate_model_1 = require("./Certificate.model");
+const FeeReceipt_model_1 = require("./FeeReceipt.model");
 const Appraisal_model_1 = require("./Appraisal.model");
 const EmployeePromotion_model_1 = require("./EmployeePromotion.model");
 const TrainingAttendance_model_1 = require("./TrainingAttendance.model");
@@ -204,6 +205,8 @@ class AssociationManager {
         Enrollment_model_1.Enrollment.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId', as: 'staff' });
         ExamResult_model_1.ExamResult.belongsTo(Enrollment_model_1.Enrollment, { foreignKey: 'enrollmentId', as: 'enrollment' });
         Certificate_model_1.Certificate.belongsTo(Enrollment_model_1.Enrollment, { foreignKey: 'enrollmentId', as: 'enrollment' });
+        FeeReceipt_model_1.FeeReceipt.belongsTo(Enrollment_model_1.Enrollment, { foreignKey: 'enrollmentId', as: 'enrollment' });
+        FeeReceipt_model_1.FeeReceipt.belongsTo(User_model_1.User, { foreignKey: 'issuedById', as: 'issuedBy' });
         JobPosting_model_1.JobPosting.belongsTo(Department_model_1.Department, { foreignKey: 'departmentId', as: 'department' });
         JobPosting_model_1.JobPosting.belongsTo(Designation_model_1.Designation, { foreignKey: 'designationId', as: 'designation' });
         JobPosting_model_1.JobPosting.belongsTo(User_model_1.User, { foreignKey: 'createdById', as: 'createdBy' });

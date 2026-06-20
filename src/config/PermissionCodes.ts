@@ -220,6 +220,11 @@ export enum PermissionCode {
   LMS_CERTIFICATE_ISSUE_ALL = 'lms.certificate.issue.all',
   LMS_CERTIFICATE_ISSUE_OWN_DEPARTMENT = 'lms.certificate.issue.own_department',
 
+  LMS_FEE_RECEIPT_READ_ALL = 'lms.fee_receipt.read.all',
+  LMS_FEE_RECEIPT_READ_OWN_DEPARTMENT = 'lms.fee_receipt.read.own_department',
+  LMS_FEE_RECEIPT_CREATE_ALL = 'lms.fee_receipt.create.all',
+  LMS_FEE_RECEIPT_CREATE_OWN_DEPARTMENT = 'lms.fee_receipt.create.own_department',
+
   // ==================== RECRUITMENT ====================
   REC_POSTING_CREATE_ALL = 'rec.posting.create.all',
   REC_POSTING_READ_ALL = 'rec.posting.read.all',

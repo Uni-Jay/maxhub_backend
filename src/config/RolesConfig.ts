@@ -164,6 +164,8 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.LMS_CERTIFICATE_AWARD_ALL,
     PermissionCode.LMS_CERTIFICATE_ISSUE_ALL,
     PermissionCode.LMS_CERTIFICATE_READ_ALL,
+    PermissionCode.LMS_FEE_RECEIPT_READ_ALL,
+    PermissionCode.LMS_FEE_RECEIPT_CREATE_ALL,
     // CBT
     PermissionCode.CBT_EXAM_CREATE_ALL,
     PermissionCode.CBT_EXAM_READ_ALL,
@@ -388,6 +390,8 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.LMS_EXAM_UPDATE_OWN_DEPARTMENT,
     PermissionCode.LMS_CERTIFICATE_ISSUE_OWN_DEPARTMENT,
     PermissionCode.LMS_CERTIFICATE_READ_ALL,
+    PermissionCode.LMS_FEE_RECEIPT_READ_OWN_DEPARTMENT,
+    PermissionCode.LMS_FEE_RECEIPT_CREATE_OWN_DEPARTMENT,
     // CBT
     PermissionCode.CBT_EXAM_READ_ALL,
     PermissionCode.CBT_RESULT_READ_ALL,

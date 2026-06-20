@@ -104,6 +104,7 @@ const Exam_model_1 = require("./models/Exam.model");
 const Question_model_1 = require("./models/Question.model");
 const ExamResult_model_1 = require("./models/ExamResult.model");
 const Certificate_model_1 = require("./models/Certificate.model");
+const FeeReceipt_model_1 = require("./models/FeeReceipt.model");
 const Assignment_model_1 = require("./models/Assignment.model");
 const Submission_model_1 = require("./models/Submission.model");
 const Conversation_model_1 = require("./models/Conversation.model");
@@ -261,6 +262,7 @@ class AppBootstrapper {
         Question_model_1.Question.initModel(this.sequelize);
         ExamResult_model_1.ExamResult.initModel(this.sequelize);
         Certificate_model_1.Certificate.initModel(this.sequelize);
+        FeeReceipt_model_1.FeeReceipt.initModel(this.sequelize);
         Assignment_model_1.Assignment.initModel(this.sequelize);
         Submission_model_1.Submission.initModel(this.sequelize);
         JobPosting_model_1.JobPosting.initModel(this.sequelize);

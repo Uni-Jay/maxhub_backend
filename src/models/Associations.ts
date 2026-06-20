@@ -59,6 +59,7 @@ import { Exam } from './Exam.model';
 import { Question } from './Question.model';
 import { ExamResult } from './ExamResult.model';
 import { Certificate } from './Certificate.model';
+import { FeeReceipt } from './FeeReceipt.model';
 import { Appraisal } from './Appraisal.model';
 import { EmployeePromotion } from './EmployeePromotion.model';
 import { TrainingAttendance } from './TrainingAttendance.model';
@@ -283,6 +284,8 @@ export class AssociationManager {
     Enrollment.belongsTo(Staff, { foreignKey: 'staffId', as: 'staff' });
     ExamResult.belongsTo(Enrollment, { foreignKey: 'enrollmentId', as: 'enrollment' });
     Certificate.belongsTo(Enrollment, { foreignKey: 'enrollmentId', as: 'enrollment' });
+    FeeReceipt.belongsTo(Enrollment, { foreignKey: 'enrollmentId', as: 'enrollment' });
+    FeeReceipt.belongsTo(User, { foreignKey: 'issuedById', as: 'issuedBy' });
 
     // ======== RECRUITMENT ========
 

@@ -70,6 +70,7 @@ function setupRoutes(app: any): void {
   // Learning Management routes
   apiRouter.use('/courses', require('./course.routes').default);
   apiRouter.use('/enrollments', require('./enrollment.routes').default);
+  apiRouter.use('/fee-receipts', require('./fee-receipt.routes').default);
 
   // Recruitment routes
   apiRouter.use('/job-postings', require('./job-posting.routes').default);
