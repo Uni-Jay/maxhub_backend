@@ -21,6 +21,7 @@ class JWTService {
             email: user.email,
             roles: user.roles,
             permissions: isAdmin ? [] : user.permissions,
+            departmentId: user.departmentId,
         };
         return jsonwebtoken_1.default.sign(payload, this.accessTokenSecret, {
             expiresIn: this.accessTokenExpiry,

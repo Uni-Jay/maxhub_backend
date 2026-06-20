@@ -8,6 +8,7 @@ interface UserAttributes {
     phone?: string;
     avatar?: string;
     passwordHash: string;
+    mustChangePassword: boolean;
     status: 'Active' | 'Inactive' | 'Suspended';
     emailVerified: boolean;
     emailVerifiedAt?: Date;
@@ -16,7 +17,7 @@ interface UserAttributes {
     lockedUntil?: Date;
     deletedAt?: Date;
 }
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'uuid' | 'emailVerified' | 'loginAttempts'> {
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'uuid' | 'emailVerified' | 'loginAttempts' | 'mustChangePassword'> {
 }
 export declare class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
     id: bigint;
@@ -27,6 +28,7 @@ export declare class User extends Model<UserAttributes, UserCreationAttributes> 
     phone?: string;
     avatar?: string;
     passwordHash: string;
+    mustChangePassword: boolean;
     status: 'Active' | 'Inactive' | 'Suspended';
     emailVerified: boolean;
     emailVerifiedAt?: Date;

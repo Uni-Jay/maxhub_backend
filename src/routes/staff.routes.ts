@@ -212,6 +212,7 @@ router.post(
       email,
       phone,
       passwordHash,
+      mustChangePassword: true,
       status: 'Active',
       emailVerified: true,
     } as any);

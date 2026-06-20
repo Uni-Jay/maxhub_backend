@@ -71,7 +71,7 @@ async function main() {
     const dept = staff && staff.departmentId ? await Department_model_1.Department.findByPk(staff.departmentId, { attributes: ['name'] }) : null;
     const temporaryPassword = PasswordService_1.default.generateRandomPassword(12);
     const passwordHash = await PasswordService_1.default.hashPassword(temporaryPassword);
-    await user.update({ passwordHash });
+    await user.update({ passwordHash, mustChangePassword: true });
     console.log(`✅  Password reset for ${email}`);
     console.log(`   New temp password: ${temporaryPassword}`);
     const sent = await (0, CommunicationService_1.sendWelcomeEmail)({

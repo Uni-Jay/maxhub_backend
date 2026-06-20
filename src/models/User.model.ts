@@ -20,6 +20,7 @@ interface UserAttributes {
   phone?: string;
   avatar?: string;
   passwordHash: string;
+  mustChangePassword: boolean;
   status: 'Active' | 'Inactive' | 'Suspended';
   emailVerified: boolean;
   emailVerifiedAt?: Date;
@@ -30,7 +31,7 @@ interface UserAttributes {
 }
 
 interface UserCreationAttributes
-  extends Optional<UserAttributes, 'id' | 'uuid' | 'emailVerified' | 'loginAttempts'> {}
+  extends Optional<UserAttributes, 'id' | 'uuid' | 'emailVerified' | 'loginAttempts' | 'mustChangePassword'> {}
 
 export class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: bigint;
@@ -41,6 +42,7 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   public phone?: string;
   public avatar?: string;
   public passwordHash!: string;
+  public mustChangePassword!: boolean;
   public status!: 'Active' | 'Inactive' | 'Suspended';
   public emailVerified!: boolean;
   public emailVerifiedAt?: Date;
@@ -113,6 +115,12 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
           type: DataTypes.STRING(255),
           allowNull: false,
           comment: 'Bcrypt hashed password',
+        },
+        mustChangePassword: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: false,
+          comment: 'True for accounts created with a temp password — forces a change before they can use the app',
         },
         status: {
           type: DataTypes.ENUM('Active', 'Inactive', 'Suspended'),

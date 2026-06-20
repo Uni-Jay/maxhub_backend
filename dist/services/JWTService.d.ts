@@ -5,6 +5,7 @@ export interface JWTPayload {
     email: string;
     roles: string[];
     permissions: string[];
+    departmentId: number | null;
     iat: number;
     exp: number;
 }

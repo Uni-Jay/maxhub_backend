@@ -385,7 +385,7 @@ DashboardController.getHODStats = ErrorMiddleware_1.ErrorMiddleware.asyncHandler
     const teamStaff = await Staff_model_1.Staff.findAll({ where: staffWhere, attributes: ['id'] });
     const staffIds = teamStaff.map((s) => s.id);
     const idFilter = { [sequelize_1.Op.in]: staffIds.length ? staffIds : [-1] };
-    const [totalStaff, pendingApprovals, todayPresent, todayTotal, activeProjects, reportsWaitingReview] = await Promise.all([
+    const [teamSize, pendingApprovals, presentToday, todayTotal, activeProjects, reportsWaitingReview] = await Promise.all([
         Promise.resolve(staffIds.length),
         LeaveRequest_model_1.LeaveRequest.count({ where: { status: 'Pending', staffId: idFilter } }),
         Attendance_model_1.Attendance.count({ where: { staffId: idFilter, attendanceDate: { [sequelize_1.Op.between]: [startOfDay, endOfDay] }, status: { [sequelize_1.Op.in]: ['Present', 'Late'] } } }),
@@ -393,8 +393,29 @@ DashboardController.getHODStats = ErrorMiddleware_1.ErrorMiddleware.asyncHandler
         departmentId ? Project_model_1.Project.count({ where: { departmentId, status: 'Active' } }) : Project_model_1.Project.count({ where: { status: 'Active' } }),
         WeeklyReport_model_1.WeeklyReport.count({ where: { approvalStatus: 'Pending', staffId: idFilter } }),
     ]);
-    const averageAttendance = todayTotal > 0 ? Math.round((todayPresent / todayTotal) * 1000) / 10 : 0;
-    ResponseFormatter_1.ResponseFormatter.success(res, { totalStaff, pendingApprovals, averageAttendance, activeProjects, reportsWaitingReview }, 'HOD dashboard statistics retrieved');
+    const attendancePct = todayTotal > 0 ? Math.round((presentToday / todayTotal) * 1000) / 10 : 0;
+    const ownStaffForDepts = await getOwnStaff(req);
+    let departments = [];
+    if (ownStaffForDepts) {
+        const deptLinks = await StaffDepartment_model_1.StaffDepartment.findAll({ where: { staffId: ownStaffForDepts.id }, attributes: ['departmentId', 'isPrimary'] });
+        const deptIds = new Set(deptLinks.map((l) => Number(l.departmentId)));
+        if (departmentId)
+            deptIds.add(Number(departmentId));
+        const isPrimaryByDeptId = new Map(deptLinks.map((l) => [Number(l.departmentId), !!l.isPrimary]));
+        departments = await Promise.all([...deptIds].map(async (deptId) => {
+            const dept = await Department_model_1.Department.findByPk(deptId, { attributes: ['id', 'name', 'code'] });
+            return {
+                id: deptId,
+                name: dept?.name,
+                code: dept?.code,
+                isPrimary: isPrimaryByDeptId.get(deptId) ?? deptId === Number(departmentId),
+                teamSize: await Staff_model_1.Staff.count({ where: { departmentId: deptId, status: 'Active' } }),
+            };
+        }));
+    }
+    ResponseFormatter_1.ResponseFormatter.success(res, {
+        teamSize, presentToday, attendancePct, pendingApprovals, activeProjects, reportsWaitingReview, departments,
+    }, 'HOD dashboard statistics retrieved');
 });
 DashboardController.getStaffStats = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     if (!isAuthenticated(req)) {

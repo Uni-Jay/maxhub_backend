@@ -501,7 +501,7 @@ export class DashboardController {
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-      // HOD is department-only — scoped to req.user.departmentId (already on the JWT, no lookup needed).
+      // HOD is department-only — scoped to req.user.departmentId (now correctly on the JWT — see AuthenticationService.ts).
       const departmentId = req.user?.departmentId;
       const staffWhere: Record<string, unknown> = { status: 'Active' };
       if (departmentId) staffWhere.departmentId = departmentId;
@@ -510,7 +510,7 @@ export class DashboardController {
       const staffIds = teamStaff.map((s: any) => s.id);
       const idFilter = { [Op.in]: staffIds.length ? staffIds : [-1] };
 
-      const [totalStaff, pendingApprovals, todayPresent, todayTotal, activeProjects, reportsWaitingReview] = await Promise.all([
+      const [teamSize, pendingApprovals, presentToday, todayTotal, activeProjects, reportsWaitingReview] = await Promise.all([
         Promise.resolve(staffIds.length),
         LeaveRequest.count({ where: { status: 'Pending', staffId: idFilter } }),
         Attendance.count({ where: { staffId: idFilter, attendanceDate: { [Op.between]: [startOfDay, endOfDay] }, status: { [Op.in]: ['Present', 'Late'] } } }),
@@ -519,9 +519,34 @@ export class DashboardController {
         WeeklyReport.count({ where: { approvalStatus: 'Pending', staffId: idFilter } }),
       ]);
 
-      const averageAttendance = todayTotal > 0 ? Math.round((todayPresent / todayTotal) * 1000) / 10 : 0;
+      const attendancePct = todayTotal > 0 ? Math.round((presentToday / todayTotal) * 1000) / 10 : 0;
 
-      ResponseFormatter.success(res, { totalStaff, pendingApprovals, averageAttendance, activeProjects, reportsWaitingReview }, 'HOD dashboard statistics retrieved');
+      // She may also be linked to other departments (short-staffed coverage) —
+      // surface all of them so her dashboard isn't primary-department-only.
+      const ownStaffForDepts = await getOwnStaff(req);
+      let departments: { id: number; name: string; code?: string; isPrimary: boolean; teamSize: number }[] = [];
+      if (ownStaffForDepts) {
+        const deptLinks = await StaffDepartment.findAll({ where: { staffId: ownStaffForDepts.id }, attributes: ['departmentId', 'isPrimary'] });
+        const deptIds = new Set<number>(deptLinks.map((l: any) => Number(l.departmentId)));
+        if (departmentId) deptIds.add(Number(departmentId));
+        const isPrimaryByDeptId = new Map<number, boolean>(deptLinks.map((l: any) => [Number(l.departmentId), !!l.isPrimary]));
+        departments = await Promise.all(
+          [...deptIds].map(async (deptId) => {
+            const dept = await Department.findByPk(deptId, { attributes: ['id', 'name', 'code'] });
+            return {
+              id: deptId,
+              name: (dept as any)?.name,
+              code: (dept as any)?.code,
+              isPrimary: isPrimaryByDeptId.get(deptId) ?? deptId === Number(departmentId),
+              teamSize: await Staff.count({ where: { departmentId: deptId, status: 'Active' } }),
+            };
+          })
+        );
+      }
+
+      ResponseFormatter.success(res, {
+        teamSize, presentToday, attendancePct, pendingApprovals, activeProjects, reportsWaitingReview, departments,
+      }, 'HOD dashboard statistics retrieved');
     }
   );
 

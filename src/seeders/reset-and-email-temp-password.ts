@@ -49,7 +49,7 @@ async function main() {
 
   const temporaryPassword = PasswordService.generateRandomPassword(12);
   const passwordHash = await PasswordService.hashPassword(temporaryPassword);
-  await user.update({ passwordHash } as any);
+  await user.update({ passwordHash, mustChangePassword: true } as any);
 
   console.log(`✅  Password reset for ${email}`);
   console.log(`   New temp password: ${temporaryPassword}`);

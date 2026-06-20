@@ -7,6 +7,7 @@ export interface JWTPayload {
   email: string;
   roles: string[];
   permissions: string[];
+  departmentId: number | null;
   iat: number;
   exp: number;
 }
@@ -38,6 +39,7 @@ export class JWTService {
       email: user.email,
       roles: user.roles,
       permissions: isAdmin ? [] : user.permissions,
+      departmentId: user.departmentId,
     };
 
     return jwt.sign(payload, this.accessTokenSecret, {

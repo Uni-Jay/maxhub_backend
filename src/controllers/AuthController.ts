@@ -467,7 +467,7 @@ export class AuthController {
       }
 
       const hash = await bcrypt.hash(newPassword, 12);
-      await user.update({ passwordHash: hash });
+      await user.update({ passwordHash: hash, mustChangePassword: false });
 
       ResponseFormatter.success(res, null, 'Password changed successfully');
     } catch (error) {

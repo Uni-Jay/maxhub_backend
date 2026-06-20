@@ -13,8 +13,11 @@ export interface AuthenticatedUser {
   departmentId: number | null;
   departmentUuid: string;
   position?: string | null;
+  phone?: string | null;
   roles: string[];
   permissions: string[];
+  mustChangePassword?: boolean;
+  departmentCodes?: string[];
 }
 
 /**

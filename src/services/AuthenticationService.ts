@@ -1,5 +1,7 @@
 import { User } from '@models/User.model';
 import { Staff } from '@models/Staff.model';
+import { StaffDepartment } from '@models/StaffDepartment.model';
+import { Department } from '@models/Department.model';
 import { Permission } from '@models/Permission.model';
 import { Session } from '@models/Session.model';
 import { OTPVerification } from '@models/OTPVerification.model';
@@ -34,6 +36,16 @@ export interface LoginResponse {
   refreshToken: string;
   requiresMFA: boolean;
   sessionId: string;
+}
+
+/** All department codes (e.g. ['KS','VM','BM']) a staff member is linked to — primary plus any secondary coverage via StaffDepartment. Used by the frontend sidebar to splice in department-specific module nav (LMS for Kurios Sat, etc.) without an extra round trip. */
+async function getDepartmentCodes(staffId: bigint | number, primaryDepartmentId?: bigint | number | null): Promise<string[]> {
+  const links = await StaffDepartment.findAll({ where: { staffId }, attributes: ['departmentId'] });
+  const deptIds = new Set<number>(links.map((l: any) => Number(l.departmentId)));
+  if (primaryDepartmentId) deptIds.add(Number(primaryDepartmentId));
+  if (!deptIds.size) return [];
+  const depts = await Department.findAll({ where: { id: [...deptIds] }, attributes: ['code'] });
+  return depts.map((d: any) => d.code).filter(Boolean);
 }
 
 export interface RegistrationPayload {
@@ -105,7 +117,8 @@ export class AuthenticationService {
         ...directPerms.map((p: any) => p.code),
       ]),
     ];
-    const staffRecord = await Staff.findOne({ where: { userId: user.id }, attributes: ['position'] });
+    const staffRecord = await Staff.findOne({ where: { userId: user.id }, attributes: ['id', 'position', 'departmentId', 'phone'] });
+    const departmentCodes = staffRecord ? await getDepartmentCodes((staffRecord as any).id, (staffRecord as any).departmentId) : [];
 
     const authenticatedUser = {
       id: Number(user.id),
@@ -114,11 +127,14 @@ export class AuthenticationService {
       name: `${user.firstName} ${user.lastName}`,
       firstName: user.firstName,
       lastName: user.lastName,
-      departmentId: (user as any).departmentId ? Number((user as any).departmentId) : null,
+      departmentId: (staffRecord as any)?.departmentId ? Number((staffRecord as any).departmentId) : null,
       departmentUuid: (user as any).departmentUuid || '',
       position: (staffRecord as any)?.position ?? null,
+      phone: (staffRecord as any)?.phone ?? (user as any).phone ?? null,
       roles: roles.map((r: any) => r.code),
       permissions: permCodes,
+      mustChangePassword: !!user.mustChangePassword,
+      departmentCodes,
     };
 
     // Check if 2FA is enabled
@@ -274,8 +290,10 @@ export class AuthenticationService {
       departmentId: departmentId ? Number(departmentId) : null,
       departmentUuid: '',
       position: null,
+      phone: phone ?? null,
       roles: roles.map((r: any) => r.code),
       permissions: permCodes,
+      mustChangePassword: false,
     };
 
     const accessToken = JWTService.generateAccessToken(authenticatedUser);
@@ -348,7 +366,8 @@ export class AuthenticationService {
         ...directPerms.map((p: any) => p.code),
       ]),
     ];
-    const staffRecord = await Staff.findOne({ where: { userId: user.id }, attributes: ['position'] });
+    const staffRecord = await Staff.findOne({ where: { userId: user.id }, attributes: ['id', 'position', 'departmentId', 'phone'] });
+    const departmentCodes = staffRecord ? await getDepartmentCodes((staffRecord as any).id, (staffRecord as any).departmentId) : [];
 
     const authenticatedUser = {
       id: Number(user.id),
@@ -357,11 +376,14 @@ export class AuthenticationService {
       name: `${user.firstName} ${user.lastName}`,
       firstName: user.firstName,
       lastName: user.lastName,
-      departmentId: (user as any).departmentId ? Number((user as any).departmentId) : null,
+      departmentId: (staffRecord as any)?.departmentId ? Number((staffRecord as any).departmentId) : null,
       departmentUuid: (user as any).departmentUuid || '',
       position: (staffRecord as any)?.position ?? null,
+      phone: (staffRecord as any)?.phone ?? (user as any).phone ?? null,
       roles: roles.map((r: any) => r.code),
       permissions: permCodes,
+      mustChangePassword: !!user.mustChangePassword,
+      departmentCodes,
     };
 
     const newAccessToken = JWTService.generateAccessToken(authenticatedUser);
@@ -544,7 +566,8 @@ export class AuthenticationService {
         ...directPerms.map((p: any) => p.code),
       ]),
     ];
-    const staffRecord = await Staff.findOne({ where: { userId: user.id }, attributes: ['position'] });
+    const staffRecord = await Staff.findOne({ where: { userId: user.id }, attributes: ['id', 'position', 'departmentId', 'phone'] });
+    const departmentCodes = staffRecord ? await getDepartmentCodes((staffRecord as any).id, (staffRecord as any).departmentId) : [];
 
     const authenticatedUser = {
       id: Number(user.id),
@@ -553,11 +576,14 @@ export class AuthenticationService {
       name: `${user.firstName} ${user.lastName}`,
       firstName: user.firstName,
       lastName: user.lastName,
-      departmentId: (user as any).departmentId ? Number((user as any).departmentId) : null,
+      departmentId: (staffRecord as any)?.departmentId ? Number((staffRecord as any).departmentId) : null,
       departmentUuid: (user as any).departmentUuid || '',
       position: (staffRecord as any)?.position ?? null,
+      phone: (staffRecord as any)?.phone ?? (user as any).phone ?? null,
       roles: roles.map((r: any) => r.code),
       permissions: permCodes,
+      mustChangePassword: !!user.mustChangePassword,
+      departmentCodes,
     };
 
     const accessToken = JWTService.generateAccessToken(authenticatedUser);

@@ -51,6 +51,12 @@ class User extends sequelize_1.Model {
                 allowNull: false,
                 comment: 'Bcrypt hashed password',
             },
+            mustChangePassword: {
+                type: sequelize_1.DataTypes.BOOLEAN,
+                allowNull: false,
+                defaultValue: false,
+                comment: 'True for accounts created with a temp password — forces a change before they can use the app',
+            },
             status: {
                 type: sequelize_1.DataTypes.ENUM('Active', 'Inactive', 'Suspended'),
                 defaultValue: 'Active',

@@ -148,6 +148,7 @@ router.post('/', AuthMiddleware_1.default.requirePermission('org.staff.create.al
         email,
         phone,
         passwordHash,
+        mustChangePassword: true,
         status: 'Active',
         emailVerified: true,
     });
