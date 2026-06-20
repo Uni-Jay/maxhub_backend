@@ -36,15 +36,19 @@ export class NotificationService extends BaseService {
   }
 
   private initializeProviders() {
-    // Email configuration — uses the same SMTP env vars as CommunicationService
+    // System notifications send from the general/notification mailbox
+    // (INFO_EMAIL/INFO_PASSWORD), same as CommunicationService's notification
+    // sender — falls back to the legacy single-mailbox SMTP_USER/PASSWORD
+    // (both together, never mixed) when INFO_EMAIL isn't configured yet.
+    const infoPass = process.env.INFO_PASSWORD;
+    const emailAuth = infoPass
+      ? { user: process.env.INFO_EMAIL || process.env.SMTP_USER, pass: infoPass }
+      : { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD };
     this.emailTransporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT || '465'),
       secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD,
-      },
+      auth: emailAuth,
     });
 
     // SMS configuration (Twilio)
@@ -160,7 +164,7 @@ export class NotificationService extends BaseService {
       const staffEmail = 'user@example.com'; // Replace with actual email lookup
 
       const mailOptions = {
-        from: process.env.EMAIL_FROM || 'noreply@kuriossats.com',
+        from: `"MaxHub ERP" <${process.env.INFO_FROM || process.env.EMAIL_FROM || 'info@maxhubng.company'}>`,
         to: staffEmail,
         subject: data.title,
         html: this.generateEmailHTML(data.title, emailBody, data.actionUrl),

@@ -20,14 +20,15 @@ class NotificationService extends BaseService_1.default {
         this.initializeProviders();
     }
     initializeProviders() {
+        const infoPass = process.env.INFO_PASSWORD;
+        const emailAuth = infoPass
+            ? { user: process.env.INFO_EMAIL || process.env.SMTP_USER, pass: infoPass }
+            : { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD };
         this.emailTransporter = nodemailer_1.default.createTransport({
             host: process.env.SMTP_HOST,
             port: parseInt(process.env.SMTP_PORT || '465'),
             secure: process.env.SMTP_SECURE === 'true',
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASSWORD,
-            },
+            auth: emailAuth,
         });
         if (process.env.TWILIO_ACCOUNT_SID) {
             this.twilioClient = (0, twilio_1.default)(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -97,7 +98,7 @@ class NotificationService extends BaseService_1.default {
             }
             const staffEmail = 'user@example.com';
             const mailOptions = {
-                from: process.env.EMAIL_FROM || 'noreply@kuriossats.com',
+                from: `"MaxHub ERP" <${process.env.INFO_FROM || process.env.EMAIL_FROM || 'info@maxhubng.company'}>`,
                 to: staffEmail,
                 subject: data.title,
                 html: this.generateEmailHTML(data.title, emailBody, data.actionUrl),

@@ -12,6 +12,7 @@ const JobPosting_model_1 = require("../models/JobPosting.model");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
+const hr_email_service_1 = require("../services/email/hr-email.service");
 const router = (0, express_1.Router)();
 router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { page = 1, limit = 20, status, jobPostingId, search } = req.query;
@@ -76,7 +77,10 @@ router.put('/:id', AuthMiddleware_1.default.requirePermission('rec.application.u
     ResponseFormatter_1.ResponseFormatter.success(res, application, 'Application updated');
 }));
 router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('rec.application.update.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const application = await JobApplication_model_1.JobApplication.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
+    const application = await JobApplication_model_1.JobApplication.findOne({
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) },
+        include: [{ model: JobPosting_model_1.JobPosting, as: 'jobPosting', attributes: ['title'] }],
+    });
     if (!application)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Application not found', 404);
     const { status, notes } = req.body;
@@ -93,6 +97,23 @@ router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('rec.appl
         return ResponseFormatter_1.ResponseFormatter.error(res, `Cannot transition from ${current} to ${status}`, 400);
     }
     await application.update({ status, notes: notes || application.notes });
+    const jobTitle = application.jobPosting?.title ?? 'the position';
+    const statusMessages = {
+        Shortlisted: { subject: `You've been shortlisted — ${jobTitle}`, message: `Good news! You've been shortlisted for the ${jobTitle} role. Our team will be in touch shortly with next steps.` },
+        Interviewed: { subject: `Thank you for interviewing — ${jobTitle}`, message: `Thank you for taking the time to interview for the ${jobTitle} role. We'll follow up with a decision soon.` },
+        Offered: { subject: `Job offer — ${jobTitle}`, message: `Congratulations! We'd like to offer you the ${jobTitle} position. Our team will reach out with details shortly.` },
+        Rejected: { subject: `Update on your application — ${jobTitle}`, message: `Thank you for your interest in the ${jobTitle} role. After careful consideration, we will not be proceeding with your application at this time. We wish you the best in your search.` },
+    };
+    const notice = statusMessages[status];
+    if (notice) {
+        (0, hr_email_service_1.sendRecruitmentEmail)({
+            to: application.applicantEmail,
+            applicantName: application.applicantName,
+            jobTitle,
+            subject: notice.subject,
+            message: notice.message,
+        }).catch(() => { });
+    }
     ResponseFormatter_1.ResponseFormatter.success(res, application, 'Status updated');
 }));
 router.delete('/:id', AuthMiddleware_1.default.requirePermission('rec.application.delete.all'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {

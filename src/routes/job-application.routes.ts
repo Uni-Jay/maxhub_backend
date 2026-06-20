@@ -8,6 +8,7 @@ import { Contact } from '@models/Contact.model';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import AuthMiddleware from '@middleware/AuthMiddleware';
+import { sendRecruitmentEmail } from '@services/email/hr-email.service';
 
 const router = Router();
 
@@ -79,7 +80,10 @@ router.put('/:id', AuthMiddleware.requirePermission('rec.application.update.all'
 
 // PATCH /api/job-applications/:id/status
 router.patch('/:id/status', AuthMiddleware.requirePermission('rec.application.update.all'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const application = await JobApplication.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
+  const application = await JobApplication.findOne({
+    where: { ...idOrUuidWhere(req.params.id) },
+    include: [{ model: JobPosting, as: 'jobPosting', attributes: ['title'] }],
+  });
   if (!application) return ResponseFormatter.error(res, 'Application not found', 404);
 
   const { status, notes } = req.body;
@@ -98,6 +102,25 @@ router.patch('/:id/status', AuthMiddleware.requirePermission('rec.application.up
   }
 
   await application.update({ status, notes: notes || (application as any).notes });
+
+  const jobTitle = (application as any).jobPosting?.title ?? 'the position';
+  const statusMessages: Record<string, { subject: string; message: string } | undefined> = {
+    Shortlisted: { subject: `You've been shortlisted — ${jobTitle}`, message: `Good news! You've been shortlisted for the ${jobTitle} role. Our team will be in touch shortly with next steps.` },
+    Interviewed: { subject: `Thank you for interviewing — ${jobTitle}`, message: `Thank you for taking the time to interview for the ${jobTitle} role. We'll follow up with a decision soon.` },
+    Offered: { subject: `Job offer — ${jobTitle}`, message: `Congratulations! We'd like to offer you the ${jobTitle} position. Our team will reach out with details shortly.` },
+    Rejected: { subject: `Update on your application — ${jobTitle}`, message: `Thank you for your interest in the ${jobTitle} role. After careful consideration, we will not be proceeding with your application at this time. We wish you the best in your search.` },
+  };
+  const notice = statusMessages[status];
+  if (notice) {
+    sendRecruitmentEmail({
+      to: (application as any).applicantEmail,
+      applicantName: (application as any).applicantName,
+      jobTitle,
+      subject: notice.subject,
+      message: notice.message,
+    }).catch(() => {});
+  }
+
   ResponseFormatter.success(res, application, 'Status updated');
 }));
 
