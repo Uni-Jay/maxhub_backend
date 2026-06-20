@@ -113,6 +113,7 @@ export class Client
         tableName: 'clients',
         paranoid: true,
         timestamps: true,
+        underscored: false,
         hooks: {
           beforeCreate: async (client) => {
             if (!client.clientId) {

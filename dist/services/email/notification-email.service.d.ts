@@ -53,6 +53,26 @@ export declare function sendApprovalEmail(params: {
     message: string;
     status: 'Approved' | 'Rejected' | 'Pending';
 }): Promise<boolean>;
+export declare function sendProposalEmail(params: {
+    to: string;
+    clientName: string;
+    proposalCode: string;
+    title: string;
+    scopeOfWork?: string;
+    termsAndConditions?: string;
+    items: {
+        description: string;
+        qty: number;
+        unitPrice: number;
+    }[];
+    subtotal: number;
+    discount: number;
+    tax: number;
+    total: number;
+    currency: string;
+    validUntil: string | Date;
+    senderName?: string;
+}): Promise<boolean>;
 export declare function buildWeeklyMessage(channel: 'Email' | 'SMS' | 'WhatsApp', recipient: MessageRecipient, companyName: string): string;
 export declare function buildBirthdayMessage(channel: 'Email' | 'SMS' | 'WhatsApp', recipient: MessageRecipient, companyName: string): string;
 //# sourceMappingURL=notification-email.service.d.ts.map

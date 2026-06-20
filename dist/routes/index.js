@@ -44,6 +44,7 @@ function setupRoutes(app) {
     apiRouter.use('/project-collaboration', require('./project-collaboration.routes').default);
     apiRouter.use('/contacts', require('./contact.routes').default);
     apiRouter.use('/opportunities', require('./opportunity.routes').default);
+    apiRouter.use('/quotes', require('./quote.routes').default);
     apiRouter.use('/courses', require('./course.routes').default);
     apiRouter.use('/enrollments', require('./enrollment.routes').default);
     apiRouter.use('/fee-receipts', require('./fee-receipt.routes').default);

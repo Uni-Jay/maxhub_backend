@@ -1,10 +1,18 @@
 import { Model, Optional, Sequelize } from 'sequelize';
+interface InvoiceLineItem {
+    description: string;
+    qty: number;
+    unitPrice: number;
+}
 interface InvoiceAttributes {
     id: bigint;
     uuid: string;
     invoiceCode: string;
     orderId?: bigint;
-    accountId: bigint;
+    accountId?: bigint;
+    clientId?: bigint;
+    departmentId?: bigint;
+    items?: InvoiceLineItem[];
     invoiceDate: Date;
     dueDate: Date;
     subtotal: number;
@@ -24,7 +32,10 @@ export declare class Invoice extends Model<InvoiceAttributes, InvoiceCreationAtt
     uuid: string;
     invoiceCode: string;
     orderId?: bigint;
-    accountId: bigint;
+    accountId?: bigint;
+    clientId?: bigint;
+    departmentId?: bigint;
+    items?: InvoiceLineItem[];
     invoiceDate: Date;
     dueDate: Date;
     subtotal: number;

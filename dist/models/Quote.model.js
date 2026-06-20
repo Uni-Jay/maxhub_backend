@@ -12,6 +12,12 @@ class Quote extends sequelize_1.Model {
             opportunityId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Opportunity ID' },
             accountId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Account ID' },
             contactId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Contact ID' },
+            clientId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Client ID (CRM customer this proposal is for)' },
+            departmentId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Department/business unit, denormalized from client at creation for fast scoping' },
+            title: { type: sequelize_1.DataTypes.STRING(200), allowNull: true, comment: 'Proposal title' },
+            scopeOfWork: { type: sequelize_1.DataTypes.TEXT, allowNull: true, comment: 'What we will deliver' },
+            termsAndConditions: { type: sequelize_1.DataTypes.TEXT, allowNull: true, comment: 'Our terms and conditions for this engagement' },
+            items: { type: sequelize_1.DataTypes.JSONB, allowNull: true, comment: 'Line items: [{description, qty, unitPrice}]' },
             quoteDate: { type: sequelize_1.DataTypes.DATE, allowNull: false, defaultValue: sequelize_1.DataTypes.NOW, comment: 'Quote date' },
             validUntil: { type: sequelize_1.DataTypes.DATE, allowNull: false, comment: 'Valid until date' },
             subtotal: { type: sequelize_1.DataTypes.DECIMAL(15, 2), allowNull: false, comment: 'Subtotal' },
@@ -21,6 +27,8 @@ class Quote extends sequelize_1.Model {
             currency: { type: sequelize_1.DataTypes.STRING(3), allowNull: false, defaultValue: 'USD', comment: 'Currency code' },
             status: { type: sequelize_1.DataTypes.ENUM('Draft', 'Sent', 'Accepted', 'Rejected', 'Expired'), defaultValue: 'Draft' },
             description: { type: sequelize_1.DataTypes.TEXT, allowNull: true, comment: 'Description' },
+            sentAt: { type: sequelize_1.DataTypes.DATE, allowNull: true, comment: 'When this was emailed to the client' },
+            respondedAt: { type: sequelize_1.DataTypes.DATE, allowNull: true, comment: 'When the client accepted/rejected' },
             createdById: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'Created by user ID' },
             deletedAt: { type: sequelize_1.DataTypes.DATE, allowNull: true, comment: 'Soft delete timestamp' },
         }, {
@@ -29,12 +37,14 @@ class Quote extends sequelize_1.Model {
                 { fields: ['quoteCode'], name: 'idx_quotes_quoteCode' },
                 { fields: ['opportunityId'], name: 'idx_quotes_opportunityId' },
                 { fields: ['accountId'], name: 'idx_quotes_accountId' },
+                { fields: ['clientId'], name: 'idx_quotes_clientId' },
+                { fields: ['departmentId'], name: 'idx_quotes_departmentId' },
                 { fields: ['status'], name: 'idx_quotes_status' },
                 { fields: ['validUntil'], name: 'idx_quotes_validUntil' },
                 { fields: ['createdById'], name: 'idx_quotes_createdById' },
                 { fields: ['uuid'], name: 'idx_quotes_uuid' },
             ],
-            comment: 'Sales quotes'
+            comment: 'Sales quotes / client proposals'
         });
         return Quote;
     }

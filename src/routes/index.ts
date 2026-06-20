@@ -66,6 +66,7 @@ function setupRoutes(app: any): void {
   // CRM routes
   apiRouter.use('/contacts', require('./contact.routes').default);
   apiRouter.use('/opportunities', require('./opportunity.routes').default);
+  apiRouter.use('/quotes', require('./quote.routes').default);
 
   // Learning Management routes
   apiRouter.use('/courses', require('./course.routes').default);

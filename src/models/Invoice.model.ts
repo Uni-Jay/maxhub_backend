@@ -1,12 +1,21 @@
 import { DataTypes, Model, Optional, Sequelize } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
 
+interface InvoiceLineItem {
+  description: string;
+  qty: number;
+  unitPrice: number;
+}
+
 interface InvoiceAttributes {
   id: bigint;
   uuid: string;
   invoiceCode: string;
   orderId?: bigint;
-  accountId: bigint;
+  accountId?: bigint;
+  clientId?: bigint;
+  departmentId?: bigint;
+  items?: InvoiceLineItem[];
   invoiceDate: Date;
   dueDate: Date;
   subtotal: number;
@@ -28,7 +37,10 @@ export class Invoice extends Model<InvoiceAttributes, InvoiceCreationAttributes>
   public uuid!: string;
   public invoiceCode!: string;
   public orderId?: bigint;
-  public accountId!: bigint;
+  public accountId?: bigint;
+  public clientId?: bigint;
+  public departmentId?: bigint;
+  public items?: InvoiceLineItem[];
   public invoiceDate!: Date;
   public dueDate!: Date;
   public subtotal!: number;
@@ -51,7 +63,10 @@ export class Invoice extends Model<InvoiceAttributes, InvoiceCreationAttributes>
         uuid: { type: DataTypes.UUID, defaultValue: () => uuidv4(), unique: true, allowNull: false },
         invoiceCode: { type: DataTypes.STRING(50), allowNull: false, unique: true, comment: 'Invoice code' },
         orderId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Order ID' },
-        accountId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'Account ID' },
+        accountId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Account ID (legacy, generic)' },
+        clientId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Client ID (CRM customer this invoice is billed to)' },
+        departmentId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Department/business unit, denormalized from client at creation for fast scoping' },
+        items: { type: DataTypes.JSONB, allowNull: true, comment: 'Line items: [{description, qty, unitPrice}]' },
         invoiceDate: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW, comment: 'Invoice date' },
         dueDate: { type: DataTypes.DATE, allowNull: false, comment: 'Due date' },
         subtotal: { type: DataTypes.DECIMAL(15, 2), allowNull: false, comment: 'Subtotal' },
@@ -70,6 +85,8 @@ export class Invoice extends Model<InvoiceAttributes, InvoiceCreationAttributes>
           { fields: ['invoiceCode'], name: 'idx_invoices_invoiceCode' },
           { fields: ['orderId'], name: 'idx_invoices_orderId' },
           { fields: ['accountId'], name: 'idx_invoices_accountId' },
+          { fields: ['clientId'], name: 'idx_invoices_clientId' },
+          { fields: ['departmentId'], name: 'idx_invoices_departmentId' },
           { fields: ['status'], name: 'idx_invoices_status' },
           { fields: ['dueDate'], name: 'idx_invoices_dueDate' },
           { fields: ['createdById'], name: 'idx_invoices_createdById' },

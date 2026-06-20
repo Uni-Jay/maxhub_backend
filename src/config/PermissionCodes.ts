@@ -175,10 +175,17 @@ export enum PermissionCode {
   CRM_ACTIVITY_DELETE_ALL = 'crm.activity.delete.all',
 
   CRM_QUOTE_CREATE_ALL = 'crm.quote.create.all',
+  CRM_QUOTE_CREATE_OWN_DEPARTMENT = 'crm.quote.create.own_department',
   CRM_QUOTE_READ_ALL = 'crm.quote.read.all',
   CRM_QUOTE_READ_OWN = 'crm.quote.read.own',
+  CRM_QUOTE_READ_OWN_DEPARTMENT = 'crm.quote.read.own_department',
+  CRM_QUOTE_UPDATE_ALL = 'crm.quote.update.all',
+  CRM_QUOTE_UPDATE_OWN_DEPARTMENT = 'crm.quote.update.own_department',
   CRM_QUOTE_APPROVE_ALL = 'crm.quote.approve.all',
   CRM_QUOTE_DELETE_ALL = 'crm.quote.delete.all',
+  CRM_QUOTE_DELETE_OWN_DEPARTMENT = 'crm.quote.delete.own_department',
+  CRM_QUOTE_SEND_ALL = 'crm.quote.send.all',
+  CRM_QUOTE_SEND_OWN_DEPARTMENT = 'crm.quote.send.own_department',
 
   CRM_ORDER_CREATE_ALL = 'crm.order.create.all',
   CRM_ORDER_READ_ALL = 'crm.order.read.all',
@@ -606,10 +613,14 @@ export enum PermissionCode {
   FIN_BUDGET_DELETE_ALL = 'fin.budget.delete.all',
 
   FIN_INVOICE_CREATE_ALL = 'fin.invoice.create.all',
+  FIN_INVOICE_CREATE_OWN_DEPARTMENT = 'fin.invoice.create.own_department',
   FIN_INVOICE_READ_ALL = 'fin.invoice.read.all',
   FIN_INVOICE_READ_OWN = 'fin.invoice.read.own',
+  FIN_INVOICE_READ_OWN_DEPARTMENT = 'fin.invoice.read.own_department',
   FIN_INVOICE_UPDATE_ALL = 'fin.invoice.update.all',
+  FIN_INVOICE_UPDATE_OWN_DEPARTMENT = 'fin.invoice.update.own_department',
   FIN_INVOICE_DELETE_ALL = 'fin.invoice.delete.all',
+  FIN_INVOICE_DELETE_OWN_DEPARTMENT = 'fin.invoice.delete.own_department',
 
   FIN_PAYMENT_CREATE_ALL = 'fin.payment.create.all',
   FIN_PAYMENT_READ_ALL = 'fin.payment.read.all',

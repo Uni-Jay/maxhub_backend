@@ -1,3 +1,3 @@
 export { sendWelcomeEmail, sendStaffCredentials, sendRecruitmentEmail, sendInterviewInvitation, } from './email/hr-email.service';
-export { MessageRecipient, sendMessage, sendOTPEmail, sendPasswordResetEmail, sendPasswordChangedEmail, sendPromotionEmail, sendBirthdayEmail, sendNotificationEmail, sendApprovalEmail, buildWeeklyMessage, buildBirthdayMessage, } from './email/notification-email.service';
+export { MessageRecipient, sendMessage, sendOTPEmail, sendPasswordResetEmail, sendPasswordChangedEmail, sendPromotionEmail, sendBirthdayEmail, sendNotificationEmail, sendApprovalEmail, sendProposalEmail, buildWeeklyMessage, buildBirthdayMessage, } from './email/notification-email.service';
 //# sourceMappingURL=CommunicationService.d.ts.map

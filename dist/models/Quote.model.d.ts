@@ -1,4 +1,9 @@
 import { Model, Optional, Sequelize } from 'sequelize';
+interface QuoteLineItem {
+    description: string;
+    qty: number;
+    unitPrice: number;
+}
 interface QuoteAttributes {
     id: bigint;
     uuid: string;
@@ -6,6 +11,12 @@ interface QuoteAttributes {
     opportunityId?: bigint;
     accountId?: bigint;
     contactId?: bigint;
+    clientId?: bigint;
+    departmentId?: bigint;
+    title?: string;
+    scopeOfWork?: string;
+    termsAndConditions?: string;
+    items?: QuoteLineItem[];
     quoteDate: Date;
     validUntil: Date;
     subtotal: number;
@@ -15,6 +26,8 @@ interface QuoteAttributes {
     currency: string;
     status: 'Draft' | 'Sent' | 'Accepted' | 'Rejected' | 'Expired';
     description?: string;
+    sentAt?: Date;
+    respondedAt?: Date;
     createdById: bigint;
     deletedAt?: Date;
 }
@@ -27,6 +40,12 @@ export declare class Quote extends Model<QuoteAttributes, QuoteCreationAttribute
     opportunityId?: bigint;
     accountId?: bigint;
     contactId?: bigint;
+    clientId?: bigint;
+    departmentId?: bigint;
+    title?: string;
+    scopeOfWork?: string;
+    termsAndConditions?: string;
+    items?: QuoteLineItem[];
     quoteDate: Date;
     validUntil: Date;
     subtotal: number;
@@ -36,6 +55,8 @@ export declare class Quote extends Model<QuoteAttributes, QuoteCreationAttribute
     currency: string;
     status: 'Draft' | 'Sent' | 'Accepted' | 'Rejected' | 'Expired';
     description?: string;
+    sentAt?: Date;
+    respondedAt?: Date;
     createdById: bigint;
     deletedAt?: Date;
     readonly createdAt: Date;

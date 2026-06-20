@@ -22,6 +22,7 @@ export {
   sendBirthdayEmail,
   sendNotificationEmail,
   sendApprovalEmail,
+  sendProposalEmail,
   buildWeeklyMessage,
   buildBirthdayMessage,
 } from './email/notification-email.service';

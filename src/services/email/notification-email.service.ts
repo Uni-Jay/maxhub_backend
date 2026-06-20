@@ -558,6 +558,104 @@ export async function sendApprovalEmail(params: {
 }
 
 /**
+ * Sends a client proposal — scope of work, line items, and our terms &
+ * conditions — as a branded HTML email so the client can review (and, once
+ * a client portal exists, accept) it without needing an attachment.
+ */
+export async function sendProposalEmail(params: {
+  to: string;
+  clientName: string;
+  proposalCode: string;
+  title: string;
+  scopeOfWork?: string;
+  termsAndConditions?: string;
+  items: { description: string; qty: number; unitPrice: number }[];
+  subtotal: number;
+  discount: number;
+  tax: number;
+  total: number;
+  currency: string;
+  validUntil: string | Date;
+  senderName?: string;
+}): Promise<boolean> {
+  const { to, clientName, proposalCode, title, scopeOfWork, termsAndConditions, items, subtotal, discount, tax, total, currency, validUntil, senderName } = params;
+  const companyName = process.env.COMPANY_NAME || 'MaxHub';
+  const validUntilStr = new Date(validUntil).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const fmt = (n: number) => `${currency} ${Number(n).toLocaleString()}`;
+
+  const itemRows = items.map(it => `
+    <tr>
+      <td style="padding:10px 14px;border-top:1px solid #f0f0f0;font-size:13px;color:#111827;">${it.description}</td>
+      <td style="padding:10px 14px;border-top:1px solid #f0f0f0;font-size:13px;color:#6b7280;text-align:center;">${it.qty}</td>
+      <td style="padding:10px 14px;border-top:1px solid #f0f0f0;font-size:13px;color:#6b7280;text-align:right;">${fmt(it.unitPrice)}</td>
+      <td style="padding:10px 14px;border-top:1px solid #f0f0f0;font-size:13px;color:#111827;font-weight:600;text-align:right;">${fmt(it.qty * it.unitPrice)}</td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><title>${title}</title></head>
+<body style="margin:0;padding:0;background:#f4f4f8;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f8;padding:32px 0;">
+    <tr><td align="center">
+      <table width="640" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);padding:36px 40px;">
+            <p style="margin:0 0 4px;color:rgba(255,255,255,0.75);font-size:12px;text-transform:uppercase;letter-spacing:1px;">Proposal ${proposalCode}</p>
+            <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;">${title}</h1>
+            <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:13px;">From ${companyName}${senderName ? ` — ${senderName}` : ''}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:36px 40px;">
+            <p style="margin:0 0 24px;font-size:14px;color:#374151;">Dear ${clientName},</p>
+            ${scopeOfWork ? `
+            <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:0.5px;">Scope of Work</p>
+            <p style="margin:0 0 24px;font-size:14px;color:#374151;line-height:1.7;white-space:pre-line;">${scopeOfWork}</p>` : ''}
+
+            <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:20px;">
+              <thead>
+                <tr style="background:#f3f4f6;">
+                  <th style="padding:10px 14px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;">Description</th>
+                  <th style="padding:10px 14px;text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;">Qty</th>
+                  <th style="padding:10px 14px;text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;">Unit Price</th>
+                  <th style="padding:10px 14px;text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;">Amount</th>
+                </tr>
+              </thead>
+              <tbody>${itemRows}</tbody>
+              <tfoot>
+                <tr><td colspan="3" style="padding:8px 14px;text-align:right;font-size:12px;color:#6b7280;">Subtotal</td><td style="padding:8px 14px;text-align:right;font-size:12px;color:#111827;">${fmt(subtotal)}</td></tr>
+                ${discount ? `<tr><td colspan="3" style="padding:8px 14px;text-align:right;font-size:12px;color:#6b7280;">Discount</td><td style="padding:8px 14px;text-align:right;font-size:12px;color:#111827;">-${fmt(discount)}</td></tr>` : ''}
+                ${tax ? `<tr><td colspan="3" style="padding:8px 14px;text-align:right;font-size:12px;color:#6b7280;">Tax</td><td style="padding:8px 14px;text-align:right;font-size:12px;color:#111827;">${fmt(tax)}</td></tr>` : ''}
+                <tr style="background:#f0f4ff;"><td colspan="3" style="padding:12px 14px;text-align:right;font-size:14px;font-weight:700;color:#4f46e5;">Total</td><td style="padding:12px 14px;text-align:right;font-size:15px;font-weight:700;color:#4f46e5;">${fmt(total)}</td></tr>
+              </tfoot>
+            </table>
+
+            <p style="margin:0 0 20px;font-size:12px;color:#9ca3af;">This proposal is valid until <strong style="color:#374151;">${validUntilStr}</strong>.</p>
+
+            ${termsAndConditions ? `
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;">
+              <tr><td style="padding:18px 22px;">
+                <p style="margin:0 0 8px;font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:0.5px;">Terms &amp; Conditions</p>
+                <p style="margin:0;font-size:13px;color:#374151;line-height:1.7;white-space:pre-line;">${termsAndConditions}</p>
+              </td></tr>
+            </table>` : ''}
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f9fafb;border-top:1px solid #f3f4f6;padding:20px 40px;text-align:center;">
+            <p style="margin:0;font-size:12px;color:#9ca3af;">Please reply to this email if you have any questions or wish to proceed.</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  return sendNotification({ to, subject: `Proposal: ${title} — ${companyName}`, html });
+}
+
+/**
  * Build weekly greeting message with company name substitution
  */
 export function buildWeeklyMessage(

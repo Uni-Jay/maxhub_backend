@@ -73,6 +73,9 @@ import { JobSyncLog } from './JobSyncLog.model';
 import { WeeklyReport } from './WeeklyReport.model';
 import { Customer } from './Customer.model';
 import { OrderTracking } from './OrderTracking.model';
+import { Invoice } from './Invoice.model';
+import { Client } from './Client.model';
+import { Quote } from './Quote.model';
 import { AIConversation } from '../modules/ai/models/AIConversation.model';
 import { AIMessage } from '../modules/ai/models/AIMessage.model';
 import { AIMeetingSummary } from '../modules/ai/models/AIMeetingSummary.model';
@@ -286,6 +289,15 @@ export class AssociationManager {
     Certificate.belongsTo(Enrollment, { foreignKey: 'enrollmentId', as: 'enrollment' });
     FeeReceipt.belongsTo(Enrollment, { foreignKey: 'enrollmentId', as: 'enrollment' });
     FeeReceipt.belongsTo(User, { foreignKey: 'issuedById', as: 'issuedBy' });
+
+    // ======== INVOICES & PROPOSALS (CRM customer billing) ========
+    Invoice.belongsTo(Client, { foreignKey: 'clientId', as: 'client' });
+    Invoice.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
+    Invoice.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+    Quote.belongsTo(Client, { foreignKey: 'clientId', as: 'client' });
+    Quote.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
+    Quote.belongsTo(Opportunity, { foreignKey: 'opportunityId', as: 'opportunity' });
+    Quote.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
 
     // ======== RECRUITMENT ========
 

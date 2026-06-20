@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildBirthdayMessage = exports.buildWeeklyMessage = exports.sendApprovalEmail = exports.sendNotificationEmail = exports.sendBirthdayEmail = exports.sendPromotionEmail = exports.sendPasswordChangedEmail = exports.sendPasswordResetEmail = exports.sendOTPEmail = exports.sendMessage = exports.sendInterviewInvitation = exports.sendRecruitmentEmail = exports.sendStaffCredentials = exports.sendWelcomeEmail = void 0;
+exports.buildBirthdayMessage = exports.buildWeeklyMessage = exports.sendProposalEmail = exports.sendApprovalEmail = exports.sendNotificationEmail = exports.sendBirthdayEmail = exports.sendPromotionEmail = exports.sendPasswordChangedEmail = exports.sendPasswordResetEmail = exports.sendOTPEmail = exports.sendMessage = exports.sendInterviewInvitation = exports.sendRecruitmentEmail = exports.sendStaffCredentials = exports.sendWelcomeEmail = void 0;
 var hr_email_service_1 = require("./email/hr-email.service");
 Object.defineProperty(exports, "sendWelcomeEmail", { enumerable: true, get: function () { return hr_email_service_1.sendWelcomeEmail; } });
 Object.defineProperty(exports, "sendStaffCredentials", { enumerable: true, get: function () { return hr_email_service_1.sendStaffCredentials; } });
@@ -15,6 +15,7 @@ Object.defineProperty(exports, "sendPromotionEmail", { enumerable: true, get: fu
 Object.defineProperty(exports, "sendBirthdayEmail", { enumerable: true, get: function () { return notification_email_service_1.sendBirthdayEmail; } });
 Object.defineProperty(exports, "sendNotificationEmail", { enumerable: true, get: function () { return notification_email_service_1.sendNotificationEmail; } });
 Object.defineProperty(exports, "sendApprovalEmail", { enumerable: true, get: function () { return notification_email_service_1.sendApprovalEmail; } });
+Object.defineProperty(exports, "sendProposalEmail", { enumerable: true, get: function () { return notification_email_service_1.sendProposalEmail; } });
 Object.defineProperty(exports, "buildWeeklyMessage", { enumerable: true, get: function () { return notification_email_service_1.buildWeeklyMessage; } });
 Object.defineProperty(exports, "buildBirthdayMessage", { enumerable: true, get: function () { return notification_email_service_1.buildBirthdayMessage; } });
 //# sourceMappingURL=CommunicationService.js.map

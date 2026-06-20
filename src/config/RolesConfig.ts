@@ -361,6 +361,11 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.PROJECT_COMMENT_READ_ALL,
     // Budget (read own dept)
     PermissionCode.FIN_BUDGET_READ_OWN_DEPARTMENT,
+    // Invoices — bill customers in any department she covers (e.g. Kurios SAT, VisaMax)
+    PermissionCode.FIN_INVOICE_CREATE_OWN_DEPARTMENT,
+    PermissionCode.FIN_INVOICE_READ_OWN_DEPARTMENT,
+    PermissionCode.FIN_INVOICE_UPDATE_OWN_DEPARTMENT,
+    PermissionCode.FIN_INVOICE_DELETE_OWN_DEPARTMENT,
     // Department announcements only — auto-copied to HR/Admin/Super Admin server-side
     PermissionCode.BROADCAST_CREATE_OWN_DEPARTMENT,
     // Meetings — schedule + send Google Meet links
@@ -370,6 +375,12 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.CRM_OPPORTUNITY_READ_ALL,
     PermissionCode.CRM_OPPORTUNITY_READ_OWN,
     PermissionCode.CRM_ACTIVITY_READ_OWN,
+    // Proposals (Quote model) — draft, send, and manage for her own departments' clients
+    PermissionCode.CRM_QUOTE_CREATE_OWN_DEPARTMENT,
+    PermissionCode.CRM_QUOTE_READ_OWN_DEPARTMENT,
+    PermissionCode.CRM_QUOTE_UPDATE_OWN_DEPARTMENT,
+    PermissionCode.CRM_QUOTE_DELETE_OWN_DEPARTMENT,
+    PermissionCode.CRM_QUOTE_SEND_OWN_DEPARTMENT,
     // Student management
     PermissionCode.STM_STUDENT_READ_ALL,
     PermissionCode.STM_ENROLLMENT_READ_ALL,
