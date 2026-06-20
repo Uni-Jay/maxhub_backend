@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.onlineUsers = void 0;
+exports.emitToUser = emitToUser;
 exports.initChatSocket = initChatSocket;
 const socket_io_1 = require("socket.io");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -20,6 +21,11 @@ const socketUserMap = new Map();
 const typingUsers = new Map();
 function getUserSockets(userId) {
     return onlineUsers.get(userId) ?? new Set();
+}
+function emitToUser(io, userId, event, payload) {
+    for (const sockId of getUserSockets(userId)) {
+        io.to(sockId).emit(event, payload);
+    }
 }
 function broadcastPresence(io, userId, isOnline) {
     io.emit('user:presence', { userId, isOnline, lastSeen: new Date().toISOString() });
@@ -74,7 +80,8 @@ function initChatSocket(httpServer) {
                 socket.join(`conv:${p.conversationId}`);
             }
         }
-        catch {
+        catch (err) {
+            console.error(`[ChatSocket] Failed to join conversation rooms for user ${userId}:`, err);
         }
         const onlineList = Array.from(onlineUsers.entries())
             .filter(([, sockets]) => sockets.size > 0)
@@ -149,12 +156,17 @@ function initChatSocket(httpServer) {
                 if (!msg)
                     return ack?.({ error: 'Message not found' });
                 const convId = msg.conversationId;
-                if (data.deleteForEveryone && msg.senderUserId === userId) {
+                if (data.deleteForEveryone) {
+                    if (msg.senderUserId !== userId)
+                        return ack?.({ error: 'Can only delete your own messages for everyone' });
                     await msg.update({ messageText: '🚫 This message was deleted', messageType: 'Text', attachmentUrl: null });
                     io.to(`conv:${convId}`).emit('chat:deleted', { messageId: data.messageId, deleteForEveryone: true });
                 }
                 else {
-                    await msg.destroy();
+                    const existing = msg.deletedForUserIds || [];
+                    if (!existing.includes(userId)) {
+                        await msg.update({ deletedForUserIds: [...existing, userId] });
+                    }
                     socket.emit('chat:deleted', { messageId: data.messageId, deleteForEveryone: false });
                 }
                 ack?.({ success: true });
@@ -225,8 +237,16 @@ function initChatSocket(httpServer) {
                 ack?.({ error: err.message });
             }
         });
-        socket.on('chat:join', ({ conversationId }) => {
-            socket.join(`conv:${conversationId}`);
+        socket.on('chat:join', async ({ conversationId }) => {
+            try {
+                const isParticipant = await ConversationParticipant_model_1.ConversationParticipant.findOne({
+                    where: { conversationId, userId },
+                });
+                if (isParticipant)
+                    socket.join(`conv:${conversationId}`);
+            }
+            catch {
+            }
         });
         socket.on('disconnect', () => {
             const sockets = onlineUsers.get(userId);

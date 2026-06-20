@@ -13,6 +13,7 @@ const Project_model_1 = require("../models/Project.model");
 const Staff_model_1 = require("../models/Staff.model");
 const ProjectComment_model_1 = require("../models/ProjectComment.model");
 const Notification_model_1 = require("../models/Notification.model");
+const notify_1 = require("../utils/notify");
 const router = (0, express_1.Router)();
 function isBypassRole(req) {
     const roles = (req.user?.roles || []).map((r) => r.toLowerCase().replace(/[^a-z]/g, ''));
@@ -132,6 +133,18 @@ router.post('/', AuthMiddleware_1.AuthMiddleware.requirePermission(PermissionCod
         estimatedHours,
         label,
     });
+    if (assigneeId && String(assigneeId) !== String(reporterId)) {
+        const io = req.app?.get('io');
+        (0, notify_1.notifyStaff)(assigneeId, {
+            type: 'Assignment',
+            title: 'New task assigned to you',
+            message: `You've been assigned "${task.title}".`,
+            relatedEntityType: 'Task',
+            relatedEntityId: task.id,
+            actionUrl: `/tasks/${task.id}`,
+            priority: priority === 'Critical' || priority === 'High' ? 'High' : 'Medium',
+        }, io).catch(() => { });
+    }
     ResponseFormatter_1.ResponseFormatter.success(res, task.toJSON(), 'Task created successfully', 201);
 }));
 router.patch('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
@@ -172,7 +185,21 @@ router.patch('/:id/assign', AuthMiddleware_1.AuthMiddleware.requirePermission(Pe
     const task = await Task_model_1.Task.findByPk(req.params.id);
     if (!task)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Task not found');
-    await task.update({ assigneeId: BigInt(req.body.assigneeId) });
+    const newAssigneeId = BigInt(req.body.assigneeId);
+    const previousAssigneeId = task.assigneeId;
+    await task.update({ assigneeId: newAssigneeId });
+    if (String(newAssigneeId) !== String(previousAssigneeId)) {
+        const io = req.app?.get('io');
+        (0, notify_1.notifyStaff)(newAssigneeId, {
+            type: 'Assignment',
+            title: 'Task assigned to you',
+            message: `You've been assigned "${task.title}".`,
+            relatedEntityType: 'Task',
+            relatedEntityId: task.id,
+            actionUrl: `/tasks/${task.id}`,
+            priority: 'Medium',
+        }, io).catch(() => { });
+    }
     ResponseFormatter_1.ResponseFormatter.success(res, task.toJSON(), 'Task assigned successfully');
 }));
 router.delete('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {

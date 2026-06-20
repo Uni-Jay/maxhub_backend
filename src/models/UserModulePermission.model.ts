@@ -49,6 +49,8 @@ export class UserModulePermission
         sequelize,
         tableName: 'user_module_permissions',
         timestamps: true,
+        underscored: false,
+        paranoid: false,
         indexes: [{ fields: ['userId', 'moduleCode'], unique: true }],
       }
     );

@@ -22,6 +22,8 @@ class UserModulePermission extends sequelize_1.Model {
             sequelize,
             tableName: 'user_module_permissions',
             timestamps: true,
+            underscored: false,
+            paranoid: false,
             indexes: [{ fields: ['userId', 'moduleCode'], unique: true }],
         });
         return UserModulePermission;

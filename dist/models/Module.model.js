@@ -19,6 +19,8 @@ class AppModule extends sequelize_1.Model {
             sequelize,
             tableName: 'app_modules',
             timestamps: true,
+            underscored: false,
+            paranoid: false,
             indexes: [{ fields: ['code'], unique: true }],
         });
         return AppModule;

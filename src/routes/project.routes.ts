@@ -11,6 +11,7 @@ import { Department } from '@models/Department.model';
 import { Staff } from '@models/Staff.model';
 import { ProjectComment } from '@models/ProjectComment.model';
 import { Notification } from '@models/Notification.model';
+import { notifyStaff } from '@utils/notify';
 
 const router = Router();
 
@@ -184,6 +185,22 @@ router.post(
       status: status || 'Planning',
       priority: priority || 'Medium',
     });
+
+    // Notify the assigned project manager — this is the only "add someone
+    // to a project" action that exists today (there's no separate team-
+    // member roster), and it previously notified nobody at all.
+    if (String(projectManagerId) !== String(ownStaffId)) {
+      const io = (req as any).app?.get('io');
+      notifyStaff(projectManagerId, {
+        type: 'Assignment',
+        title: 'You were assigned as Project Manager',
+        message: `You've been made the project manager for "${project.name}".`,
+        relatedEntityType: 'Project',
+        relatedEntityId: project.id,
+        actionUrl: `/projects/${project.id}`,
+        priority: 'High',
+      }, io).catch(() => {});
+    }
 
     ResponseFormatter.success(res, project.toJSON(), 'Project created successfully', 201);
   })

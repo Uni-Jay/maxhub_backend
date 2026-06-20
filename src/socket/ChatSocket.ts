@@ -20,6 +20,20 @@ function getUserSockets(userId: number): Set<string> {
   return onlineUsers.get(userId) ?? new Set();
 }
 
+/**
+ * Emits an event to every socket a specific user currently has open, by
+ * iterating their actual connected socket IDs — not a "user:{id}" room,
+ * since no socket here ever joins one. (message.routes.ts previously used
+ * `io.to('user:${uid}')`, which targeted a room nobody was in and silently
+ * reached no one; this is the fix, reusing the same mechanism the read-
+ * receipt handler below already relies on.)
+ */
+export function emitToUser(io: SocketServer, userId: number, event: string, payload: any) {
+  for (const sockId of getUserSockets(userId)) {
+    io.to(sockId).emit(event, payload);
+  }
+}
+
 function broadcastPresence(io: SocketServer, userId: number, isOnline: boolean) {
   io.emit('user:presence', { userId, isOnline, lastSeen: new Date().toISOString() });
 }
@@ -81,8 +95,13 @@ export function initChatSocket(httpServer: HttpServer): SocketServer {
       for (const p of participations) {
         socket.join(`conv:${(p as any).conversationId}`);
       }
-    } catch {
-      // non-fatal
+    } catch (err) {
+      // A failure here leaves this socket subscribed to zero conversation
+      // rooms with no retry — it would receive presence/typing events but
+      // never a single chat:message until the client reconnects. Logging
+      // so this isn't invisible; not rethrowing since presence should
+      // still work.
+      console.error(`[ChatSocket] Failed to join conversation rooms for user ${userId}:`, err);
     }
 
     // Send current online users list to newly connected user
@@ -179,13 +198,19 @@ export function initChatSocket(httpServer: HttpServer): SocketServer {
         if (!msg) return ack?.({ error: 'Message not found' });
         const convId = (msg as any).conversationId;
 
-        if (data.deleteForEveryone && (msg as any).senderUserId === userId) {
+        if (data.deleteForEveryone) {
+          if ((msg as any).senderUserId !== userId) return ack?.({ error: 'Can only delete your own messages for everyone' });
           await msg.update({ messageText: '🚫 This message was deleted', messageType: 'Text', attachmentUrl: null } as any);
           io.to(`conv:${convId}`).emit('chat:deleted', { messageId: data.messageId, deleteForEveryone: true });
         } else {
-          // Delete for me only — store in MessageRead with a special marker
-          // For simplicity, we just soft-delete
-          await msg.destroy();
+          // Delete for me only — hides it from just this user's view via
+          // deletedForUserIds, without touching the row anyone else sees.
+          // This used to call msg.destroy(), a soft delete that removed the
+          // message for every participant, not just the requester.
+          const existing: number[] = (msg as any).deletedForUserIds || [];
+          if (!existing.includes(userId)) {
+            await msg.update({ deletedForUserIds: [...existing, userId] } as any);
+          }
           socket.emit('chat:deleted', { messageId: data.messageId, deleteForEveryone: false });
         }
         ack?.({ success: true });
@@ -262,8 +287,19 @@ export function initChatSocket(httpServer: HttpServer): SocketServer {
     });
 
     // ── Join new conversation room ─────────────────────────────────────────
-    socket.on('chat:join', ({ conversationId }: { conversationId: number }) => {
-      socket.join(`conv:${conversationId}`);
+    // Verifies the requesting socket's user is actually a participant before
+    // joining — previously unconditional, so a broadcast chat:join (or any
+    // client just emitting one with an arbitrary id) could subscribe a
+    // socket to a conversation room it has no business reading.
+    socket.on('chat:join', async ({ conversationId }: { conversationId: number }) => {
+      try {
+        const isParticipant = await ConversationParticipant.findOne({
+          where: { conversationId, userId },
+        });
+        if (isParticipant) socket.join(`conv:${conversationId}`);
+      } catch {
+        // non-fatal — worst case the client doesn't get live updates for this room
+      }
     });
 
     // ── Disconnect ─────────────────────────────────────────────────────────

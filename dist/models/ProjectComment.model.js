@@ -80,6 +80,7 @@ class ProjectComment extends sequelize_1.Model {
             tableName: 'project_comment',
             timestamps: true,
             paranoid: true,
+            underscored: false,
             indexes: [
                 {
                     fields: ['taskId'],

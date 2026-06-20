@@ -47,6 +47,8 @@ class Company extends sequelize_1.Model {
             modelName: 'Company',
             tableName: 'companies',
             timestamps: true,
+            underscored: false,
+            paranoid: false,
         });
         return Company;
     }

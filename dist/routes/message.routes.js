@@ -52,6 +52,7 @@ const Call_model_1 = require("../models/Call.model");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = require("../middleware/AuthMiddleware");
+const ChatSocket_1 = require("../socket/ChatSocket");
 const router = (0, express_1.Router)();
 const CHAT_UPLOAD_DIR = path_1.default.join(process.cwd(), 'uploads', 'chat');
 const chatStorage = multer_1.default.diskStorage({
@@ -142,12 +143,17 @@ router.get('/conversations', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asyn
         }).catch(() => 0);
         const unreadCount = Math.max(0, totalMsgs - readMsgs);
         const myParticipation = participations.find((p) => p.conversationId === conv.id);
+        const allParticipants = await ConversationParticipant_model_1.ConversationParticipant.findAll({
+            where: { conversationId: conv.id },
+            include: [{ model: User_model_1.User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'avatar', 'email'] }],
+        });
         return {
             ...conv.toJSON(),
             lastMessage: lastMsg?.toJSON() ?? null,
             unreadCount,
             myRole: myParticipation?.role ?? 'Member',
             isMuted: myParticipation?.isMuted ?? false,
+            participants: allParticipants,
         };
     }));
     ResponseFormatter_1.ResponseFormatter.success(res, enriched);
@@ -175,7 +181,7 @@ router.post('/conversations', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asy
     const io = req.app?.get('io');
     if (io) {
         for (const uid of allParticipants) {
-            io.to(`user:${uid}`).emit('chat:join', { conversationId: conversation.id });
+            (0, ChatSocket_1.emitToUser)(io, uid, 'chat:join', { conversationId: conversation.id });
         }
     }
     ResponseFormatter_1.ResponseFormatter.success(res, conversation, 'Conversation created', 201);
@@ -203,7 +209,7 @@ router.post('/conversations/find-or-create', ErrorMiddleware_1.ErrorMiddleware.a
         if (existing) {
             const participants = await ConversationParticipant_model_1.ConversationParticipant.findAll({
                 where: { conversationId: existing.id },
-                include: [{ model: User_model_1.User, attributes: ['id', 'firstName', 'lastName', 'avatar', 'email'] }],
+                include: [{ model: User_model_1.User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'avatar', 'email'] }],
             });
             return ResponseFormatter_1.ResponseFormatter.success(res, { ...existing.toJSON(), participants, isNew: false });
         }
@@ -228,12 +234,12 @@ router.post('/conversations/find-or-create', ErrorMiddleware_1.ErrorMiddleware.a
     })));
     const participants = await ConversationParticipant_model_1.ConversationParticipant.findAll({
         where: { conversationId: conversation.id },
-        include: [{ model: User_model_1.User, attributes: ['id', 'firstName', 'lastName', 'avatar', 'email'] }],
+        include: [{ model: User_model_1.User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'avatar', 'email'] }],
     });
     const io = req.app?.get('io');
     if (io) {
-        io.emit('chat:join', { conversationId: conversation.id, userId: user.id });
-        io.emit('chat:join', { conversationId: conversation.id, userId: otherUserId });
+        (0, ChatSocket_1.emitToUser)(io, user.id, 'chat:join', { conversationId: conversation.id });
+        (0, ChatSocket_1.emitToUser)(io, otherUserId, 'chat:join', { conversationId: conversation.id });
     }
     ResponseFormatter_1.ResponseFormatter.success(res, { ...conversation.toJSON(), participants, isNew: true }, 'Direct message created', 201);
 }));
@@ -251,7 +257,7 @@ router.get('/conversations/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Access denied', 403);
     const participants = await ConversationParticipant_model_1.ConversationParticipant.findAll({
         where: { conversationId: conversation.id },
-        include: [{ model: User_model_1.User, attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'] }],
+        include: [{ model: User_model_1.User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'] }],
     });
     ResponseFormatter_1.ResponseFormatter.success(res, { ...conversation.toJSON(), participants });
 }));
@@ -306,7 +312,7 @@ router.post('/conversations/:id/participants', ErrorMiddleware_1.ErrorMiddleware
     const io = req.app?.get('io');
     if (io) {
         for (const uid of userIds) {
-            io.emit('chat:join', { conversationId: conversation.id, userId: uid });
+            (0, ChatSocket_1.emitToUser)(io, uid, 'chat:join', { conversationId: conversation.id });
         }
     }
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Participants added');
@@ -348,7 +354,8 @@ router.get('/conversations/:id/messages', ErrorMiddleware_1.ErrorMiddleware.asyn
         order: [['createdAt', 'DESC']],
         limit: Number(limit), offset,
     });
-    ResponseFormatter_1.ResponseFormatter.paginated(res, rows.reverse(), count, Number(page), Number(limit));
+    const visible = rows.filter((m) => !(m.deletedForUserIds || []).includes(user.id));
+    ResponseFormatter_1.ResponseFormatter.paginated(res, visible.reverse(), count, Number(page), Number(limit));
 }));
 router.post('/conversations/:id/messages', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
@@ -415,18 +422,20 @@ router.delete('/conversations/:convId/messages/:msgId', ErrorMiddleware_1.ErrorM
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Message not found', 404);
     const io = req.app?.get('io');
     const convId = message.conversationId;
-    if (everyone === 'true' && message.senderUserId === user.id) {
+    if (everyone === 'true') {
+        if (message.senderUserId !== user.id)
+            return ResponseFormatter_1.ResponseFormatter.error(res, 'Can only delete your own messages for everyone', 403);
         await message.update({ messageText: '🚫 This message was deleted', messageType: 'Text', attachmentUrl: null });
         if (io)
             io.to(`conv:${convId}`).emit('chat:deleted', { messageId: message.id, deleteForEveryone: true });
     }
-    else if (message.senderUserId === user.id) {
-        await message.destroy();
-        if (io)
-            io.to(`conv:${convId}`).emit('chat:deleted', { messageId: message.id, deleteForEveryone: false });
-    }
     else {
-        return ResponseFormatter_1.ResponseFormatter.error(res, 'Can only delete your own messages', 403);
+        const existing = message.deletedForUserIds || [];
+        if (!existing.includes(user.id)) {
+            await message.update({ deletedForUserIds: [...existing, user.id] });
+        }
+        if (io)
+            (0, ChatSocket_1.emitToUser)(io, user.id, 'chat:deleted', { messageId: message.id, deleteForEveryone: false });
     }
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Message deleted');
 }));
@@ -526,10 +535,6 @@ router.post('/conversations/:convId/read', ErrorMiddleware_1.ErrorMiddleware.asy
     })));
     const io = req.app?.get('io');
     if (io) {
-        const senderIds = [...new Set(messages.map((m) => Number(m.senderUserId)))];
-        for (const sid of senderIds) {
-            io.emit(`user:${sid}:read_receipt`, { conversationId, readBy: user.id });
-        }
         io.to(`conv:${conversationId}`).emit('chat:read_receipt', { conversationId, readBy: user.id });
     }
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Marked as read');

@@ -98,6 +98,7 @@ export class CommunicationLog
         tableName: 'communication_logs',
         timestamps: true,
         underscored: false,
+        paranoid: false,
         freezeTableName: true,
       }
     );

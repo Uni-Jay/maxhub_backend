@@ -22,7 +22,7 @@ class AuditLog extends sequelize_1.Model {
             status: { type: sequelize_1.DataTypes.ENUM('Success', 'Failed', 'Partial'), defaultValue: 'Success' },
             createdAt: { type: sequelize_1.DataTypes.DATE, defaultValue: sequelize_1.DataTypes.NOW, allowNull: false },
         }, {
-            sequelize, tableName: 'audit_logs', timestamps: false, underscored: false, freezeTableName: true,
+            sequelize, tableName: 'audit_logs', timestamps: false, underscored: false, paranoid: false, freezeTableName: true,
             indexes: [
                 { fields: ['module'], name: 'idx_audit_logs_module' },
                 { fields: ['action'], name: 'idx_audit_logs_action' },

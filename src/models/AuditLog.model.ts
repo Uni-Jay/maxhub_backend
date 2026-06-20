@@ -61,7 +61,7 @@ export class AuditLog extends Model<AuditLogAttributes, AuditLogCreationAttribut
         createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, allowNull: false },
       },
       {
-        sequelize, tableName: 'audit_logs', timestamps: false, underscored: false, freezeTableName: true,
+        sequelize, tableName: 'audit_logs', timestamps: false, underscored: false, paranoid: false, freezeTableName: true,
         indexes: [
           { fields: ['module'], name: 'idx_audit_logs_module' },
           { fields: ['action'], name: 'idx_audit_logs_action' },

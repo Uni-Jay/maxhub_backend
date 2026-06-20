@@ -117,6 +117,7 @@ export class ProjectComment
         tableName: 'project_comment',
         timestamps: true,
         paranoid: true,
+        underscored: false,
         indexes: [
           {
             fields: ['taskId'],

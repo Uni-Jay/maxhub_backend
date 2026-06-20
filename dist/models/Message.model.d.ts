@@ -13,6 +13,7 @@ interface MessageAttributes {
     editedAt?: Date;
     isPinned: boolean;
     reactions?: string;
+    deletedForUserIds?: number[];
     deletedAt?: Date;
 }
 interface MessageCreationAttributes extends Optional<MessageAttributes, 'id' | 'uuid'> {
@@ -31,6 +32,7 @@ export declare class Message extends Model<MessageAttributes, MessageCreationAtt
     editedAt?: Date;
     isPinned: boolean;
     reactions?: string;
+    deletedForUserIds?: number[];
     deletedAt?: Date;
     readonly createdAt: Date;
     readonly updatedAt: Date;

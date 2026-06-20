@@ -13,6 +13,7 @@ const Department_model_1 = require("../models/Department.model");
 const Staff_model_1 = require("../models/Staff.model");
 const ProjectComment_model_1 = require("../models/ProjectComment.model");
 const Notification_model_1 = require("../models/Notification.model");
+const notify_1 = require("../utils/notify");
 const router = (0, express_1.Router)();
 function isBypassRole(req) {
     const roles = (req.user?.roles || []).map((r) => r.toLowerCase().replace(/[^a-z]/g, ''));
@@ -155,6 +156,18 @@ router.post('/', AuthMiddleware_1.AuthMiddleware.requirePermission(PermissionCod
         status: status || 'Planning',
         priority: priority || 'Medium',
     });
+    if (String(projectManagerId) !== String(ownStaffId)) {
+        const io = req.app?.get('io');
+        (0, notify_1.notifyStaff)(projectManagerId, {
+            type: 'Assignment',
+            title: 'You were assigned as Project Manager',
+            message: `You've been made the project manager for "${project.name}".`,
+            relatedEntityType: 'Project',
+            relatedEntityId: project.id,
+            actionUrl: `/projects/${project.id}`,
+            priority: 'High',
+        }, io).catch(() => { });
+    }
     ResponseFormatter_1.ResponseFormatter.success(res, project.toJSON(), 'Project created successfully', 201);
 }));
 router.patch('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {

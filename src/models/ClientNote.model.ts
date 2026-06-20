@@ -45,6 +45,7 @@ export class ClientNote
         tableName: 'client_notes',
         paranoid: true,
         timestamps: true,
+        underscored: false,
       }
     );
   }

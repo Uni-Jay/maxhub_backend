@@ -19,6 +19,7 @@ class Message extends sequelize_1.Model {
             editedAt: { type: sequelize_1.DataTypes.DATE, allowNull: true, comment: 'Edit timestamp' },
             isPinned: { type: sequelize_1.DataTypes.BOOLEAN, defaultValue: false, allowNull: false, comment: 'Is pinned' },
             reactions: { type: sequelize_1.DataTypes.JSON, allowNull: true, comment: 'Reactions (JSON)' },
+            deletedForUserIds: { type: sequelize_1.DataTypes.JSONB, allowNull: true, defaultValue: [], comment: 'User IDs who chose "delete for me" — hidden from their view only, message still exists for everyone else' },
             deletedAt: { type: sequelize_1.DataTypes.DATE, allowNull: true, comment: 'Soft delete timestamp' },
         }, {
             sequelize, tableName: 'messages', timestamps: true, paranoid: true, underscored: false, freezeTableName: true,

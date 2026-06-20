@@ -36,6 +36,7 @@ class CommunicationLog extends sequelize_1.Model {
             tableName: 'communication_logs',
             timestamps: true,
             underscored: false,
+            paranoid: false,
             freezeTableName: true,
         });
     }

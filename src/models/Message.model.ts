@@ -15,6 +15,7 @@ interface MessageAttributes {
   editedAt?: Date;
   isPinned: boolean;
   reactions?: string;
+  deletedForUserIds?: number[];
   deletedAt?: Date;
 }
 
@@ -35,6 +36,7 @@ export class Message extends Model<MessageAttributes, MessageCreationAttributes>
   public editedAt?: Date;
   public isPinned!: boolean;
   public reactions?: string;
+  public deletedForUserIds?: number[];
   public deletedAt?: Date;
 
   public readonly createdAt!: Date;
@@ -56,6 +58,7 @@ export class Message extends Model<MessageAttributes, MessageCreationAttributes>
         editedAt: { type: DataTypes.DATE, allowNull: true, comment: 'Edit timestamp' },
         isPinned: { type: DataTypes.BOOLEAN, defaultValue: false, allowNull: false, comment: 'Is pinned' },
         reactions: { type: DataTypes.JSON, allowNull: true, comment: 'Reactions (JSON)' },
+        deletedForUserIds: { type: DataTypes.JSONB, allowNull: true, defaultValue: [], comment: 'User IDs who chose "delete for me" — hidden from their view only, message still exists for everyone else' },
         deletedAt: { type: DataTypes.DATE, allowNull: true, comment: 'Soft delete timestamp' },
       },
       {

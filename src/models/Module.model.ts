@@ -47,6 +47,8 @@ export class AppModule extends Model<ModuleAttributes, ModuleCreationAttributes>
         sequelize,
         tableName: 'app_modules',
         timestamps: true,
+        underscored: false,
+        paranoid: false,
         indexes: [{ fields: ['code'], unique: true }],
       }
     );

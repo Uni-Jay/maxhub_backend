@@ -182,6 +182,11 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.INV_INVENTORY_READ_ALL,
     PermissionCode.INV_ITEM_READ_ALL,
     PermissionCode.INV_STOCK_READ_ALL,
+    PermissionCode.INV_CATEGORY_READ_ALL,
+    // BeadMax
+    PermissionCode.BM_PRODUCT_READ_ALL,
+    PermissionCode.BM_ORDER_READ_ALL,
+    PermissionCode.BM_ANALYTICS_READ_ALL,
     // Messaging
     PermissionCode.MSG_DIRECT_MESSAGE_CREATE_OWN,
     PermissionCode.MSG_DIRECT_MESSAGE_READ_OWN,
@@ -370,6 +375,12 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.BROADCAST_CREATE_OWN_DEPARTMENT,
     // Meetings — schedule + send Google Meet links
     PermissionCode.MEETING_CREATE_ALL,
+    // BeadMax — she also covers this business unit (read-only; product/order
+    // management stays with BeadMax's own staff)
+    PermissionCode.BM_PRODUCT_READ_ALL,
+    PermissionCode.BM_ORDER_READ_ALL,
+    PermissionCode.BM_ANALYTICS_READ_ALL,
+    PermissionCode.INV_CATEGORY_READ_ALL,
     // CRM
     PermissionCode.CRM_CONTACT_READ_ALL,
     PermissionCode.CRM_OPPORTUNITY_READ_ALL,

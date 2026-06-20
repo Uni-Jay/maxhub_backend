@@ -10,6 +10,7 @@ import { Project } from '@models/Project.model';
 import { Staff } from '@models/Staff.model';
 import { ProjectComment } from '@models/ProjectComment.model';
 import { Notification } from '@models/Notification.model';
+import { notifyStaff } from '@utils/notify';
 
 const router = Router();
 
@@ -153,6 +154,19 @@ router.post(
       label,
     });
 
+    if (assigneeId && String(assigneeId) !== String(reporterId)) {
+      const io = (req as any).app?.get('io');
+      notifyStaff(assigneeId, {
+        type: 'Assignment',
+        title: 'New task assigned to you',
+        message: `You've been assigned "${task.title}".`,
+        relatedEntityType: 'Task',
+        relatedEntityId: task.id,
+        actionUrl: `/tasks/${task.id}`,
+        priority: priority === 'Critical' || priority === 'High' ? 'High' : 'Medium',
+      }, io).catch(() => {});
+    }
+
     ResponseFormatter.success(res, task.toJSON(), 'Task created successfully', 201);
   })
 );
@@ -210,7 +224,23 @@ router.patch(
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const task = await Task.findByPk(req.params.id);
     if (!task) return ResponseFormatter.notFound(res, 'Task not found');
-    await task.update({ assigneeId: BigInt(req.body.assigneeId) });
+    const newAssigneeId = BigInt(req.body.assigneeId);
+    const previousAssigneeId = (task as any).assigneeId;
+    await task.update({ assigneeId: newAssigneeId });
+
+    if (String(newAssigneeId) !== String(previousAssigneeId)) {
+      const io = (req as any).app?.get('io');
+      notifyStaff(newAssigneeId, {
+        type: 'Assignment',
+        title: 'Task assigned to you',
+        message: `You've been assigned "${task.title}".`,
+        relatedEntityType: 'Task',
+        relatedEntityId: task.id,
+        actionUrl: `/tasks/${task.id}`,
+        priority: 'Medium',
+      }, io).catch(() => {});
+    }
+
     ResponseFormatter.success(res, task.toJSON(), 'Task assigned successfully');
   })
 );

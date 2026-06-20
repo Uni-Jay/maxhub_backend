@@ -25,6 +25,7 @@ class ClientDocument extends sequelize_1.Model {
             tableName: 'client_documents',
             paranoid: true,
             timestamps: true,
+            underscored: false,
         });
     }
 }

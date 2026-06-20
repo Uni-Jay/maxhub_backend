@@ -15,6 +15,7 @@ import { Call } from '@models/Call.model';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import { AuthMiddleware } from '@middleware/AuthMiddleware';
+import { emitToUser } from '../socket/ChatSocket';
 
 const router = Router();
 
@@ -132,12 +133,21 @@ router.get('/conversations', ErrorMiddleware.asyncHandler(async (req: Request, r
 
     const myParticipation = participations.find((p: any) => p.conversationId === conv.id);
 
+    // The frontend reads p.user.firstName/lastName/avatar for member lists,
+    // online dots, and DM display names — needs the same alias as the
+    // detail endpoint below.
+    const allParticipants = await ConversationParticipant.findAll({
+      where: { conversationId: conv.id },
+      include: [{ model: User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'avatar', 'email'] }],
+    });
+
     return {
       ...conv.toJSON(),
       lastMessage: lastMsg?.toJSON() ?? null,
       unreadCount,
       myRole: (myParticipation as any)?.role ?? 'Member',
       isMuted: (myParticipation as any)?.isMuted ?? false,
+      participants: allParticipants,
     };
   }));
 
@@ -170,11 +180,13 @@ router.post('/conversations', ErrorMiddleware.asyncHandler(async (req: Request, 
     } as any)
   ));
 
-  // Notify Socket.IO to join room
+  // Notify Socket.IO to join room — targets each participant's actual
+  // connected sockets (a "user:{id}" room nobody ever joins was previously
+  // used here and silently reached no one).
   const io = (req as any).app?.get('io');
   if (io) {
     for (const uid of allParticipants) {
-      io.to(`user:${uid}`).emit('chat:join', { conversationId: (conversation as any).id });
+      emitToUser(io, uid, 'chat:join', { conversationId: (conversation as any).id });
     }
   }
 
@@ -209,7 +221,7 @@ router.post('/conversations/find-or-create', ErrorMiddleware.asyncHandler(async 
     if (existing) {
       const participants = await ConversationParticipant.findAll({
         where: { conversationId: (existing as any).id },
-        include: [{ model: User, attributes: ['id', 'firstName', 'lastName', 'avatar', 'email'] }],
+        include: [{ model: User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'avatar', 'email'] }],
       });
       return ResponseFormatter.success(res, { ...existing.toJSON(), participants, isNew: false });
     }
@@ -241,14 +253,17 @@ router.post('/conversations/find-or-create', ErrorMiddleware.asyncHandler(async 
 
   const participants = await ConversationParticipant.findAll({
     where: { conversationId: (conversation as any).id },
-    include: [{ model: User, attributes: ['id', 'firstName', 'lastName', 'avatar', 'email'] }],
+    include: [{ model: User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'avatar', 'email'] }],
   });
 
-  // Tell both users to join the socket room
+  // Tell both users to join the socket room — previously a bare io.emit(),
+  // which broadcasts to every connected user, not just these two; combined
+  // with chat:join's old unconditional socket.join(), any online user's
+  // socket could end up subscribed to a DM room it isn't part of.
   const io = (req as any).app?.get('io');
   if (io) {
-    io.emit('chat:join', { conversationId: (conversation as any).id, userId: user.id });
-    io.emit('chat:join', { conversationId: (conversation as any).id, userId: otherUserId });
+    emitToUser(io, user.id, 'chat:join', { conversationId: (conversation as any).id });
+    emitToUser(io, otherUserId, 'chat:join', { conversationId: (conversation as any).id });
   }
 
   ResponseFormatter.success(res, { ...conversation.toJSON(), participants, isNew: true }, 'Direct message created', 201);
@@ -269,7 +284,7 @@ router.get('/conversations/:id', ErrorMiddleware.asyncHandler(async (req: Reques
 
   const participants = await ConversationParticipant.findAll({
     where: { conversationId: (conversation as any).id },
-    include: [{ model: User, attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'] }],
+    include: [{ model: User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'] }],
   });
 
   ResponseFormatter.success(res, { ...conversation.toJSON(), participants });
@@ -335,7 +350,7 @@ router.post('/conversations/:id/participants', ErrorMiddleware.asyncHandler(asyn
   const io = (req as any).app?.get('io');
   if (io) {
     for (const uid of userIds) {
-      io.emit('chat:join', { conversationId: (conversation as any).id, userId: uid });
+      emitToUser(io, uid, 'chat:join', { conversationId: (conversation as any).id });
     }
   }
 
@@ -388,7 +403,12 @@ router.get('/conversations/:id/messages', ErrorMiddleware.asyncHandler(async (re
     limit: Number(limit), offset,
   });
 
-  ResponseFormatter.paginated(res, rows.reverse(), count, Number(page), Number(limit));
+  // "Delete for me" hides a message from just the requesting user's view —
+  // filtered client-side post-query rather than pushed into the WHERE
+  // clause, so this is a small pagination-count approximation, not exact.
+  const visible = rows.filter((m: any) => !(m.deletedForUserIds || []).includes(user.id));
+
+  ResponseFormatter.paginated(res, visible.reverse(), count, Number(page), Number(limit));
 }));
 
 // POST /api/messages/conversations/:id/messages — send message
@@ -468,14 +488,20 @@ router.delete('/conversations/:convId/messages/:msgId', ErrorMiddleware.asyncHan
   const io = (req as any).app?.get('io');
   const convId = (message as any).conversationId;
 
-  if (everyone === 'true' && (message as any).senderUserId === user.id) {
+  if (everyone === 'true') {
+    if ((message as any).senderUserId !== user.id) return ResponseFormatter.error(res, 'Can only delete your own messages for everyone', 403);
     await message.update({ messageText: '🚫 This message was deleted', messageType: 'Text', attachmentUrl: null } as any);
     if (io) io.to(`conv:${convId}`).emit('chat:deleted', { messageId: (message as any).id, deleteForEveryone: true });
-  } else if ((message as any).senderUserId === user.id) {
-    await message.destroy();
-    if (io) io.to(`conv:${convId}`).emit('chat:deleted', { messageId: (message as any).id, deleteForEveryone: false });
   } else {
-    return ResponseFormatter.error(res, 'Can only delete your own messages', 403);
+    // "Delete for me" — any participant can hide a message from their own
+    // view without affecting the sender or other participants. Previously
+    // this called message.destroy(), a soft delete that removed the row
+    // for *everyone*, not just the requester.
+    const existing: number[] = (message as any).deletedForUserIds || [];
+    if (!existing.includes(user.id)) {
+      await message.update({ deletedForUserIds: [...existing, user.id] } as any);
+    }
+    if (io) emitToUser(io, user.id, 'chat:deleted', { messageId: (message as any).id, deleteForEveryone: false });
   }
 
   ResponseFormatter.success(res, null, 'Message deleted');
@@ -594,13 +620,12 @@ router.post('/conversations/:convId/read', ErrorMiddleware.asyncHandler(async (r
     })
   ));
 
-  // Notify senders
+  // Notify the room — covers every participant including the senders being
+  // notified their message was read. (A redundant per-sender io.emit() with
+  // a templated event name no client listened for used to sit here too —
+  // it broadcast to every connected user globally and was pure dead weight.)
   const io = (req as any).app?.get('io');
   if (io) {
-    const senderIds = [...new Set(messages.map((m: any) => Number(m.senderUserId)))];
-    for (const sid of senderIds) {
-      io.emit(`user:${sid}:read_receipt`, { conversationId, readBy: user.id });
-    }
     io.to(`conv:${conversationId}`).emit('chat:read_receipt', { conversationId, readBy: user.id });
   }
 

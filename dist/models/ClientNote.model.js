@@ -16,6 +16,7 @@ class ClientNote extends sequelize_1.Model {
             tableName: 'client_notes',
             paranoid: true,
             timestamps: true,
+            underscored: false,
         });
     }
 }

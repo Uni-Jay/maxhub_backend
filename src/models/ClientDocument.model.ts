@@ -93,6 +93,7 @@ export class ClientDocument
         tableName: 'client_documents',
         paranoid: true,
         timestamps: true,
+        underscored: false,
       }
     );
   }

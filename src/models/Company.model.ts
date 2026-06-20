@@ -92,6 +92,8 @@ export class Company
         modelName: 'Company',
         tableName: 'companies',
         timestamps: true,
+        underscored: false,
+        paranoid: false,
       }
     );
     return Company;
