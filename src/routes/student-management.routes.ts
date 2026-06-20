@@ -11,7 +11,7 @@ const router = Router();
 router.post(
   '/',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission(PermissionCode.STM_STUDENT_CREATE_ALL, PermissionCode.RECEP_STUDENT_REGISTER),
+  AuthMiddleware.requirePermission(PermissionCode.STM_STUDENT_CREATE_ALL, PermissionCode.STM_STUDENT_CREATE_OWN_DEPARTMENT, PermissionCode.RECEP_STUDENT_REGISTER),
   StudentController.register
 );
 
@@ -35,7 +35,7 @@ router.get(
 router.patch(
   '/:id',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission(PermissionCode.STM_STUDENT_UPDATE_ALL),
+  AuthMiddleware.requirePermission(PermissionCode.STM_STUDENT_UPDATE_ALL, PermissionCode.STM_STUDENT_UPDATE_OWN_DEPARTMENT),
   StudentController.update
 );
 
@@ -43,7 +43,7 @@ router.patch(
 router.patch(
   '/:id/status',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission(PermissionCode.STM_STUDENT_SUSPEND_ALL, PermissionCode.STM_STUDENT_UPDATE_ALL),
+  AuthMiddleware.requirePermission(PermissionCode.STM_STUDENT_SUSPEND_ALL, PermissionCode.STM_STUDENT_SUSPEND_OWN_DEPARTMENT, PermissionCode.STM_STUDENT_UPDATE_ALL, PermissionCode.STM_STUDENT_UPDATE_OWN_DEPARTMENT),
   StudentController.updateStatus
 );
 
@@ -51,7 +51,7 @@ router.patch(
 router.post(
   '/:id/enroll',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission(PermissionCode.STM_ENROLLMENT_CREATE_ALL),
+  AuthMiddleware.requirePermission(PermissionCode.STM_ENROLLMENT_CREATE_ALL, PermissionCode.STM_STUDENT_UPDATE_OWN_DEPARTMENT),
   StudentController.enroll
 );
 

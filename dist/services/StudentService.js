@@ -11,6 +11,7 @@ const StudentResult_model_1 = require("../models/StudentResult.model");
 const StudentAttendance_model_1 = require("../models/StudentAttendance.model");
 const ClassSchedule_model_1 = require("../models/ClassSchedule.model");
 const Program_model_1 = require("../models/Program.model");
+const Department_model_1 = require("../models/Department.model");
 const User_model_1 = require("../models/User.model");
 const Course_model_1 = require("../models/Course.model");
 const ErrorHandler_1 = require("../utils/ErrorHandler");
@@ -43,6 +44,7 @@ class StudentService {
             userId: user.id,
             companyId: input.companyId,
             programId: input.programId,
+            departmentId: input.departmentId,
             studentNumber,
             gender: input.gender,
             dateOfBirth: input.dateOfBirth,
@@ -77,11 +79,17 @@ class StudentService {
             profileWhere.programId = filters.programId;
         if (filters.status)
             profileWhere.status = filters.status;
+        if (filters.departmentId) {
+            profileWhere.departmentId = Array.isArray(filters.departmentId)
+                ? { [sequelize_1.Op.in]: filters.departmentId }
+                : filters.departmentId;
+        }
         const { count, rows } = await StudentProfile_model_1.StudentProfile.findAndCountAll({
             where: profileWhere,
             include: [
                 { model: User_model_1.User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatar'], where: Object.keys(userWhere).length ? userWhere : undefined },
                 { model: Program_model_1.Program, as: 'program', attributes: ['id', 'name', 'code', 'level'] },
+                { model: Department_model_1.Department, as: 'department', attributes: ['id', 'name', 'code'] },
             ],
             limit,
             offset,
@@ -97,6 +105,7 @@ class StudentService {
             include: [
                 { model: User_model_1.User, as: 'user', attributes: { exclude: ['passwordHash'] } },
                 { model: Program_model_1.Program, as: 'program' },
+                { model: Department_model_1.Department, as: 'department', attributes: ['id', 'name', 'code'] },
             ],
         });
         if (!student)
@@ -109,6 +118,7 @@ class StudentService {
             include: [
                 { model: User_model_1.User, as: 'user', attributes: { exclude: ['passwordHash'] } },
                 { model: Program_model_1.Program, as: 'program' },
+                { model: Department_model_1.Department, as: 'department', attributes: ['id', 'name', 'code'] },
             ],
         });
         if (!student)

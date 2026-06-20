@@ -6,12 +6,24 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.StudentController = void 0;
 const StudentService_1 = __importDefault(require("../services/StudentService"));
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
+const ErrorHandler_1 = require("../utils/ErrorHandler");
+const departmentScope_1 = require("../utils/departmentScope");
 class StudentController {
     static async register(req, res, next) {
         try {
+            const scope = await (0, departmentScope_1.getMultiDeptScope)(req, 'stm.student.create.all');
+            let departmentId = req.body.departmentId ? BigInt(req.body.departmentId) : undefined;
+            if (scope.scoped) {
+                if (scope.departmentIds.length === 0)
+                    throw new ErrorHandler_1.ForbiddenError('No department assigned to your account');
+                if (!departmentId || !scope.departmentIds.includes(Number(departmentId))) {
+                    departmentId = BigInt(scope.departmentIds[0]);
+                }
+            }
             const student = await StudentService_1.default.registerStudent({
                 ...req.body,
                 companyId: BigInt(req.body.companyId || 1),
+                departmentId,
                 registeredById: BigInt(req.user.id),
             });
             ResponseFormatter_1.ResponseFormatter.success(res, student, 'Student registered successfully', 201);
@@ -22,10 +34,16 @@ class StudentController {
     }
     static async list(req, res, next) {
         try {
-            const { companyId, programId, status, search, page, limit } = req.query;
+            const { companyId, programId, departmentId, status, search, page, limit } = req.query;
+            const scope = await (0, departmentScope_1.getMultiDeptScope)(req, 'stm.student.read.all');
+            let departmentFilter = departmentId ? BigInt(departmentId) : undefined;
+            if (scope.scoped) {
+                departmentFilter = scope.departmentIds.map(id => BigInt(id));
+            }
             const result = await StudentService_1.default.getStudents({
                 companyId: companyId ? BigInt(companyId) : undefined,
                 programId: programId ? BigInt(programId) : undefined,
+                departmentId: departmentFilter,
                 status: status,
                 search,
                 page: page ? parseInt(page) : 1,
@@ -40,6 +58,10 @@ class StudentController {
     static async getById(req, res, next) {
         try {
             const student = await StudentService_1.default.getStudentById(BigInt(req.params.id));
+            const scope = await (0, departmentScope_1.getMultiDeptScope)(req, 'stm.student.read.all');
+            if (scope.scoped && (!student.departmentId || !scope.departmentIds.includes(Number(student.departmentId)))) {
+                throw new ErrorHandler_1.ForbiddenError('You can only view students in your own departments');
+            }
             ResponseFormatter_1.ResponseFormatter.success(res, student, 'Student retrieved');
         }
         catch (e) {
@@ -48,6 +70,11 @@ class StudentController {
     }
     static async update(req, res, next) {
         try {
+            const existing = await StudentService_1.default.getStudentById(BigInt(req.params.id));
+            const scope = await (0, departmentScope_1.getMultiDeptScope)(req, 'stm.student.update.all');
+            if (scope.scoped && (!existing.departmentId || !scope.departmentIds.includes(Number(existing.departmentId)))) {
+                throw new ErrorHandler_1.ForbiddenError('You can only manage students in your own departments');
+            }
             const student = await StudentService_1.default.updateStudent(BigInt(req.params.id), req.body);
             ResponseFormatter_1.ResponseFormatter.success(res, student, 'Student updated');
         }
@@ -57,6 +84,11 @@ class StudentController {
     }
     static async updateStatus(req, res, next) {
         try {
+            const existing = await StudentService_1.default.getStudentById(BigInt(req.params.id));
+            const scope = await (0, departmentScope_1.getMultiDeptScope)(req, 'stm.student.update.all');
+            if (scope.scoped && (!existing.departmentId || !scope.departmentIds.includes(Number(existing.departmentId)))) {
+                throw new ErrorHandler_1.ForbiddenError('You can only manage students in your own departments');
+            }
             const { status, notes } = req.body;
             const student = await StudentService_1.default.updateStudentStatus(BigInt(req.params.id), status, notes);
             ResponseFormatter_1.ResponseFormatter.success(res, student, `Student status updated to ${status}`);

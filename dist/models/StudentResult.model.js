@@ -53,6 +53,8 @@ class StudentResult extends sequelize_1.Model {
             modelName: 'StudentResult',
             tableName: 'student_results',
             timestamps: true,
+            underscored: false,
+            paranoid: false,
             indexes: [
                 { fields: ['studentId'] },
                 { fields: ['courseId'] },

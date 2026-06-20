@@ -84,6 +84,8 @@ export class StudentAttendance
         modelName: 'StudentAttendance',
         tableName: 'student_attendance',
         timestamps: true,
+        underscored: false,
+        paranoid: false,
         indexes: [
           { fields: ['studentId'] },
           { fields: ['courseId'] },

@@ -21,6 +21,7 @@ class StudentProfile extends sequelize_1.Model {
             userId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: false, unique: true },
             companyId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: false },
             programId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true },
+            departmentId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Department/business unit (e.g. Kurios SAT) this student belongs to' },
             studentNumber: { type: sequelize_1.DataTypes.STRING(50), allowNull: false, unique: true },
             gender: {
                 type: sequelize_1.DataTypes.ENUM('Male', 'Female', 'Other'),
@@ -53,10 +54,13 @@ class StudentProfile extends sequelize_1.Model {
             modelName: 'StudentProfile',
             tableName: 'student_profiles',
             timestamps: true,
+            underscored: false,
+            paranoid: false,
             indexes: [
                 { fields: ['userId'] },
                 { fields: ['companyId'] },
                 { fields: ['programId'] },
+                { fields: ['departmentId'] },
                 { fields: ['status'] },
                 { fields: ['studentNumber'], unique: true },
             ],

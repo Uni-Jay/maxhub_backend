@@ -10,6 +10,7 @@ interface StudentProfileAttributes {
   userId: bigint;
   companyId: bigint;
   programId?: bigint;
+  departmentId?: bigint;
   studentNumber: string;
   gender?: StudentGender;
   dateOfBirth?: Date;
@@ -46,6 +47,7 @@ export class StudentProfile
   public userId!: bigint;
   public companyId!: bigint;
   public programId?: bigint;
+  public departmentId?: bigint;
   public studentNumber!: string;
   public gender?: StudentGender;
   public dateOfBirth?: Date;
@@ -88,6 +90,7 @@ export class StudentProfile
         userId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false, unique: true },
         companyId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
         programId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
+        departmentId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Department/business unit (e.g. Kurios SAT) this student belongs to' },
         studentNumber: { type: DataTypes.STRING(50), allowNull: false, unique: true },
         gender: {
           type: DataTypes.ENUM('Male', 'Female', 'Other'),
@@ -121,10 +124,13 @@ export class StudentProfile
         modelName: 'StudentProfile',
         tableName: 'student_profiles',
         timestamps: true,
+        underscored: false,
+        paranoid: false,
         indexes: [
           { fields: ['userId'] },
           { fields: ['companyId'] },
           { fields: ['programId'] },
+          { fields: ['departmentId'] },
           { fields: ['status'] },
           { fields: ['studentNumber'], unique: true },
         ],

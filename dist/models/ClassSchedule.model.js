@@ -41,6 +41,8 @@ class ClassSchedule extends sequelize_1.Model {
             modelName: 'ClassSchedule',
             tableName: 'class_schedules',
             timestamps: true,
+            underscored: false,
+            paranoid: false,
             indexes: [
                 { fields: ['courseId'] },
                 { fields: ['instructorId'] },

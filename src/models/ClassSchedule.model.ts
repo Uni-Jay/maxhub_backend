@@ -92,6 +92,8 @@ export class ClassSchedule
         modelName: 'ClassSchedule',
         tableName: 'class_schedules',
         timestamps: true,
+        underscored: false,
+        paranoid: false,
         indexes: [
           { fields: ['courseId'] },
           { fields: ['instructorId'] },

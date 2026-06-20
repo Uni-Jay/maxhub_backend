@@ -44,6 +44,8 @@ class Program extends sequelize_1.Model {
             modelName: 'Program',
             tableName: 'programs',
             timestamps: true,
+            underscored: false,
+            paranoid: false,
             indexes: [{ fields: ['companyId'] }, { fields: ['status'] }],
         });
         return Program;

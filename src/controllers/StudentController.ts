@@ -1,14 +1,26 @@
 import { Request, Response, NextFunction } from 'express';
 import StudentService from '@services/StudentService';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
+import { ForbiddenError } from '@utils/ErrorHandler';
+import { getMultiDeptScope } from '@utils/departmentScope';
 
 export class StudentController {
   // ─── ADMIN: Student Registration ──────────────────────────────
   static async register(req: Request, res: Response, next: NextFunction) {
     try {
+      const scope = await getMultiDeptScope(req, 'stm.student.create.all');
+      let departmentId = req.body.departmentId ? BigInt(req.body.departmentId) : undefined;
+      if (scope.scoped) {
+        if (scope.departmentIds.length === 0) throw new ForbiddenError('No department assigned to your account');
+        if (!departmentId || !scope.departmentIds.includes(Number(departmentId))) {
+          departmentId = BigInt(scope.departmentIds[0]);
+        }
+      }
+
       const student = await StudentService.registerStudent({
         ...req.body,
         companyId: BigInt(req.body.companyId || 1),
+        departmentId,
         registeredById: BigInt(req.user!.id),
       });
       ResponseFormatter.success(res, student, 'Student registered successfully', 201);
@@ -17,10 +29,18 @@ export class StudentController {
 
   static async list(req: Request, res: Response, next: NextFunction) {
     try {
-      const { companyId, programId, status, search, page, limit } = req.query as Record<string, string>;
+      const { companyId, programId, departmentId, status, search, page, limit } = req.query as Record<string, string>;
+
+      const scope = await getMultiDeptScope(req, 'stm.student.read.all');
+      let departmentFilter: bigint | bigint[] | undefined = departmentId ? BigInt(departmentId) : undefined;
+      if (scope.scoped) {
+        departmentFilter = scope.departmentIds.map(id => BigInt(id));
+      }
+
       const result = await StudentService.getStudents({
         companyId: companyId ? BigInt(companyId) : undefined,
         programId: programId ? BigInt(programId) : undefined,
+        departmentId: departmentFilter,
         status: status as any,
         search,
         page: page ? parseInt(page) : 1,
@@ -33,12 +53,24 @@ export class StudentController {
   static async getById(req: Request, res: Response, next: NextFunction) {
     try {
       const student = await StudentService.getStudentById(BigInt(req.params.id));
+
+      const scope = await getMultiDeptScope(req, 'stm.student.read.all');
+      if (scope.scoped && (!student.departmentId || !scope.departmentIds.includes(Number(student.departmentId)))) {
+        throw new ForbiddenError('You can only view students in your own departments');
+      }
+
       ResponseFormatter.success(res, student, 'Student retrieved');
     } catch (e) { next(e); }
   }
 
   static async update(req: Request, res: Response, next: NextFunction) {
     try {
+      const existing = await StudentService.getStudentById(BigInt(req.params.id));
+      const scope = await getMultiDeptScope(req, 'stm.student.update.all');
+      if (scope.scoped && (!existing.departmentId || !scope.departmentIds.includes(Number(existing.departmentId)))) {
+        throw new ForbiddenError('You can only manage students in your own departments');
+      }
+
       const student = await StudentService.updateStudent(BigInt(req.params.id), req.body);
       ResponseFormatter.success(res, student, 'Student updated');
     } catch (e) { next(e); }
@@ -46,6 +78,12 @@ export class StudentController {
 
   static async updateStatus(req: Request, res: Response, next: NextFunction) {
     try {
+      const existing = await StudentService.getStudentById(BigInt(req.params.id));
+      const scope = await getMultiDeptScope(req, 'stm.student.update.all');
+      if (scope.scoped && (!existing.departmentId || !scope.departmentIds.includes(Number(existing.departmentId)))) {
+        throw new ForbiddenError('You can only manage students in your own departments');
+      }
+
       const { status, notes } = req.body;
       const student = await StudentService.updateStudentStatus(BigInt(req.params.id), status, notes);
       ResponseFormatter.success(res, student, `Student status updated to ${status}`);

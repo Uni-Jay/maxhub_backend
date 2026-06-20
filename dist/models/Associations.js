@@ -253,6 +253,7 @@ class AssociationManager {
         StudentProfile_model_1.StudentProfile.belongsTo(User_model_1.User, { foreignKey: 'userId', as: 'user' });
         StudentProfile_model_1.StudentProfile.belongsTo(Company_model_1.Company, { foreignKey: 'companyId', as: 'company' });
         StudentProfile_model_1.StudentProfile.belongsTo(Program_model_1.Program, { foreignKey: 'programId', as: 'program' });
+        StudentProfile_model_1.StudentProfile.belongsTo(Department_model_1.Department, { foreignKey: 'departmentId', as: 'department' });
         StudentProfile_model_1.StudentProfile.hasMany(StudentEnrollment_model_1.StudentEnrollment, { foreignKey: 'studentId', as: 'enrollments' });
         StudentEnrollment_model_1.StudentEnrollment.belongsTo(StudentProfile_model_1.StudentProfile, { foreignKey: 'studentId', as: 'student' });
         StudentEnrollment_model_1.StudentEnrollment.belongsTo(Course_model_1.Course, { foreignKey: 'courseId', as: 'course' });

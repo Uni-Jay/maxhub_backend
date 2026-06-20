@@ -11,6 +11,7 @@ interface RegisterStudentInput {
     password?: string;
     companyId: bigint;
     programId?: bigint;
+    departmentId?: bigint;
     gender?: string;
     dateOfBirth?: string;
     address?: string;
@@ -36,6 +37,7 @@ export declare class StudentService {
     getStudents(filters: {
         companyId?: bigint;
         programId?: bigint;
+        departmentId?: bigint | bigint[];
         status?: StudentStatus;
         search?: string;
         page?: number;

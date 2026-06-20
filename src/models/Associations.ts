@@ -360,6 +360,7 @@ export class AssociationManager {
     StudentProfile.belongsTo(User, { foreignKey: 'userId', as: 'user' });
     StudentProfile.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
     StudentProfile.belongsTo(Program, { foreignKey: 'programId', as: 'program' });
+    StudentProfile.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
 
     // StudentProfile → Enrollments
     StudentProfile.hasMany(StudentEnrollment, { foreignKey: 'studentId', as: 'enrollments' });

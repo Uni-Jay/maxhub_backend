@@ -100,6 +100,8 @@ export class StudentEnrollment
         modelName: 'StudentEnrollment',
         tableName: 'student_enrollments',
         timestamps: true,
+        underscored: false,
+        paranoid: false,
         indexes: [
           { fields: ['studentId'] },
           { fields: ['courseId'] },

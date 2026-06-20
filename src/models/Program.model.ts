@@ -94,6 +94,8 @@ export class Program
         modelName: 'Program',
         tableName: 'programs',
         timestamps: true,
+        underscored: false,
+        paranoid: false,
         indexes: [{ fields: ['companyId'] }, { fields: ['status'] }],
       }
     );

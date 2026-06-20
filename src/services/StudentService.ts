@@ -5,6 +5,7 @@ import { StudentResult } from '@models/StudentResult.model';
 import { StudentAttendance, AttendanceStatus } from '@models/StudentAttendance.model';
 import { ClassSchedule } from '@models/ClassSchedule.model';
 import { Program } from '@models/Program.model';
+import { Department } from '@models/Department.model';
 import { User } from '@models/User.model';
 import { Course } from '@models/Course.model';
 import { NotFoundError, ConflictError, ValidationError } from '@utils/ErrorHandler';
@@ -18,6 +19,7 @@ interface RegisterStudentInput {
   password?: string;
   companyId: bigint;
   programId?: bigint;
+  departmentId?: bigint;
   gender?: string;
   dateOfBirth?: string;
   address?: string;
@@ -73,6 +75,7 @@ export class StudentService {
       userId: user.id,
       companyId: input.companyId,
       programId: input.programId,
+      departmentId: input.departmentId,
       studentNumber,
       gender: input.gender as any,
       dateOfBirth: input.dateOfBirth as any,
@@ -94,6 +97,7 @@ export class StudentService {
   async getStudents(filters: {
     companyId?: bigint;
     programId?: bigint;
+    departmentId?: bigint | bigint[];
     status?: StudentStatus;
     search?: string;
     page?: number;
@@ -116,12 +120,18 @@ export class StudentService {
     if (filters.companyId) profileWhere.companyId = filters.companyId;
     if (filters.programId) profileWhere.programId = filters.programId;
     if (filters.status) profileWhere.status = filters.status;
+    if (filters.departmentId) {
+      profileWhere.departmentId = Array.isArray(filters.departmentId)
+        ? { [Op.in]: filters.departmentId }
+        : filters.departmentId;
+    }
 
     const { count, rows } = await StudentProfile.findAndCountAll({
       where: profileWhere,
       include: [
         { model: User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatar'], where: Object.keys(userWhere).length ? userWhere : undefined },
         { model: Program, as: 'program', attributes: ['id', 'name', 'code', 'level'] },
+        { model: Department, as: 'department', attributes: ['id', 'name', 'code'] },
       ],
       limit,
       offset,
@@ -140,6 +150,7 @@ export class StudentService {
       include: [
         { model: User, as: 'user', attributes: { exclude: ['passwordHash'] } },
         { model: Program, as: 'program' },
+        { model: Department, as: 'department', attributes: ['id', 'name', 'code'] },
       ],
     });
     if (!student) throw new NotFoundError('Student not found');
@@ -153,6 +164,7 @@ export class StudentService {
       include: [
         { model: User, as: 'user', attributes: { exclude: ['passwordHash'] } },
         { model: Program, as: 'program' },
+        { model: Department, as: 'department', attributes: ['id', 'name', 'code'] },
       ],
     });
     if (!student) throw new NotFoundError('Student profile not found');

@@ -784,10 +784,13 @@ export enum PermissionCode {
 
   // ==================== STUDENT MANAGEMENT (ADMIN / INSTRUCTOR) ====================
   STM_STUDENT_CREATE_ALL = 'stm.student.create.all',
+  STM_STUDENT_CREATE_OWN_DEPARTMENT = 'stm.student.create.own_department',
   STM_STUDENT_READ_ALL = 'stm.student.read.all',
   STM_STUDENT_UPDATE_ALL = 'stm.student.update.all',
+  STM_STUDENT_UPDATE_OWN_DEPARTMENT = 'stm.student.update.own_department',
   STM_STUDENT_DELETE_ALL = 'stm.student.delete.all',
   STM_STUDENT_SUSPEND_ALL = 'stm.student.suspend.all',
+  STM_STUDENT_SUSPEND_OWN_DEPARTMENT = 'stm.student.suspend.own_department',
 
   STM_PROGRAM_CREATE_ALL = 'stm.program.create.all',
   STM_PROGRAM_READ_ALL = 'stm.program.read.all',

@@ -7,6 +7,7 @@ interface StudentProfileAttributes {
     userId: bigint;
     companyId: bigint;
     programId?: bigint;
+    departmentId?: bigint;
     studentNumber: string;
     gender?: StudentGender;
     dateOfBirth?: Date;
@@ -38,6 +39,7 @@ export declare class StudentProfile extends Model<StudentProfileAttributes, Stud
     userId: bigint;
     companyId: bigint;
     programId?: bigint;
+    departmentId?: bigint;
     studentNumber: string;
     gender?: StudentGender;
     dateOfBirth?: Date;

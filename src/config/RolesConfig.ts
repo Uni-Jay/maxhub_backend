@@ -381,8 +381,13 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.CRM_QUOTE_UPDATE_OWN_DEPARTMENT,
     PermissionCode.CRM_QUOTE_DELETE_OWN_DEPARTMENT,
     PermissionCode.CRM_QUOTE_SEND_OWN_DEPARTMENT,
-    // Student management
+    // Student management — read is company-wide (pre-existing), write is
+    // scoped to her own department(s) so she can run Kurios SAT's student
+    // roster without touching other business units' students.
     PermissionCode.STM_STUDENT_READ_ALL,
+    PermissionCode.STM_STUDENT_CREATE_OWN_DEPARTMENT,
+    PermissionCode.STM_STUDENT_UPDATE_OWN_DEPARTMENT,
+    PermissionCode.STM_STUDENT_SUSPEND_OWN_DEPARTMENT,
     PermissionCode.STM_ENROLLMENT_READ_ALL,
     PermissionCode.STM_ATTENDANCE_READ_ALL,
     PermissionCode.STM_RESULT_READ_ALL,

@@ -46,6 +46,8 @@ class StudentEnrollment extends sequelize_1.Model {
             modelName: 'StudentEnrollment',
             tableName: 'student_enrollments',
             timestamps: true,
+            underscored: false,
+            paranoid: false,
             indexes: [
                 { fields: ['studentId'] },
                 { fields: ['courseId'] },
