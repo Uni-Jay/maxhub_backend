@@ -19,6 +19,23 @@ import AuthMiddleware from '@middleware/AuthMiddleware';
 
 const router = Router();
 
+// HOD (and similar) get *_OWN_DEPARTMENT permission variants instead of *_ALL —
+// this resolves whether the caller is scoped to their own department only, and
+// if so, what that department is. Bypass roles (superadmin/admin/headofadmin)
+// and holders of the _ALL permission are never scoped.
+function getDeptScope(req: Request, allPermission: string): { scoped: boolean; departmentId: number | null } {
+  const user = (req as any).user;
+  const normRoles = (user.roles || []).map((r: string) => r.toLowerCase().replace(/[^a-z]/g, ''));
+  if (normRoles.includes('superadmin') || normRoles.includes('admin') || normRoles.includes('headofadmin')) {
+    return { scoped: false, departmentId: null };
+  }
+  const perms = new Set((user.permissions || []).map((p: string) => p.toLowerCase()));
+  if (perms.has(allPermission.toLowerCase())) {
+    return { scoped: false, departmentId: null };
+  }
+  return { scoped: true, departmentId: user.departmentId ?? null };
+}
+
 // ─── COURSES ──────────────────────────────────────────────────────────────────
 
 // GET /api/courses — list all courses
@@ -63,12 +80,19 @@ router.get('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Respon
 }));
 
 // POST /api/courses — create course
-router.post('/', AuthMiddleware.requirePermission('LMS.COURSE.CREATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const { title, courseCode, description, departmentId, instructorId, duration, fee,
+router.post('/', AuthMiddleware.requirePermission('LMS.COURSE.CREATE.ALL', 'LMS.COURSE.CREATE.OWN_DEPARTMENT'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const { title, courseCode, description, instructorId, duration, fee,
     startDate, endDate, status, certificateRequired, passingScore, maxParticipants, minParticipants } = req.body;
 
   if (!title || !courseCode || !instructorId || !duration || !startDate) {
     return ResponseFormatter.error(res, 'title, courseCode, instructorId, duration, startDate are required', 400);
+  }
+
+  const scope = getDeptScope(req, 'lms.course.create.all');
+  let { departmentId } = req.body;
+  if (scope.scoped) {
+    if (!scope.departmentId) return ResponseFormatter.error(res, 'No department assigned to your account', 403);
+    departmentId = scope.departmentId; // ignore any client-supplied departmentId — always her own
   }
 
   const existing = await Course.findOne({ where: { courseCode } });
@@ -86,23 +110,35 @@ router.post('/', AuthMiddleware.requirePermission('LMS.COURSE.CREATE.ALL'), Erro
 }));
 
 // PUT /api/courses/:id — update course
-router.put('/:id', AuthMiddleware.requirePermission('LMS.COURSE.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.put('/:id', AuthMiddleware.requirePermission('LMS.COURSE.UPDATE.ALL', 'LMS.COURSE.UPDATE.OWN_DEPARTMENT'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const course = await Course.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!course) return ResponseFormatter.error(res, 'Course not found', 404);
+
+  const scope = getDeptScope(req, 'lms.course.update.all');
+  if (scope.scoped && String(course.departmentId) !== String(scope.departmentId)) {
+    return ResponseFormatter.error(res, 'You can only manage courses in your own department', 403);
+  }
 
   const allowed = ['title', 'description', 'departmentId', 'instructorId', 'duration', 'fee',
     'startDate', 'endDate', 'status', 'certificateRequired', 'passingScore', 'maxParticipants', 'minParticipants'];
   const updates: any = {};
   allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
+  if (scope.scoped) delete updates.departmentId; // dept-scoped callers can't move a course out of their department
 
   await course.update(updates);
   ResponseFormatter.success(res, course, 'Course updated');
 }));
 
 // DELETE /api/courses/:id — soft delete
-router.delete('/:id', AuthMiddleware.requirePermission('LMS.COURSE.DELETE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.delete('/:id', AuthMiddleware.requirePermission('LMS.COURSE.DELETE.ALL', 'LMS.COURSE.DELETE.OWN_DEPARTMENT'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const course = await Course.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!course) return ResponseFormatter.error(res, 'Course not found', 404);
+
+  const scope = getDeptScope(req, 'lms.course.delete.all');
+  if (scope.scoped && String(course.departmentId) !== String(scope.departmentId)) {
+    return ResponseFormatter.error(res, 'You can only manage courses in your own department', 403);
+  }
+
   await course.destroy();
   ResponseFormatter.success(res, null, 'Course deleted');
 }));
@@ -123,36 +159,61 @@ router.get('/:id/modules', ErrorMiddleware.asyncHandler(async (req: Request, res
 }));
 
 // POST /api/courses/:id/modules — add module
-router.post('/:id/modules', AuthMiddleware.requirePermission('LMS.COURSE.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.post('/:id/modules', AuthMiddleware.requirePermission('LMS.COURSE.UPDATE.ALL', 'LMS.COURSE.UPDATE.OWN_DEPARTMENT'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const course = await Course.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!course) return ResponseFormatter.error(res, 'Course not found', 404);
+
+  const scope = getDeptScope(req, 'lms.course.update.all');
+  if (scope.scoped && String(course.departmentId) !== String(scope.departmentId)) {
+    return ResponseFormatter.error(res, 'You can only manage courses in your own department', 403);
+  }
 
   const { title, description, sequence, duration } = req.body;
   if (!title) return ResponseFormatter.error(res, 'title is required', 400);
 
+  const moduleCount = await CourseModule.count({ where: { courseId: course.id } });
   const mod = await CourseModule.create({
-    uuid: uuidv4(), courseId: course.id, title, description,
-    sequence: sequence || 1, duration: duration || 0, status: 'Draft',
+    uuid: uuidv4(), courseId: course.id,
+    moduleCode: `${course.courseCode}-M${moduleCount + 1}`, moduleName: title, description,
+    sequence: sequence || moduleCount + 1, duration: duration || 0, status: 'Draft',
   } as any);
   ResponseFormatter.success(res, mod, 'Module created', 201);
 }));
 
 // PUT /api/courses/:courseId/modules/:moduleId
-router.put('/:courseId/modules/:moduleId', AuthMiddleware.requirePermission('LMS.COURSE.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.put('/:courseId/modules/:moduleId', AuthMiddleware.requirePermission('LMS.COURSE.UPDATE.ALL', 'LMS.COURSE.UPDATE.OWN_DEPARTMENT'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const mod = await CourseModule.findOne({
     where: { ...idOrUuidWhere(req.params.moduleId) },
   });
   if (!mod) return ResponseFormatter.error(res, 'Module not found', 404);
+
+  const scope = getDeptScope(req, 'lms.course.update.all');
+  if (scope.scoped) {
+    const course = await Course.findByPk(mod.courseId);
+    if (!course || String(course.departmentId) !== String(scope.departmentId)) {
+      return ResponseFormatter.error(res, 'You can only manage courses in your own department', 403);
+    }
+  }
+
   await mod.update(req.body);
   ResponseFormatter.success(res, mod, 'Module updated');
 }));
 
 // DELETE /api/courses/:courseId/modules/:moduleId
-router.delete('/:courseId/modules/:moduleId', AuthMiddleware.requirePermission('LMS.COURSE.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.delete('/:courseId/modules/:moduleId', AuthMiddleware.requirePermission('LMS.COURSE.UPDATE.ALL', 'LMS.COURSE.UPDATE.OWN_DEPARTMENT'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const mod = await CourseModule.findOne({
     where: { ...idOrUuidWhere(req.params.moduleId) },
   });
   if (!mod) return ResponseFormatter.error(res, 'Module not found', 404);
+
+  const scope = getDeptScope(req, 'lms.course.update.all');
+  if (scope.scoped) {
+    const course = await Course.findByPk(mod.courseId);
+    if (!course || String(course.departmentId) !== String(scope.departmentId)) {
+      return ResponseFormatter.error(res, 'You can only manage courses in your own department', 403);
+    }
+  }
+
   await mod.destroy();
   ResponseFormatter.success(res, null, 'Module deleted');
 }));
@@ -369,9 +430,14 @@ router.get('/:id/exams', ErrorMiddleware.asyncHandler(async (req: Request, res: 
 }));
 
 // POST /api/courses/:id/exams — create exam
-router.post('/:id/exams', AuthMiddleware.requirePermission('LMS.EXAM.CREATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.post('/:id/exams', AuthMiddleware.requirePermission('LMS.EXAM.CREATE.ALL', 'LMS.EXAM.CREATE.OWN_DEPARTMENT'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const course = await Course.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!course) return ResponseFormatter.error(res, 'Course not found', 404);
+
+  const scope = getDeptScope(req, 'lms.exam.create.all');
+  if (scope.scoped && String(course.departmentId) !== String(scope.departmentId)) {
+    return ResponseFormatter.error(res, 'You can only manage exams for courses in your own department', 403);
+  }
 
   const { examCode, examName, description, totalQuestions, passingScore, duration, attempts } = req.body;
   if (!examCode || !examName || !totalQuestions || !passingScore || !duration) {
@@ -387,17 +453,34 @@ router.post('/:id/exams', AuthMiddleware.requirePermission('LMS.EXAM.CREATE.ALL'
 }));
 
 // PUT /api/courses/:courseId/exams/:examId
-router.put('/:courseId/exams/:examId', AuthMiddleware.requirePermission('LMS.EXAM.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.put('/:courseId/exams/:examId', AuthMiddleware.requirePermission('LMS.EXAM.UPDATE.ALL', 'LMS.EXAM.UPDATE.OWN_DEPARTMENT'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const exam = await Exam.findOne({ where: { ...idOrUuidWhere(req.params.examId) } });
   if (!exam) return ResponseFormatter.error(res, 'Exam not found', 404);
+
+  const scope = getDeptScope(req, 'lms.exam.update.all');
+  if (scope.scoped) {
+    const course = await Course.findByPk(exam.courseId);
+    if (!course || String(course.departmentId) !== String(scope.departmentId)) {
+      return ResponseFormatter.error(res, 'You can only manage exams for courses in your own department', 403);
+    }
+  }
+
   await exam.update(req.body);
   ResponseFormatter.success(res, exam, 'Exam updated');
 }));
 
 // POST /api/courses/:courseId/exams/:examId/questions — add question
-router.post('/:courseId/exams/:examId/questions', AuthMiddleware.requirePermission('LMS.EXAM.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.post('/:courseId/exams/:examId/questions', AuthMiddleware.requirePermission('LMS.EXAM.UPDATE.ALL', 'LMS.EXAM.UPDATE.OWN_DEPARTMENT'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const exam = await Exam.findOne({ where: { ...idOrUuidWhere(req.params.examId) } });
   if (!exam) return ResponseFormatter.error(res, 'Exam not found', 404);
+
+  const scope = getDeptScope(req, 'lms.exam.update.all');
+  if (scope.scoped) {
+    const course = await Course.findByPk(exam.courseId);
+    if (!course || String(course.departmentId) !== String(scope.departmentId)) {
+      return ResponseFormatter.error(res, 'You can only manage exams for courses in your own department', 403);
+    }
+  }
 
   const { questionType, questionText, points, sequence, options, correctAnswer, explanation, difficulty } = req.body;
   if (!questionType || !questionText || !correctAnswer) {
@@ -421,6 +504,25 @@ router.get('/:courseId/exams/:examId/questions', ErrorMiddleware.asyncHandler(as
   ResponseFormatter.success(res, questions);
 }));
 
+// DELETE /api/courses/:courseId/exams/:examId/questions/:questionId
+router.delete('/:courseId/exams/:examId/questions/:questionId', AuthMiddleware.requirePermission('LMS.EXAM.UPDATE.ALL', 'LMS.EXAM.UPDATE.OWN_DEPARTMENT'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const exam = await Exam.findOne({ where: { ...idOrUuidWhere(req.params.examId) } });
+  if (!exam) return ResponseFormatter.error(res, 'Exam not found', 404);
+
+  const scope = getDeptScope(req, 'lms.exam.update.all');
+  if (scope.scoped) {
+    const course = await Course.findByPk(exam.courseId);
+    if (!course || String(course.departmentId) !== String(scope.departmentId)) {
+      return ResponseFormatter.error(res, 'You can only manage exams for courses in your own department', 403);
+    }
+  }
+
+  const question = await Question.findOne({ where: { ...idOrUuidWhere(req.params.questionId), examId: exam.id } });
+  if (!question) return ResponseFormatter.error(res, 'Question not found', 404);
+  await question.update({ status: 'Archived' });
+  ResponseFormatter.success(res, null, 'Question removed');
+}));
+
 // ─── ENROLLMENTS VIA COURSE ───────────────────────────────────────────────────
 
 // GET /api/courses/:id/enrollments
@@ -433,6 +535,57 @@ router.get('/:id/enrollments', ErrorMiddleware.asyncHandler(async (req: Request,
     order: [['enrollmentDate', 'DESC']],
   });
   ResponseFormatter.success(res, enrollments);
+}));
+
+// ─── CERTIFICATES ─────────────────────────────────────────────────────────────
+
+// GET /api/courses/:id/certificates — certificates issued for a course
+router.get('/:id/certificates', AuthMiddleware.verifyToken, ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const course = await Course.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
+  if (!course) return ResponseFormatter.error(res, 'Course not found', 404);
+
+  const enrollments = await Enrollment.findAll({ where: { courseId: course.id }, attributes: ['id'] });
+  const enrollmentIds = enrollments.map(e => e.id);
+  if (enrollmentIds.length === 0) return ResponseFormatter.success(res, []);
+
+  const certs = await Certificate.findAll({
+    where: { enrollmentId: { [Op.in]: enrollmentIds } },
+    include: [{ model: Enrollment, as: 'enrollment', include: [{ model: Staff, as: 'staff', include: [{ model: User, attributes: ['firstName', 'lastName', 'email'] }] }] }],
+    order: [['issuedDate', 'DESC']],
+  });
+  ResponseFormatter.success(res, certs);
+}));
+
+// POST /api/courses/enrollments/:enrollmentId/certificate — issue a certificate
+router.post('/enrollments/:enrollmentId/certificate', AuthMiddleware.requirePermission('LMS.CERTIFICATE.ISSUE.ALL', 'LMS.CERTIFICATE.ISSUE.OWN_DEPARTMENT'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const enrollment = await Enrollment.findOne({ where: { ...idOrUuidWhere(req.params.enrollmentId) } });
+  if (!enrollment) return ResponseFormatter.error(res, 'Enrollment not found', 404);
+
+  const course = await Course.findByPk(enrollment.courseId);
+  if (!course) return ResponseFormatter.error(res, 'Course not found', 404);
+
+  const scope = getDeptScope(req, 'lms.certificate.issue.all');
+  if (scope.scoped && String(course.departmentId) !== String(scope.departmentId)) {
+    return ResponseFormatter.error(res, 'You can only issue certificates for courses in your own department', 403);
+  }
+
+  if (enrollment.status !== 'Completed') {
+    return ResponseFormatter.error(res, 'Enrollment must be Completed before a certificate can be issued', 400);
+  }
+
+  const existing = await Certificate.findOne({ where: { enrollmentId: enrollment.id, status: 'Issued' } });
+  if (existing) return ResponseFormatter.error(res, 'A certificate has already been issued for this enrollment', 409);
+
+  const { certificateName } = req.body;
+  const code = `CERT-${course.courseCode}-${Date.now().toString(36).toUpperCase()}`;
+  const certificate = await Certificate.create({
+    uuid: uuidv4(), enrollmentId: enrollment.id,
+    certificateCode: code, certificateName: certificateName || `Certificate of Completion — ${course.title}`,
+    issuedDate: new Date(), verificationCode: uuidv4().slice(0, 8).toUpperCase(),
+    status: 'Issued',
+  } as any);
+
+  ResponseFormatter.success(res, certificate, 'Certificate issued', 201);
 }));
 
 // ─── EXAM RESULTS ─────────────────────────────────────────────────────────────

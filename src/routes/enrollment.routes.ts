@@ -15,6 +15,22 @@ import AuthMiddleware from '@middleware/AuthMiddleware';
 
 const router = Router();
 
+// Mirrors the same scoping helper in course.routes.ts — HOD-style callers hold
+// the *_OWN_DEPARTMENT permission instead of *_ALL and are restricted to
+// enrollments/courses in their own department.
+function getDeptScope(req: Request, allPermission: string): { scoped: boolean; departmentId: number | null } {
+  const user = (req as any).user;
+  const normRoles = (user.roles || []).map((r: string) => r.toLowerCase().replace(/[^a-z]/g, ''));
+  if (normRoles.includes('superadmin') || normRoles.includes('admin') || normRoles.includes('headofadmin')) {
+    return { scoped: false, departmentId: null };
+  }
+  const perms = new Set((user.permissions || []).map((p: string) => p.toLowerCase()));
+  if (perms.has(allPermission.toLowerCase())) {
+    return { scoped: false, departmentId: null };
+  }
+  return { scoped: true, departmentId: user.departmentId ?? null };
+}
+
 // GET /api/enrollments — list all enrollments (admin)
 router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const { page = 1, limit = 20, status, courseId, staffId } = req.query;
@@ -38,13 +54,18 @@ router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response)
 }));
 
 // POST /api/enrollments — enroll a staff member
-router.post('/', AuthMiddleware.requirePermission('LMS.ENROLLMENT.CREATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.post('/', AuthMiddleware.requirePermission('LMS.ENROLLMENT.CREATE.ALL', 'LMS.ENROLLMENT.CREATE.OWN_DEPARTMENT'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const { courseId, staffId, notes } = req.body;
   if (!courseId || !staffId) return ResponseFormatter.error(res, 'courseId and staffId are required', 400);
 
   const course = await Course.findByPk(courseId);
   if (!course) return ResponseFormatter.error(res, 'Course not found', 404);
   if (course.status === 'Cancelled') return ResponseFormatter.error(res, 'Cannot enroll in a cancelled course', 400);
+
+  const scope = getDeptScope(req, 'lms.enrollment.create.all');
+  if (scope.scoped && String(course.departmentId) !== String(scope.departmentId)) {
+    return ResponseFormatter.error(res, 'You can only enroll students into courses in your own department', 403);
+  }
 
   const existing = await Enrollment.findOne({ where: { courseId, staffId } });
   if (existing && existing.status !== 'Dropped') return ResponseFormatter.error(res, 'Already enrolled', 409);
@@ -103,9 +124,18 @@ router.patch('/:id/progress', ErrorMiddleware.asyncHandler(async (req: Request, 
 }));
 
 // PATCH /api/enrollments/:id/status
-router.patch('/:id/status', AuthMiddleware.requirePermission('LMS.ENROLLMENT.UPDATE.ALL'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.patch('/:id/status', AuthMiddleware.requirePermission('LMS.ENROLLMENT.UPDATE.ALL', 'LMS.ENROLLMENT.UPDATE.OWN_DEPARTMENT'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const enrollment = await Enrollment.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!enrollment) return ResponseFormatter.error(res, 'Enrollment not found', 404);
+
+  const scope = getDeptScope(req, 'lms.enrollment.update.all');
+  if (scope.scoped) {
+    const course = await Course.findByPk(enrollment.courseId);
+    if (!course || String(course.departmentId) !== String(scope.departmentId)) {
+      return ResponseFormatter.error(res, 'You can only manage enrollments for courses in your own department', 403);
+    }
+  }
+
   const { status, notes } = req.body;
   if (!['Enrolled', 'InProgress', 'Completed', 'Failed', 'Dropped', 'OnHold'].includes(status)) return ResponseFormatter.error(res, 'Invalid status', 400);
   await enrollment.update({ status, notes, completionDate: status === 'Completed' ? new Date() : enrollment.completionDate });

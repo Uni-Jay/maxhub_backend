@@ -156,8 +156,13 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.LMS_COURSE_UPDATE_ALL,
     PermissionCode.LMS_COURSE_DELETE_ALL,
     PermissionCode.LMS_ENROLLMENT_MANAGE_ALL,
+    PermissionCode.LMS_ENROLLMENT_CREATE_ALL,
+    PermissionCode.LMS_ENROLLMENT_UPDATE_ALL,
     PermissionCode.LMS_ENROLLMENT_READ_ALL,
+    PermissionCode.LMS_EXAM_CREATE_ALL,
+    PermissionCode.LMS_EXAM_UPDATE_ALL,
     PermissionCode.LMS_CERTIFICATE_AWARD_ALL,
+    PermissionCode.LMS_CERTIFICATE_ISSUE_ALL,
     PermissionCode.LMS_CERTIFICATE_READ_ALL,
     // CBT
     PermissionCode.CBT_EXAM_CREATE_ALL,
@@ -369,9 +374,20 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.STM_ATTENDANCE_READ_ALL,
     PermissionCode.STM_RESULT_READ_ALL,
     PermissionCode.STM_ANALYTICS_VIEW_ALL,
-    // LMS (view)
+    // LMS — full management of her own department's courses (she runs the
+    // school for that department: add courses, exam questions, certificates,
+    // enroll students), but never another department's.
     PermissionCode.LMS_COURSE_READ_ALL,
+    PermissionCode.LMS_COURSE_CREATE_OWN_DEPARTMENT,
+    PermissionCode.LMS_COURSE_UPDATE_OWN_DEPARTMENT,
+    PermissionCode.LMS_COURSE_DELETE_OWN_DEPARTMENT,
     PermissionCode.LMS_ENROLLMENT_READ_ALL,
+    PermissionCode.LMS_ENROLLMENT_CREATE_OWN_DEPARTMENT,
+    PermissionCode.LMS_ENROLLMENT_UPDATE_OWN_DEPARTMENT,
+    PermissionCode.LMS_EXAM_CREATE_OWN_DEPARTMENT,
+    PermissionCode.LMS_EXAM_UPDATE_OWN_DEPARTMENT,
+    PermissionCode.LMS_CERTIFICATE_ISSUE_OWN_DEPARTMENT,
+    PermissionCode.LMS_CERTIFICATE_READ_ALL,
     // CBT
     PermissionCode.CBT_EXAM_READ_ALL,
     PermissionCode.CBT_RESULT_READ_ALL,

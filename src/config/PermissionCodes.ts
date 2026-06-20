@@ -189,24 +189,36 @@ export enum PermissionCode {
 
   // ==================== LEARNING & DEVELOPMENT ====================
   LMS_COURSE_CREATE_ALL = 'lms.course.create.all',
+  LMS_COURSE_CREATE_OWN_DEPARTMENT = 'lms.course.create.own_department',
   LMS_COURSE_READ_ALL = 'lms.course.read.all',
   LMS_COURSE_UPDATE_ALL = 'lms.course.update.all',
+  LMS_COURSE_UPDATE_OWN_DEPARTMENT = 'lms.course.update.own_department',
   LMS_COURSE_DELETE_ALL = 'lms.course.delete.all',
+  LMS_COURSE_DELETE_OWN_DEPARTMENT = 'lms.course.delete.own_department',
 
   LMS_ENROLLMENT_CREATE_ALL = 'lms.enrollment.create.all',
+  LMS_ENROLLMENT_CREATE_OWN_DEPARTMENT = 'lms.enrollment.create.own_department',
   LMS_ENROLLMENT_READ_ALL = 'lms.enrollment.read.all',
   LMS_ENROLLMENT_READ_OWN = 'lms.enrollment.read.own',
+  /** Referenced by PATCH /enrollments/:id/status — was missing from this enum entirely until 2026-06-20, making that route unreachable by any non-bypass role. */
+  LMS_ENROLLMENT_UPDATE_ALL = 'lms.enrollment.update.all',
+  LMS_ENROLLMENT_UPDATE_OWN_DEPARTMENT = 'lms.enrollment.update.own_department',
   LMS_ENROLLMENT_DELETE_ALL = 'lms.enrollment.delete.all',
 
   LMS_EXAM_CREATE_ALL = 'lms.exam.create.all',
+  LMS_EXAM_CREATE_OWN_DEPARTMENT = 'lms.exam.create.own_department',
   LMS_EXAM_READ_ALL = 'lms.exam.read.all',
   LMS_EXAM_READ_OWN = 'lms.exam.read.own',
+  /** Referenced by PUT exams/:examId and POST exams/:examId/questions — also missing from this enum entirely until 2026-06-20. */
+  LMS_EXAM_UPDATE_ALL = 'lms.exam.update.all',
+  LMS_EXAM_UPDATE_OWN_DEPARTMENT = 'lms.exam.update.own_department',
   LMS_EXAM_ATTEMPT_OWN = 'lms.exam.attempt.own',
   LMS_EXAM_DELETE_ALL = 'lms.exam.delete.all',
 
   LMS_CERTIFICATE_READ_ALL = 'lms.certificate.read.all',
   LMS_CERTIFICATE_READ_OWN = 'lms.certificate.read.own',
   LMS_CERTIFICATE_ISSUE_ALL = 'lms.certificate.issue.all',
+  LMS_CERTIFICATE_ISSUE_OWN_DEPARTMENT = 'lms.certificate.issue.own_department',
 
   // ==================== RECRUITMENT ====================
   REC_POSTING_CREATE_ALL = 'rec.posting.create.all',

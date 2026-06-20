@@ -17,6 +17,18 @@ const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
 const router = (0, express_1.Router)();
+function getDeptScope(req, allPermission) {
+    const user = req.user;
+    const normRoles = (user.roles || []).map((r) => r.toLowerCase().replace(/[^a-z]/g, ''));
+    if (normRoles.includes('superadmin') || normRoles.includes('admin') || normRoles.includes('headofadmin')) {
+        return { scoped: false, departmentId: null };
+    }
+    const perms = new Set((user.permissions || []).map((p) => p.toLowerCase()));
+    if (perms.has(allPermission.toLowerCase())) {
+        return { scoped: false, departmentId: null };
+    }
+    return { scoped: true, departmentId: user.departmentId ?? null };
+}
 router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { page = 1, limit = 20, status, courseId, staffId } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
@@ -39,7 +51,7 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
     });
     ResponseFormatter_1.ResponseFormatter.paginated(res, rows, count, Number(page), Number(limit));
 }));
-router.post('/', AuthMiddleware_1.default.requirePermission('LMS.ENROLLMENT.CREATE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.post('/', AuthMiddleware_1.default.requirePermission('LMS.ENROLLMENT.CREATE.ALL', 'LMS.ENROLLMENT.CREATE.OWN_DEPARTMENT'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { courseId, staffId, notes } = req.body;
     if (!courseId || !staffId)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'courseId and staffId are required', 400);
@@ -48,6 +60,10 @@ router.post('/', AuthMiddleware_1.default.requirePermission('LMS.ENROLLMENT.CREA
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Course not found', 404);
     if (course.status === 'Cancelled')
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Cannot enroll in a cancelled course', 400);
+    const scope = getDeptScope(req, 'lms.enrollment.create.all');
+    if (scope.scoped && String(course.departmentId) !== String(scope.departmentId)) {
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'You can only enroll students into courses in your own department', 403);
+    }
     const existing = await Enrollment_model_1.Enrollment.findOne({ where: { courseId, staffId } });
     if (existing && existing.status !== 'Dropped')
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Already enrolled', 409);
@@ -101,10 +117,17 @@ router.patch('/:id/progress', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asy
     await enrollment.update(updates);
     ResponseFormatter_1.ResponseFormatter.success(res, enrollment, 'Progress updated');
 }));
-router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('LMS.ENROLLMENT.UPDATE.ALL'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.patch('/:id/status', AuthMiddleware_1.default.requirePermission('LMS.ENROLLMENT.UPDATE.ALL', 'LMS.ENROLLMENT.UPDATE.OWN_DEPARTMENT'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const enrollment = await Enrollment_model_1.Enrollment.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!enrollment)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Enrollment not found', 404);
+    const scope = getDeptScope(req, 'lms.enrollment.update.all');
+    if (scope.scoped) {
+        const course = await Course_model_1.Course.findByPk(enrollment.courseId);
+        if (!course || String(course.departmentId) !== String(scope.departmentId)) {
+            return ResponseFormatter_1.ResponseFormatter.error(res, 'You can only manage enrollments for courses in your own department', 403);
+        }
+    }
     const { status, notes } = req.body;
     if (!['Enrolled', 'InProgress', 'Completed', 'Failed', 'Dropped', 'OnHold'].includes(status))
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Invalid status', 400);
