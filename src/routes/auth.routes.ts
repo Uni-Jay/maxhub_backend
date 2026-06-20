@@ -130,10 +130,22 @@ router.patch(
 );
 
 /**
- * @route   POST /api/auth/change-password
- * @desc    Change current password
+ * @route   POST /api/auth/change-password/request-otp
+ * @desc    Verify currentPassword and email a confirmation code required to complete the change
  * @access  Private
- * @body    { currentPassword, newPassword, confirmPassword }
+ * @body    { currentPassword }
+ */
+router.post(
+  '/change-password/request-otp',
+  AuthMiddleware.verifyToken,
+  ErrorMiddleware.asyncHandler(AuthController.requestPasswordChangeOtp)
+);
+
+/**
+ * @route   POST /api/auth/change-password
+ * @desc    Change current password — requires the OTP from request-otp above
+ * @access  Private
+ * @body    { currentPassword, newPassword, otpCode }
  */
 router.post(
   '/change-password',

@@ -7,7 +7,7 @@ interface OTPVerificationAttributes {
     phone?: string;
     otpCode: string;
     otpHash: string;
-    type: '2FA' | 'EMAIL_VERIFICATION' | 'PASSWORD_RESET' | 'PHONE_VERIFICATION';
+    type: '2FA' | 'EMAIL_VERIFICATION' | 'PASSWORD_RESET' | 'PHONE_VERIFICATION' | 'PASSWORD_CHANGE';
     isUsed: boolean;
     usedAt?: Date;
     expiresAt: Date;

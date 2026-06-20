@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendMessage = sendMessage;
 exports.sendWelcomeEmail = sendWelcomeEmail;
+exports.sendPasswordChangedEmail = sendPasswordChangedEmail;
 exports.sendPromotionEmail = sendPromotionEmail;
 exports.sendBirthdayEmail = sendBirthdayEmail;
 exports.sendOTPEmail = sendOTPEmail;
@@ -177,6 +178,73 @@ async function sendWelcomeEmail(params) {
 </body>
 </html>`;
     return sendEmail(to, `Welcome to ${companyName} — Your Login Details`, html);
+}
+async function sendPasswordChangedEmail(params) {
+    const { to, firstName, newPassword } = params;
+    const companyName = process.env.COMPANY_NAME || 'MaxHub';
+    const loginUrl = process.env.FRONTEND_URL || 'https://www.maxhubng.company';
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your Password Was Changed</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f8;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f8;padding:32px 0;">
+    <tr><td align="center">
+      <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#059669 0%,#10b981 100%);padding:36px 40px;text-align:center;">
+            <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;">✅ Password Changed</h1>
+            <p style="margin:6px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">${companyName} ERP</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:40px;">
+            <p style="margin:0 0 6px;font-size:18px;font-weight:700;color:#111827;">Hello, ${firstName}!</p>
+            <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
+              Your password was just changed successfully. For your records, your new password is shown below.
+            </p>
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;margin-bottom:24px;">
+              <tr>
+                <td style="padding:20px 24px;text-align:center;">
+                  <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:1px;color:#059669;text-transform:uppercase;">New Password</p>
+                  <span style="font-family:monospace;font-size:18px;font-weight:700;color:#111827;background:#fff;border:1px solid #a7f3d0;border-radius:8px;padding:6px 16px;display:inline-block;">${newPassword}</span>
+                </td>
+              </tr>
+            </table>
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;">
+              <tr>
+                <td style="padding:14px 18px;font-size:12px;color:#92400e;line-height:1.5;">
+                  ⚠️ If you did not make this change, contact your administrator immediately.
+                </td>
+              </tr>
+            </table>
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+              <tr>
+                <td align="center">
+                  <a href="${loginUrl}" style="display:inline-block;background:linear-gradient(135deg,#059669,#10b981);color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 32px;border-radius:10px;">
+                    Sign In
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f9fafb;border-top:1px solid #f3f4f6;padding:18px 40px;text-align:center;">
+            <p style="margin:0;font-size:11px;color:#9ca3af;">
+              This is an automated email from ${companyName} ERP. Do not reply to this email.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+    return sendEmail(to, `Your password was changed — ${companyName}`, html);
 }
 async function sendPromotionEmail(params) {
     const { to, firstName, lastName, newDesignation, newDepartment, effectiveDate, approvalRemarks } = params;
@@ -351,6 +419,13 @@ async function sendOTPEmail(params) {
             subtitle: 'Use this code to complete your sign-in. It expires in 10 minutes.',
             warning: "If you didn't attempt to sign in, please secure your account immediately.",
             icon: '🔒',
+        },
+        PASSWORD_CHANGE: {
+            subject: `Confirm Your Password Change — ${companyName}`,
+            title: 'Confirm Password Change',
+            subtitle: 'Enter this code to confirm you want to change your password.',
+            warning: "If you didn't request this, please ignore this email and your password will stay unchanged.",
+            icon: '🔐',
         },
     };
     const { subject, title, subtitle, warning, icon } = config[type];

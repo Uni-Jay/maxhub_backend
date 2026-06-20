@@ -10,6 +10,9 @@ const AuthenticationService_1 = __importDefault(require("../services/Authenticat
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const User_model_1 = require("../models/User.model");
 const Session_model_1 = require("../models/Session.model");
+const OTPVerification_model_1 = require("../models/OTPVerification.model");
+const OTPService_1 = __importDefault(require("../services/OTPService"));
+const CommunicationService_1 = require("../services/CommunicationService");
 class AuthController {
     static async login(req, res, next) {
         try {
@@ -318,16 +321,59 @@ class AuthController {
             next(error);
         }
     }
-    static async changePassword(req, res, next) {
+    static async requestPasswordChangeOtp(req, res, next) {
         try {
-            const { currentPassword, newPassword } = req.body;
+            const { currentPassword } = req.body;
             const userId = req.user?.id;
             if (!userId) {
                 ResponseFormatter_1.ResponseFormatter.unauthorized(res, 'Authentication required');
                 return;
             }
-            if (!currentPassword || !newPassword) {
-                ResponseFormatter_1.ResponseFormatter.error(res, 'currentPassword and newPassword are required', 400);
+            if (!currentPassword) {
+                ResponseFormatter_1.ResponseFormatter.error(res, 'currentPassword is required', 400);
+                return;
+            }
+            const user = await User_model_1.User.findByPk(BigInt(userId));
+            if (!user) {
+                ResponseFormatter_1.ResponseFormatter.notFound(res, 'User not found');
+                return;
+            }
+            const isMatch = await bcrypt_1.default.compare(currentPassword, user.passwordHash);
+            if (!isMatch) {
+                ResponseFormatter_1.ResponseFormatter.error(res, 'Current password is incorrect', 401);
+                return;
+            }
+            await OTPVerification_model_1.OTPVerification.update({ isUsed: true, usedAt: new Date() }, { where: { userId: user.id, type: 'PASSWORD_CHANGE', isUsed: false } });
+            const otpCode = OTPService_1.default.generateOTPCode();
+            const otpHash = await OTPService_1.default.hashOTP(otpCode);
+            await OTPVerification_model_1.OTPVerification.create({
+                userId: user.id,
+                email: user.email,
+                otpCode,
+                otpHash,
+                type: 'PASSWORD_CHANGE',
+                expiresAt: OTPService_1.default.getOTPExpirationTime(),
+                isUsed: false,
+                attempts: 0,
+            });
+            (0, CommunicationService_1.sendOTPEmail)({ to: user.email, firstName: user.firstName, otpCode, type: 'PASSWORD_CHANGE' })
+                .catch(err => console.error('[Auth] Password-change OTP email failed:', err));
+            ResponseFormatter_1.ResponseFormatter.success(res, null, 'A confirmation code has been sent to your email');
+        }
+        catch (error) {
+            next(error);
+        }
+    }
+    static async changePassword(req, res, next) {
+        try {
+            const { currentPassword, newPassword, otpCode } = req.body;
+            const userId = req.user?.id;
+            if (!userId) {
+                ResponseFormatter_1.ResponseFormatter.unauthorized(res, 'Authentication required');
+                return;
+            }
+            if (!currentPassword || !newPassword || !otpCode) {
+                ResponseFormatter_1.ResponseFormatter.error(res, 'currentPassword, newPassword, and otpCode are required', 400);
                 return;
             }
             if (newPassword.length < 8) {
@@ -344,8 +390,28 @@ class AuthController {
                 ResponseFormatter_1.ResponseFormatter.error(res, 'Current password is incorrect', 401);
                 return;
             }
+            const otp = await OTPVerification_model_1.OTPVerification.findOne({
+                where: { userId: user.id, type: 'PASSWORD_CHANGE', isUsed: false },
+                order: [['createdAt', 'DESC']],
+            });
+            let otpValid = false;
+            if (otp && otp.expiresAt >= new Date() && otp.attempts < 5) {
+                otpValid = await OTPService_1.default.verifyOTP(otpCode, otp.otpHash);
+                if (otpValid) {
+                    await otp.update({ isUsed: true, usedAt: new Date() });
+                }
+                else {
+                    await otp.increment('attempts');
+                }
+            }
+            if (!otpValid) {
+                ResponseFormatter_1.ResponseFormatter.error(res, 'Invalid or expired confirmation code', 401);
+                return;
+            }
             const hash = await bcrypt_1.default.hash(newPassword, 12);
             await user.update({ passwordHash: hash, mustChangePassword: false });
+            (0, CommunicationService_1.sendPasswordChangedEmail)({ to: user.email, firstName: user.firstName, newPassword })
+                .catch(err => console.error('[Auth] Password-changed confirmation email failed:', err));
             ResponseFormatter_1.ResponseFormatter.success(res, null, 'Password changed successfully');
         }
         catch (error) {

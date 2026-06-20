@@ -91,7 +91,8 @@ class AuthenticationService {
             where: { userId: user.id, isEnabled: true },
         });
         const mfaLoginEnabled = process.env.ENABLE_2FA_LOGIN !== 'false';
-        const requiresMFA = mfaLoginEnabled && !!twoFactorAuth;
+        const isDemoAccount = user.email.toLowerCase().endsWith('@maxhub.com');
+        const requiresMFA = mfaLoginEnabled && (!!twoFactorAuth || !isDemoAccount);
         const accessToken = JWTService_1.default.generateAccessToken(authenticatedUser);
         const refreshToken = JWTService_1.default.generateRefreshToken(authenticatedUser);
         const session = await Session_model_1.Session.create({
@@ -375,8 +376,6 @@ class AuthenticationService {
         const twoFA = await TwoFactorAuth_model_1.TwoFactorAuth.findOne({
             where: { userId: user.id, isEnabled: true },
         });
-        if (!twoFA)
-            throw new ErrorHandler_1.UnauthorizedError('2FA not configured for this account');
         let isValid = false;
         const otp = await OTPVerification_model_1.OTPVerification.findOne({
             where: { userId: user.id, type: '2FA', isUsed: false },
@@ -393,7 +392,8 @@ class AuthenticationService {
         }
         if (!isValid)
             throw new ErrorHandler_1.UnauthorizedError('Invalid verification code');
-        await twoFA.update({ lastUsedAt: new Date() });
+        if (twoFA)
+            await twoFA.update({ lastUsedAt: new Date() });
         const roles = await user.getRoles({
             include: [{ model: Permission_model_1.Permission, as: 'permissions' }],
         });

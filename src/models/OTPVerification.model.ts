@@ -9,7 +9,7 @@ interface OTPVerificationAttributes {
   phone?: string;
   otpCode: string;
   otpHash: string;
-  type: '2FA' | 'EMAIL_VERIFICATION' | 'PASSWORD_RESET' | 'PHONE_VERIFICATION';
+  type: '2FA' | 'EMAIL_VERIFICATION' | 'PASSWORD_RESET' | 'PHONE_VERIFICATION' | 'PASSWORD_CHANGE';
   isUsed: boolean;
   usedAt?: Date;
   expiresAt: Date;
@@ -80,7 +80,7 @@ export class OTPVerification extends Model<OTPVerificationAttributes, OTPVerific
           comment: 'Bcrypt hashed OTP for storage',
         },
         type: {
-          type: DataTypes.ENUM('2FA', 'EMAIL_VERIFICATION', 'PASSWORD_RESET', 'PHONE_VERIFICATION'),
+          type: DataTypes.ENUM('2FA', 'EMAIL_VERIFICATION', 'PASSWORD_RESET', 'PHONE_VERIFICATION', 'PASSWORD_CHANGE'),
           allowNull: false,
           comment: 'Type of OTP verification',
         },

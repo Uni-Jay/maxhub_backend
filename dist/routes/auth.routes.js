@@ -52,6 +52,7 @@ router.post('/2fa/verify-login', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(
 router.post('/logout', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AuthController_1.default.logout));
 router.get('/profile', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AuthController_1.default.getProfile));
 router.patch('/profile', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AuthController_1.default.updateProfile));
+router.post('/change-password/request-otp', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AuthController_1.default.requestPasswordChangeOtp));
 router.post('/change-password', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AuthController_1.default.changePassword));
 router.post('/verify-email', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AuthController_1.default.verifyEmail));
 router.post('/2fa/setup', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AuthController_1.default.setup2FA));

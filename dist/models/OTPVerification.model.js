@@ -44,7 +44,7 @@ class OTPVerification extends sequelize_1.Model {
                 comment: 'Bcrypt hashed OTP for storage',
             },
             type: {
-                type: sequelize_1.DataTypes.ENUM('2FA', 'EMAIL_VERIFICATION', 'PASSWORD_RESET', 'PHONE_VERIFICATION'),
+                type: sequelize_1.DataTypes.ENUM('2FA', 'EMAIL_VERIFICATION', 'PASSWORD_RESET', 'PHONE_VERIFICATION', 'PASSWORD_CHANGE'),
                 allowNull: false,
                 comment: 'Type of OTP verification',
             },

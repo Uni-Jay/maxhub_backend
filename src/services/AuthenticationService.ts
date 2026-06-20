@@ -142,9 +142,14 @@ export class AuthenticationService {
       where: { userId: user.id, isEnabled: true },
     });
 
-    // Honour ENABLE_2FA_LOGIN=false env var for test/staging bypass
+    // Honour ENABLE_2FA_LOGIN=false env var for test/staging bypass.
+    // Every real account is now OTP-gated on every login regardless of
+    // whether they ever set up 2FA — only the @maxhub.com demo/test
+    // accounts (used for development) are exempt unless they explicitly
+    // enabled 2FA themselves.
     const mfaLoginEnabled = process.env.ENABLE_2FA_LOGIN !== 'false';
-    const requiresMFA = mfaLoginEnabled && !!twoFactorAuth;
+    const isDemoAccount = user.email.toLowerCase().endsWith('@maxhub.com');
+    const requiresMFA = mfaLoginEnabled && (!!twoFactorAuth || !isDemoAccount);
 
     // Generate tokens
     const accessToken = JWTService.generateAccessToken(authenticatedUser);
@@ -529,10 +534,12 @@ export class AuthenticationService {
     });
     if (!user) throw new NotFoundError('User not found');
 
+    // Not required to exist — login-time OTP is now mandatory for every
+    // real account regardless of whether they ever formally set up 2FA via
+    // TwoFactorAuth; this record only updates lastUsedAt if/when it exists.
     const twoFA = await TwoFactorAuth.findOne({
       where: { userId: user.id, isEnabled: true },
     });
-    if (!twoFA) throw new UnauthorizedError('2FA not configured for this account');
 
     // Login always verifies against the emailed OTP, regardless of the
     // method (TOTP/SMS/EMAIL) the user originally configured at setup.
@@ -553,7 +560,7 @@ export class AuthenticationService {
 
     if (!isValid) throw new UnauthorizedError('Invalid verification code');
 
-    await twoFA.update({ lastUsedAt: new Date() });
+    if (twoFA) await twoFA.update({ lastUsedAt: new Date() });
 
     // Re-build user payload and issue fresh tokens
     const roles = await user.getRoles({

@@ -6,6 +6,9 @@ import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorHandler } from '@utils/ErrorHandler';
 import { User } from '@models/User.model';
 import { Session } from '@models/Session.model';
+import { OTPVerification } from '@models/OTPVerification.model';
+import OTPService from '@services/OTPService';
+import { sendOTPEmail, sendPasswordChangedEmail } from '@services/CommunicationService';
 
 export class AuthController {
   /**
@@ -431,12 +434,70 @@ export class AuthController {
   }
 
   /**
-   * Change password
+   * Request an OTP to confirm a password change.
+   * POST /api/auth/change-password/request-otp
+   * Verifies currentPassword first so a stolen session token alone can't spam OTPs.
+   */
+  static async requestPasswordChangeOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { currentPassword } = req.body;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        ResponseFormatter.unauthorized(res, 'Authentication required');
+        return;
+      }
+      if (!currentPassword) {
+        ResponseFormatter.error(res, 'currentPassword is required', 400);
+        return;
+      }
+
+      const user = await User.findByPk(BigInt(userId));
+      if (!user) {
+        ResponseFormatter.notFound(res, 'User not found');
+        return;
+      }
+
+      const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isMatch) {
+        ResponseFormatter.error(res, 'Current password is incorrect', 401);
+        return;
+      }
+
+      await OTPVerification.update(
+        { isUsed: true, usedAt: new Date() },
+        { where: { userId: user.id, type: 'PASSWORD_CHANGE', isUsed: false } }
+      );
+
+      const otpCode = OTPService.generateOTPCode();
+      const otpHash = await OTPService.hashOTP(otpCode);
+      await OTPVerification.create({
+        userId: user.id,
+        email: user.email,
+        otpCode,
+        otpHash,
+        type: 'PASSWORD_CHANGE',
+        expiresAt: OTPService.getOTPExpirationTime(),
+        isUsed: false,
+        attempts: 0,
+      } as any);
+
+      sendOTPEmail({ to: user.email, firstName: user.firstName, otpCode, type: 'PASSWORD_CHANGE' })
+        .catch(err => console.error('[Auth] Password-change OTP email failed:', err));
+
+      ResponseFormatter.success(res, null, 'A confirmation code has been sent to your email');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Change password — requires the OTP requested above.
    * POST /api/auth/change-password
    */
   static async changePassword(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { currentPassword, newPassword } = req.body;
+      const { currentPassword, newPassword, otpCode } = req.body;
       const userId = req.user?.id;
 
       if (!userId) {
@@ -444,8 +505,8 @@ export class AuthController {
         return;
       }
 
-      if (!currentPassword || !newPassword) {
-        ResponseFormatter.error(res, 'currentPassword and newPassword are required', 400);
+      if (!currentPassword || !newPassword || !otpCode) {
+        ResponseFormatter.error(res, 'currentPassword, newPassword, and otpCode are required', 400);
         return;
       }
 
@@ -466,8 +527,29 @@ export class AuthController {
         return;
       }
 
+      const otp = await OTPVerification.findOne({
+        where: { userId: user.id, type: 'PASSWORD_CHANGE', isUsed: false },
+        order: [['createdAt', 'DESC']],
+      });
+      let otpValid = false;
+      if (otp && otp.expiresAt >= new Date() && otp.attempts < 5) {
+        otpValid = await OTPService.verifyOTP(otpCode, otp.otpHash);
+        if (otpValid) {
+          await otp.update({ isUsed: true, usedAt: new Date() });
+        } else {
+          await otp.increment('attempts');
+        }
+      }
+      if (!otpValid) {
+        ResponseFormatter.error(res, 'Invalid or expired confirmation code', 401);
+        return;
+      }
+
       const hash = await bcrypt.hash(newPassword, 12);
       await user.update({ passwordHash: hash, mustChangePassword: false });
+
+      sendPasswordChangedEmail({ to: user.email, firstName: user.firstName, newPassword })
+        .catch(err => console.error('[Auth] Password-changed confirmation email failed:', err));
 
       ResponseFormatter.success(res, null, 'Password changed successfully');
     } catch (error) {

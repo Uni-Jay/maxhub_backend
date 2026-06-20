@@ -16,6 +16,11 @@ export declare function sendWelcomeEmail(params: {
     businessUnit?: string;
     department?: string;
 }): Promise<boolean>;
+export declare function sendPasswordChangedEmail(params: {
+    to: string;
+    firstName: string;
+    newPassword: string;
+}): Promise<boolean>;
 export declare function sendPromotionEmail(params: {
     to: string;
     firstName: string;
@@ -34,7 +39,7 @@ export declare function sendOTPEmail(params: {
     to: string;
     firstName: string;
     otpCode: string;
-    type: 'PASSWORD_RESET' | 'EMAIL_VERIFICATION' | '2FA';
+    type: 'PASSWORD_RESET' | 'EMAIL_VERIFICATION' | '2FA' | 'PASSWORD_CHANGE';
     expiryMinutes?: number;
 }): Promise<boolean>;
 export declare function buildWeeklyMessage(channel: 'Email' | 'SMS' | 'WhatsApp', recipient: MessageRecipient, companyName: string): string;

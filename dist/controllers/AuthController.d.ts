@@ -18,6 +18,7 @@ export declare class AuthController {
     static verify2FALogin(req: Request, res: Response, next: NextFunction): Promise<void>;
     static getProfile(req: Request, res: Response, next: NextFunction): Promise<void>;
     static updateProfile(req: Request, res: Response, next: NextFunction): Promise<void>;
+    static requestPasswordChangeOtp(req: Request, res: Response, next: NextFunction): Promise<void>;
     static changePassword(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 export default AuthController;
