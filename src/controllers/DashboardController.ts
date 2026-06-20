@@ -732,7 +732,7 @@ export class DashboardController {
       const attendanceScope = scopedStaffIds ? { staffId: { [Op.in]: scopedStaffIds.length ? scopedStaffIds : [-1] } } : {};
       const projectWhere: Record<string, unknown> = { status: 'Active' };
 
-      const [totalStaff, pendingApprovals, todayPresent, todayTotal, activeProjects, pendingOvertime, pendingWeeklyReports] = await Promise.all([
+      const [totalStaff, pendingApprovals, todayPresent, todayTotal, activeProjects, pendingOvertime, pendingWeeklyReports, studentCount] = await Promise.all([
         Staff.count({ where: staffWhere }),
         LeaveRequest.count({ where: scopedStaffIds ? { status: 'Pending', ...attendanceScope } : { status: 'Pending' } }),
         Attendance.count({ where: { ...attendanceScope, attendanceDate: { [Op.between]: [startOfDay, endOfDay] }, status: { [Op.in]: ['Present', 'Late'] } } }),
@@ -740,11 +740,15 @@ export class DashboardController {
         Project.count({ where: projectWhere }),
         Overtime.count({ where: scopedStaffIds ? { status: 'Pending', ...attendanceScope } : { status: 'Pending' } }),
         WeeklyReport.count({ where: scopedStaffIds ? { approvalStatus: 'Pending', ...attendanceScope } : { approvalStatus: 'Pending' } }),
+        // Company-wide — businessUnit is a free-text Staff field with no clean
+        // join to StudentProfile.departmentId, so this isn't scoped the way
+        // staff/attendance above are for a single-business-unit Admin.
+        StudentProfile.count(),
       ]);
 
       const averageAttendance = todayTotal > 0 ? Math.round((todayPresent / todayTotal) * 1000) / 10 : 0;
 
-      ResponseFormatter.success(res, { totalStaff, pendingApprovals, averageAttendance, activeProjects, pendingOvertime, pendingWeeklyReports }, 'Dashboard statistics retrieved');
+      ResponseFormatter.success(res, { totalStaff, pendingApprovals, averageAttendance, activeProjects, pendingOvertime, pendingWeeklyReports, studentCount }, 'Dashboard statistics retrieved');
     }
   );
 
