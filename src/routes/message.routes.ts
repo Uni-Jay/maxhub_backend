@@ -19,6 +19,20 @@ import { emitToUser } from '../socket/ChatSocket';
 
 const router = Router();
 
+// A Direct conversation's `title` column is one shared string, set once at
+// creation to "the other person's name" from whoever happened to create
+// it — so the OTHER participant, viewing the exact same stored title, would
+// see their own name instead of who they're actually talking to. Every
+// response that returns a Direct conversation needs its title recomputed
+// per-viewer from the participant list; Group/Team/Channel titles are real
+// shared names and pass through unchanged.
+function viewerTitle(conv: { id: any; title: string; conversationType: string }, participants: any[], viewerUserId: number): string {
+  if (conv.conversationType !== 'Direct') return conv.title;
+  const other = participants.find((p: any) => String(p.userId) !== String(viewerUserId));
+  const otherUser = other?.user;
+  return otherUser ? `${otherUser.firstName} ${otherUser.lastName}`.trim() : conv.title;
+}
+
 // ─── Chat file upload (images, docs, audio, video) ───────────────────────────
 const CHAT_UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'chat');
 const chatStorage = multer.diskStorage({
@@ -141,13 +155,16 @@ router.get('/conversations', ErrorMiddleware.asyncHandler(async (req: Request, r
       include: [{ model: User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'avatar', 'email'] }],
     });
 
+    const allParticipantsJson = allParticipants.map((p: any) => p.toJSON());
+
     return {
       ...conv.toJSON(),
+      title: viewerTitle(conv, allParticipantsJson, user.id),
       lastMessage: lastMsg?.toJSON() ?? null,
       unreadCount,
       myRole: (myParticipation as any)?.role ?? 'Member',
       isMuted: (myParticipation as any)?.isMuted ?? false,
-      participants: allParticipants,
+      participants: allParticipantsJson,
     };
   }));
 
@@ -223,11 +240,19 @@ router.post('/conversations/find-or-create', ErrorMiddleware.asyncHandler(async 
         where: { conversationId: (existing as any).id },
         include: [{ model: User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'avatar', 'email'] }],
       });
-      return ResponseFormatter.success(res, { ...existing.toJSON(), participants, isNew: false });
+      const participantsJson = participants.map((p: any) => p.toJSON());
+      return ResponseFormatter.success(res, {
+        ...existing.toJSON(),
+        title: viewerTitle(existing.toJSON() as any, participantsJson, user.id),
+        participants: participantsJson,
+        isNew: false,
+      });
     }
   }
 
-  // Create new DM
+  // Create new DM — stored title is irrelevant for Direct conversations
+  // beyond satisfying the NOT NULL column; every response recomputes it
+  // per-viewer via viewerTitle() above.
   const otherUser = await User.findByPk(otherUserId, { attributes: ['id', 'firstName', 'lastName'] });
   if (!otherUser) return ResponseFormatter.error(res, 'User not found', 404);
 
@@ -266,7 +291,13 @@ router.post('/conversations/find-or-create', ErrorMiddleware.asyncHandler(async 
     emitToUser(io, otherUserId, 'chat:join', { conversationId: (conversation as any).id });
   }
 
-  ResponseFormatter.success(res, { ...conversation.toJSON(), participants, isNew: true }, 'Direct message created', 201);
+  const newParticipantsJson = participants.map((p: any) => p.toJSON());
+  ResponseFormatter.success(res, {
+    ...conversation.toJSON(),
+    title: viewerTitle(conversation.toJSON() as any, newParticipantsJson, user.id),
+    participants: newParticipantsJson,
+    isNew: true,
+  }, 'Direct message created', 201);
 }));
 
 // GET /api/messages/conversations/:id
@@ -286,8 +317,13 @@ router.get('/conversations/:id', ErrorMiddleware.asyncHandler(async (req: Reques
     where: { conversationId: (conversation as any).id },
     include: [{ model: User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'] }],
   });
+  const participantsJson = participants.map((p: any) => p.toJSON());
 
-  ResponseFormatter.success(res, { ...conversation.toJSON(), participants });
+  ResponseFormatter.success(res, {
+    ...conversation.toJSON(),
+    title: viewerTitle(conversation.toJSON() as any, participantsJson, user.id),
+    participants: participantsJson,
+  });
 }));
 
 // PATCH /api/messages/conversations/:id/archive

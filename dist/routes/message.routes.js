@@ -54,6 +54,13 @@ const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = require("../middleware/AuthMiddleware");
 const ChatSocket_1 = require("../socket/ChatSocket");
 const router = (0, express_1.Router)();
+function viewerTitle(conv, participants, viewerUserId) {
+    if (conv.conversationType !== 'Direct')
+        return conv.title;
+    const other = participants.find((p) => String(p.userId) !== String(viewerUserId));
+    const otherUser = other?.user;
+    return otherUser ? `${otherUser.firstName} ${otherUser.lastName}`.trim() : conv.title;
+}
 const CHAT_UPLOAD_DIR = path_1.default.join(process.cwd(), 'uploads', 'chat');
 const chatStorage = multer_1.default.diskStorage({
     destination: (_req, _file, cb) => { fs_1.default.mkdirSync(CHAT_UPLOAD_DIR, { recursive: true }); cb(null, CHAT_UPLOAD_DIR); },
@@ -147,13 +154,15 @@ router.get('/conversations', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asyn
             where: { conversationId: conv.id },
             include: [{ model: User_model_1.User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'avatar', 'email'] }],
         });
+        const allParticipantsJson = allParticipants.map((p) => p.toJSON());
         return {
             ...conv.toJSON(),
+            title: viewerTitle(conv, allParticipantsJson, user.id),
             lastMessage: lastMsg?.toJSON() ?? null,
             unreadCount,
             myRole: myParticipation?.role ?? 'Member',
             isMuted: myParticipation?.isMuted ?? false,
-            participants: allParticipants,
+            participants: allParticipantsJson,
         };
     }));
     ResponseFormatter_1.ResponseFormatter.success(res, enriched);
@@ -211,7 +220,13 @@ router.post('/conversations/find-or-create', ErrorMiddleware_1.ErrorMiddleware.a
                 where: { conversationId: existing.id },
                 include: [{ model: User_model_1.User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'avatar', 'email'] }],
             });
-            return ResponseFormatter_1.ResponseFormatter.success(res, { ...existing.toJSON(), participants, isNew: false });
+            const participantsJson = participants.map((p) => p.toJSON());
+            return ResponseFormatter_1.ResponseFormatter.success(res, {
+                ...existing.toJSON(),
+                title: viewerTitle(existing.toJSON(), participantsJson, user.id),
+                participants: participantsJson,
+                isNew: false,
+            });
         }
     }
     const otherUser = await User_model_1.User.findByPk(otherUserId, { attributes: ['id', 'firstName', 'lastName'] });
@@ -241,7 +256,13 @@ router.post('/conversations/find-or-create', ErrorMiddleware_1.ErrorMiddleware.a
         (0, ChatSocket_1.emitToUser)(io, user.id, 'chat:join', { conversationId: conversation.id });
         (0, ChatSocket_1.emitToUser)(io, otherUserId, 'chat:join', { conversationId: conversation.id });
     }
-    ResponseFormatter_1.ResponseFormatter.success(res, { ...conversation.toJSON(), participants, isNew: true }, 'Direct message created', 201);
+    const newParticipantsJson = participants.map((p) => p.toJSON());
+    ResponseFormatter_1.ResponseFormatter.success(res, {
+        ...conversation.toJSON(),
+        title: viewerTitle(conversation.toJSON(), newParticipantsJson, user.id),
+        participants: newParticipantsJson,
+        isNew: true,
+    }, 'Direct message created', 201);
 }));
 router.get('/conversations/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
@@ -259,7 +280,12 @@ router.get('/conversations/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(
         where: { conversationId: conversation.id },
         include: [{ model: User_model_1.User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'] }],
     });
-    ResponseFormatter_1.ResponseFormatter.success(res, { ...conversation.toJSON(), participants });
+    const participantsJson = participants.map((p) => p.toJSON());
+    ResponseFormatter_1.ResponseFormatter.success(res, {
+        ...conversation.toJSON(),
+        title: viewerTitle(conversation.toJSON(), participantsJson, user.id),
+        participants: participantsJson,
+    });
 }));
 router.patch('/conversations/:id/archive', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const conversation = await Conversation_model_1.Conversation.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
