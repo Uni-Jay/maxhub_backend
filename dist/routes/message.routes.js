@@ -174,12 +174,11 @@ router.post('/conversations', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asy
     const { title, conversationType, participantUserIds, description, image } = req.body;
     if (!title || !conversationType)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'title and conversationType are required', 400);
-    const count = await Conversation_model_1.Conversation.count();
-    const conversationCode = `CONV-${String(count + 1).padStart(6, '0')}`;
     const conversation = await Conversation_model_1.Conversation.create({
-        uuid: (0, uuid_1.v4)(), conversationCode, title, conversationType,
+        uuid: (0, uuid_1.v4)(), conversationCode: `TEMP-${(0, uuid_1.v4)()}`, title, conversationType,
         createdById: user.id, isArchived: false,
     });
+    await conversation.update({ conversationCode: `CONV-${String(conversation.id).padStart(6, '0')}` });
     const allParticipants = [...new Set([user.id, ...(participantUserIds || [])])];
     await Promise.all(allParticipants.map((uid, idx) => ConversationParticipant_model_1.ConversationParticipant.create({
         uuid: (0, uuid_1.v4)(),
@@ -234,13 +233,12 @@ router.post('/conversations/find-or-create', ErrorMiddleware_1.ErrorMiddleware.a
     const otherUser = await User_model_1.User.findByPk(otherUserId, { attributes: ['id', 'firstName', 'lastName'] });
     if (!otherUser)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'User not found', 404);
-    const count = await Conversation_model_1.Conversation.count();
-    const conversationCode = `CONV-${String(count + 1).padStart(6, '0')}`;
     const title = `${otherUser.firstName} ${otherUser.lastName}`;
     const conversation = await Conversation_model_1.Conversation.create({
-        uuid: (0, uuid_1.v4)(), conversationCode, title, conversationType: 'Direct',
+        uuid: (0, uuid_1.v4)(), conversationCode: `TEMP-${(0, uuid_1.v4)()}`, title, conversationType: 'Direct',
         createdById: user.id, isArchived: false,
     });
+    await conversation.update({ conversationCode: `CONV-${String(conversation.id).padStart(6, '0')}` });
     await Promise.all([user.id, otherUserId].map((uid, idx) => ConversationParticipant_model_1.ConversationParticipant.create({
         uuid: (0, uuid_1.v4)(),
         conversationId: conversation.id,

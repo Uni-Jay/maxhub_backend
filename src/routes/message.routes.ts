@@ -179,13 +179,18 @@ router.post('/conversations', ErrorMiddleware.asyncHandler(async (req: Request, 
   const { title, conversationType, participantUserIds, description, image } = req.body;
   if (!title || !conversationType) return ResponseFormatter.error(res, 'title and conversationType are required', 400);
 
-  const count = await Conversation.count();
-  const conversationCode = `CONV-${String(count + 1).padStart(6, '0')}`;
-
+  // count()-then-create() raced: two requests landing in the same instant
+  // both count N existing rows and both compute "CONV-(N+1)", so the second
+  // create() hits the conversationCode unique constraint and 409s — even
+  // though nothing about the request was actually wrong. Creating with a
+  // collision-proof placeholder first and renaming to the row's own
+  // (DB-assigned, inherently unique) id afterward removes the race
+  // entirely.
   const conversation = await Conversation.create({
-    uuid: uuidv4(), conversationCode, title, conversationType,
+    uuid: uuidv4(), conversationCode: `TEMP-${uuidv4()}`, title, conversationType,
     createdById: user.id, isArchived: false,
   } as any);
+  await conversation.update({ conversationCode: `CONV-${String((conversation as any).id).padStart(6, '0')}` });
 
   const allParticipants = [...new Set([user.id, ...(participantUserIds || [])])];
   await Promise.all(allParticipants.map((uid: number, idx: number) =>
@@ -258,14 +263,19 @@ router.post('/conversations/find-or-create', ErrorMiddleware.asyncHandler(async 
   const otherUser = await User.findByPk(otherUserId, { attributes: ['id', 'firstName', 'lastName'] });
   if (!otherUser) return ResponseFormatter.error(res, 'User not found', 404);
 
-  const count = await Conversation.count();
-  const conversationCode = `CONV-${String(count + 1).padStart(6, '0')}`;
   const title = `${(otherUser as any).firstName} ${(otherUser as any).lastName}`;
 
+  // Same count()-then-create() race as the group-create route above — two
+  // find-or-create calls landing close together (e.g. a double-click, or a
+  // retry after the first request's connection dropped) would both fail
+  // to find an existing DM yet, both compute the same next conversationCode,
+  // and the second create() 409s on the unique constraint. Generating the
+  // code from the row's own id after creation is race-free.
   const conversation = await Conversation.create({
-    uuid: uuidv4(), conversationCode, title, conversationType: 'Direct',
+    uuid: uuidv4(), conversationCode: `TEMP-${uuidv4()}`, title, conversationType: 'Direct',
     createdById: user.id, isArchived: false,
   } as any);
+  await conversation.update({ conversationCode: `CONV-${String((conversation as any).id).padStart(6, '0')}` });
 
   await Promise.all([user.id, otherUserId].map((uid: number, idx: number) =>
     ConversationParticipant.create({
