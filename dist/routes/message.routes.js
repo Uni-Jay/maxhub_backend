@@ -287,6 +287,29 @@ router.get('/conversations/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(
         participants: participantsJson,
     });
 }));
+router.patch('/conversations/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const user = req.user;
+    const conversation = await Conversation_model_1.Conversation.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
+    if (!conversation)
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'Conversation not found', 404);
+    if (conversation.conversationType === 'Direct') {
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'Direct conversations cannot be renamed', 400);
+    }
+    const isParticipant = await ConversationParticipant_model_1.ConversationParticipant.findOne({
+        where: { conversationId: conversation.id, userId: user.id },
+    });
+    if (!isParticipant)
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'Access denied', 403);
+    const { title } = req.body;
+    if (!title || !title.trim())
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'title is required', 400);
+    await conversation.update({ title: title.trim() });
+    const io = req.app?.get('io');
+    if (io) {
+        io.to(`conv:${conversation.id}`).emit('chat:group_updated', { conversationId: conversation.id, title: title.trim() });
+    }
+    ResponseFormatter_1.ResponseFormatter.success(res, conversation, 'Group updated');
+}));
 router.patch('/conversations/:id/archive', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const conversation = await Conversation_model_1.Conversation.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!conversation)
@@ -388,14 +411,14 @@ router.post('/conversations/:id/messages', ErrorMiddleware_1.ErrorMiddleware.asy
     const conversation = await Conversation_model_1.Conversation.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!conversation)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Conversation not found', 404);
-    const { messageText, messageType, replyToMessageId, attachmentUrl, attachmentType } = req.body;
+    const { messageText, messageType, replyToMessageId, attachmentUrl, attachmentType, attachmentName, attachmentSize, attachmentDuration } = req.body;
     if (!messageText)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'messageText is required', 400);
     const message = await Message_model_1.Message.create({
         uuid: (0, uuid_1.v4)(), conversationId: conversation.id, senderUserId: user.id,
         messageText, messageType: messageType || 'Text',
-        replyToMessageId, attachmentUrl, attachmentType,
-        isEdited: false, isPinned: false, reactions: {},
+        replyToMessageId, attachmentUrl, attachmentType, attachmentName, attachmentSize, attachmentDuration,
+        isEdited: false, isPinned: false, reactions: {}, starredByUserIds: [],
     });
     await conversation.update({ lastMessageAt: new Date() });
     const full = await Message_model_1.Message.findByPk(message.id, {
@@ -480,6 +503,39 @@ router.patch('/conversations/:convId/messages/:msgId/pin', ErrorMiddleware_1.Err
     }
     ResponseFormatter_1.ResponseFormatter.success(res, message, 'Pin status toggled');
 }));
+router.patch('/conversations/:convId/messages/:msgId/star', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const user = req.user;
+    const message = await Message_model_1.Message.findOne({
+        where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.msgId) },
+    });
+    if (!message)
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'Message not found', 404);
+    const existing = message.starredByUserIds || [];
+    const isStarred = existing.includes(user.id);
+    const updated = isStarred ? existing.filter((id) => id !== user.id) : [...existing, user.id];
+    await message.update({ starredByUserIds: updated });
+    ResponseFormatter_1.ResponseFormatter.success(res, { messageId: message.id, isStarred: !isStarred }, 'Star status toggled');
+}));
+router.get('/starred', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const user = req.user;
+    const participations = await ConversationParticipant_model_1.ConversationParticipant.findAll({
+        where: { userId: user.id },
+        attributes: ['conversationId'],
+    });
+    const convIds = participations.map((p) => p.conversationId);
+    const starred = await Message_model_1.Message.findAll({
+        where: {
+            conversationId: { [sequelize_1.Op.in]: convIds },
+            starredByUserIds: { [sequelize_1.Op.contains]: [user.id] },
+        },
+        include: [
+            { model: User_model_1.User, as: 'sender', attributes: ['id', 'firstName', 'lastName', 'avatar'] },
+            { model: Conversation_model_1.Conversation, as: 'conversation', attributes: ['id', 'title', 'conversationType'] },
+        ],
+        order: [['createdAt', 'DESC']],
+    });
+    ResponseFormatter_1.ResponseFormatter.success(res, starred);
+}));
 router.patch('/conversations/:convId/messages/:msgId/react', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
     const { emoji } = req.body;
@@ -559,9 +615,10 @@ router.post('/conversations/:convId/read', ErrorMiddleware_1.ErrorMiddleware.asy
         where: { messageId: msg.id, userId: user.id },
         defaults: { messageId: msg.id, userId: user.id, readAt: new Date() },
     })));
+    await ConversationParticipant_model_1.ConversationParticipant.update({ lastSeenAt: new Date() }, { where: { conversationId, userId: user.id } });
     const io = req.app?.get('io');
     if (io) {
-        io.to(`conv:${conversationId}`).emit('chat:read_receipt', { conversationId, readBy: user.id });
+        io.to(`conv:${conversationId}`).emit('chat:read_receipt', { conversationId, readBy: user.id, readAt: new Date().toISOString() });
     }
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Marked as read');
 }));
@@ -613,7 +670,7 @@ router.get('/search', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req,
         },
         include: [
             { model: User_model_1.User, as: 'sender', attributes: ['id', 'firstName', 'lastName', 'avatar'] },
-            { model: Conversation_model_1.Conversation, attributes: ['id', 'title', 'conversationType'] },
+            { model: Conversation_model_1.Conversation, as: 'conversation', attributes: ['id', 'title', 'conversationType'] },
         ],
         order: [['createdAt', 'DESC']],
         limit: 30,

@@ -131,6 +131,9 @@ export function initChatSocket(httpServer: HttpServer): SocketServer {
       messageType?: string;
       attachmentUrl?: string;
       attachmentType?: string;
+      attachmentName?: string;
+      attachmentSize?: number;
+      attachmentDuration?: number;
       replyToMessageId?: number;
       tempId?: string;
     }, ack) => {
@@ -151,10 +154,14 @@ export function initChatSocket(httpServer: HttpServer): SocketServer {
           messageType: (data.messageType as any) || 'Text',
           attachmentUrl: data.attachmentUrl,
           attachmentType: data.attachmentType,
+          attachmentName: data.attachmentName,
+          attachmentSize: data.attachmentSize,
+          attachmentDuration: data.attachmentDuration,
           replyToMessageId: data.replyToMessageId,
           isEdited: false,
           isPinned: false,
           reactions: {},
+          starredByUserIds: [],
         } as any);
 
         await conversation.update({ lastMessageAt: new Date() });
@@ -272,12 +279,18 @@ export function initChatSocket(httpServer: HttpServer): SocketServer {
             defaults: { messageId: m.id, userId, readAt: new Date() } as any,
           })
         ));
+        // Drives the Seen tick on the other participant's client — see the
+        // matching REST /read route for the full explanation.
+        await ConversationParticipant.update(
+          { lastSeenAt: new Date() },
+          { where: { conversationId: data.conversationId, userId } }
+        );
         // Notify senders of read receipt
         const senderIds = [...new Set(messages.map((m: any) => Number(m.senderUserId)))];
         for (const sid of senderIds) {
           const sockets = getUserSockets(sid);
           for (const sockId of sockets) {
-            io.to(sockId).emit('chat:read_receipt', { conversationId: data.conversationId, readBy: userId });
+            io.to(sockId).emit('chat:read_receipt', { conversationId: data.conversationId, readBy: userId, readAt: new Date().toISOString() });
           }
         }
         ack?.({ success: true });

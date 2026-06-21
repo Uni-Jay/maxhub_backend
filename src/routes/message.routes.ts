@@ -326,6 +326,34 @@ router.get('/conversations/:id', ErrorMiddleware.asyncHandler(async (req: Reques
   });
 }));
 
+// PATCH /api/messages/conversations/:id — edit group name (Group/Team/Channel only)
+router.patch('/conversations/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const conversation = await Conversation.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
+  if (!conversation) return ResponseFormatter.error(res, 'Conversation not found', 404);
+
+  if ((conversation as any).conversationType === 'Direct') {
+    return ResponseFormatter.error(res, 'Direct conversations cannot be renamed', 400);
+  }
+
+  const isParticipant = await ConversationParticipant.findOne({
+    where: { conversationId: (conversation as any).id, userId: user.id },
+  });
+  if (!isParticipant) return ResponseFormatter.error(res, 'Access denied', 403);
+
+  const { title } = req.body;
+  if (!title || !title.trim()) return ResponseFormatter.error(res, 'title is required', 400);
+
+  await conversation.update({ title: title.trim() });
+
+  const io = (req as any).app?.get('io');
+  if (io) {
+    io.to(`conv:${(conversation as any).id}`).emit('chat:group_updated', { conversationId: (conversation as any).id, title: title.trim() });
+  }
+
+  ResponseFormatter.success(res, conversation, 'Group updated');
+}));
+
 // PATCH /api/messages/conversations/:id/archive
 router.patch('/conversations/:id/archive', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const conversation = await Conversation.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
@@ -453,14 +481,14 @@ router.post('/conversations/:id/messages', ErrorMiddleware.asyncHandler(async (r
   const conversation = await Conversation.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!conversation) return ResponseFormatter.error(res, 'Conversation not found', 404);
 
-  const { messageText, messageType, replyToMessageId, attachmentUrl, attachmentType } = req.body;
+  const { messageText, messageType, replyToMessageId, attachmentUrl, attachmentType, attachmentName, attachmentSize, attachmentDuration } = req.body;
   if (!messageText) return ResponseFormatter.error(res, 'messageText is required', 400);
 
   const message = await Message.create({
     uuid: uuidv4(), conversationId: (conversation as any).id, senderUserId: user.id,
     messageText, messageType: messageType || 'Text',
-    replyToMessageId, attachmentUrl, attachmentType,
-    isEdited: false, isPinned: false, reactions: {},
+    replyToMessageId, attachmentUrl, attachmentType, attachmentName, attachmentSize, attachmentDuration,
+    isEdited: false, isPinned: false, reactions: {}, starredByUserIds: [],
   } as any);
 
   await conversation.update({ lastMessageAt: new Date() });
@@ -561,6 +589,49 @@ router.patch('/conversations/:convId/messages/:msgId/pin', ErrorMiddleware.async
   ResponseFormatter.success(res, message, 'Pin status toggled');
 }));
 
+// PATCH /api/messages/conversations/:convId/messages/:msgId/star — personal,
+// per-user bookmark (unlike pin, which is shared/visible to the whole
+// conversation) — toggling only affects the requesting user's own list.
+router.patch('/conversations/:convId/messages/:msgId/star', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const message = await Message.findOne({
+    where: { ...idOrUuidWhere(req.params.msgId) },
+  });
+  if (!message) return ResponseFormatter.error(res, 'Message not found', 404);
+
+  const existing: number[] = (message as any).starredByUserIds || [];
+  const isStarred = existing.includes(user.id);
+  const updated = isStarred ? existing.filter((id: number) => id !== user.id) : [...existing, user.id];
+  await message.update({ starredByUserIds: updated } as any);
+
+  ResponseFormatter.success(res, { messageId: (message as any).id, isStarred: !isStarred }, 'Star status toggled');
+}));
+
+// GET /api/messages/starred — every message the requesting user has starred,
+// across all their conversations.
+router.get('/starred', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const participations = await ConversationParticipant.findAll({
+    where: { userId: user.id },
+    attributes: ['conversationId'],
+  });
+  const convIds = participations.map((p: any) => p.conversationId);
+
+  const starred = await Message.findAll({
+    where: {
+      conversationId: { [Op.in]: convIds },
+      starredByUserIds: { [Op.contains]: [user.id] },
+    } as any,
+    include: [
+      { model: User, as: 'sender', attributes: ['id', 'firstName', 'lastName', 'avatar'] },
+      { model: Conversation, as: 'conversation', attributes: ['id', 'title', 'conversationType'] },
+    ],
+    order: [['createdAt', 'DESC']],
+  });
+
+  ResponseFormatter.success(res, starred);
+}));
+
 // PATCH /api/messages/conversations/:convId/messages/:msgId/react
 router.patch('/conversations/:convId/messages/:msgId/react', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
@@ -656,13 +727,22 @@ router.post('/conversations/:convId/read', ErrorMiddleware.asyncHandler(async (r
     })
   ));
 
+  // lastSeenAt drives the Seen tick: the other participant's client compares
+  // each of its own message's createdAt against this timestamp. It existed
+  // on the model already but nothing ever wrote to it, so every message
+  // showed the same hardcoded "delivered" tick regardless of read state.
+  await ConversationParticipant.update(
+    { lastSeenAt: new Date() },
+    { where: { conversationId, userId: user.id } }
+  );
+
   // Notify the room — covers every participant including the senders being
   // notified their message was read. (A redundant per-sender io.emit() with
   // a templated event name no client listened for used to sit here too —
   // it broadcast to every connected user globally and was pure dead weight.)
   const io = (req as any).app?.get('io');
   if (io) {
-    io.to(`conv:${conversationId}`).emit('chat:read_receipt', { conversationId, readBy: user.id });
+    io.to(`conv:${conversationId}`).emit('chat:read_receipt', { conversationId, readBy: user.id, readAt: new Date().toISOString() });
   }
 
   ResponseFormatter.success(res, null, 'Marked as read');
@@ -720,7 +800,7 @@ router.get('/search', ErrorMiddleware.asyncHandler(async (req: Request, res: Res
     },
     include: [
       { model: User, as: 'sender', attributes: ['id', 'firstName', 'lastName', 'avatar'] },
-      { model: Conversation, attributes: ['id', 'title', 'conversationType'] },
+      { model: Conversation, as: 'conversation', attributes: ['id', 'title', 'conversationType'] },
     ],
     order: [['createdAt', 'DESC']],
     limit: 30,

@@ -117,10 +117,14 @@ function initChatSocket(httpServer) {
                     messageType: data.messageType || 'Text',
                     attachmentUrl: data.attachmentUrl,
                     attachmentType: data.attachmentType,
+                    attachmentName: data.attachmentName,
+                    attachmentSize: data.attachmentSize,
+                    attachmentDuration: data.attachmentDuration,
                     replyToMessageId: data.replyToMessageId,
                     isEdited: false,
                     isPinned: false,
                     reactions: {},
+                    starredByUserIds: [],
                 });
                 await conversation.update({ lastMessageAt: new Date() });
                 const full = await Message_model_1.Message.findByPk(message.id, {
@@ -224,11 +228,12 @@ function initChatSocket(httpServer) {
                     where: { messageId: m.id, userId },
                     defaults: { messageId: m.id, userId, readAt: new Date() },
                 })));
+                await ConversationParticipant_model_1.ConversationParticipant.update({ lastSeenAt: new Date() }, { where: { conversationId: data.conversationId, userId } });
                 const senderIds = [...new Set(messages.map((m) => Number(m.senderUserId)))];
                 for (const sid of senderIds) {
                     const sockets = getUserSockets(sid);
                     for (const sockId of sockets) {
-                        io.to(sockId).emit('chat:read_receipt', { conversationId: data.conversationId, readBy: userId });
+                        io.to(sockId).emit('chat:read_receipt', { conversationId: data.conversationId, readBy: userId, readAt: new Date().toISOString() });
                     }
                 }
                 ack?.({ success: true });

@@ -7,14 +7,18 @@ interface MessageAttributes {
   conversationId: bigint;
   senderUserId: bigint;
   messageText: string;
-  messageType: 'Text' | 'Image' | 'File' | 'Link' | 'Emoji' | 'Mention';
+  messageType: 'Text' | 'Image' | 'File' | 'Link' | 'Emoji' | 'Mention' | 'Video' | 'Voice' | 'Audio';
   attachmentUrl?: string;
   attachmentType?: string;
+  attachmentName?: string;
+  attachmentSize?: number;
+  attachmentDuration?: number;
   replyToMessageId?: bigint;
   isEdited: boolean;
   editedAt?: Date;
   isPinned: boolean;
   reactions?: string;
+  starredByUserIds?: number[];
   deletedForUserIds?: number[];
   deletedAt?: Date;
 }
@@ -28,14 +32,18 @@ export class Message extends Model<MessageAttributes, MessageCreationAttributes>
   public conversationId!: bigint;
   public senderUserId!: bigint;
   public messageText!: string;
-  public messageType!: 'Text' | 'Image' | 'File' | 'Link' | 'Emoji' | 'Mention';
+  public messageType!: 'Text' | 'Image' | 'File' | 'Link' | 'Emoji' | 'Mention' | 'Video' | 'Voice' | 'Audio';
   public attachmentUrl?: string;
   public attachmentType?: string;
+  public attachmentName?: string;
+  public attachmentSize?: number;
+  public attachmentDuration?: number;
   public replyToMessageId?: bigint;
   public isEdited!: boolean;
   public editedAt?: Date;
   public isPinned!: boolean;
   public reactions?: string;
+  public starredByUserIds?: number[];
   public deletedForUserIds?: number[];
   public deletedAt?: Date;
 
@@ -50,14 +58,18 @@ export class Message extends Model<MessageAttributes, MessageCreationAttributes>
         conversationId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'Conversation ID' },
         senderUserId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'Sender user ID' },
         messageText: { type: DataTypes.TEXT, allowNull: false, comment: 'Message text' },
-        messageType: { type: DataTypes.ENUM('Text', 'Image', 'File', 'Link', 'Emoji', 'Mention'), defaultValue: 'Text' },
+        messageType: { type: DataTypes.ENUM('Text', 'Image', 'File', 'Link', 'Emoji', 'Mention', 'Video', 'Voice', 'Audio'), defaultValue: 'Text' },
         attachmentUrl: { type: DataTypes.TEXT, allowNull: true, comment: 'Attachment URL' },
         attachmentType: { type: DataTypes.STRING(50), allowNull: true, comment: 'Attachment type' },
+        attachmentName: { type: DataTypes.STRING(255), allowNull: true, comment: 'Original filename' },
+        attachmentSize: { type: DataTypes.BIGINT, allowNull: true, comment: 'File size in bytes' },
+        attachmentDuration: { type: DataTypes.INTEGER, allowNull: true, comment: 'Audio/video duration in seconds' },
         replyToMessageId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Reply to message ID' },
         isEdited: { type: DataTypes.BOOLEAN, defaultValue: false, allowNull: false, comment: 'Is edited' },
         editedAt: { type: DataTypes.DATE, allowNull: true, comment: 'Edit timestamp' },
         isPinned: { type: DataTypes.BOOLEAN, defaultValue: false, allowNull: false, comment: 'Is pinned' },
         reactions: { type: DataTypes.JSON, allowNull: true, comment: 'Reactions (JSON)' },
+        starredByUserIds: { type: DataTypes.JSONB, allowNull: true, defaultValue: [], comment: 'User IDs who starred this message' },
         deletedForUserIds: { type: DataTypes.JSONB, allowNull: true, defaultValue: [], comment: 'User IDs who chose "delete for me" — hidden from their view only, message still exists for everyone else' },
         deletedAt: { type: DataTypes.DATE, allowNull: true, comment: 'Soft delete timestamp' },
       },
