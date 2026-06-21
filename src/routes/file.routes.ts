@@ -12,6 +12,22 @@ import { getRoleBucket } from '@utils/RoleBucket';
 
 const router = Router();
 
+// Files uploaded via Cloudinary already have an absolute, permanent URL
+// stored in `path` (e.g. https://res.cloudinary.com/...). Older files
+// uploaded before that switch have a backend-relative path like
+// /uploads/xyz.png — those only resolve correctly against the backend's
+// own origin, which the frontend (a different domain in production) can't
+// guess on its own. The frontend's FileItem type reads `url`, not `path`,
+// so every file needs this added before being sent back.
+function withUrl(file: any) {
+  const json = typeof file?.toJSON === 'function' ? file.toJSON() : file;
+  if (!json.path) return { ...json, url: null };
+  const url = /^https?:\/\//i.test(json.path)
+    ? json.path
+    : `${process.env.BACKEND_PUBLIC_URL || 'http://localhost:3000'}${json.path}`;
+  return { ...json, url };
+}
+
 // Named, shared folders beyond the personal/general pair — some restricted to
 // HR-domain roles. Lazily ensured (findOrCreate) so re-running this never duplicates them.
 const NAMED_FOLDERS: { name: string; icon: string; restrictedToRoles?: string[] }[] = [
@@ -154,16 +170,39 @@ router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response)
   if (search) where.name = { [Op.iLike]: `%${search}%` };
 
   const files = await FileRecord.findAll({ where, order: [['createdAt', 'DESC']] });
-  ResponseFormatter.success(res, files);
+  ResponseFormatter.success(res, files.map(withUrl));
 }));
 
-// POST /api/files/upload — multipart disk upload
+// POST /api/files/upload — accepts a pre-hosted URL (Cloudinary, uploaded
+// directly from the browser), a multipart file (legacy local-disk path), or
+// a base64 body (legacy fallback) — in that priority order.
 router.post('/upload', upload.single('file'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
   const { folderId } = req.body;
 
   if (!(await isFolderAccessible(req, folderId, user))) {
     return ResponseFormatter.forbidden(res, 'You do not have access to this folder', req.path);
+  }
+
+  // Preferred path: frontend already uploaded directly to Cloudinary (same
+  // as chat attachments and staff documents) and just needs a FileRecord
+  // pointing at the resulting permanent URL — no disk write, no size limit
+  // beyond Cloudinary's own.
+  const { url, name: directName, mimeType: directMimeType, size: directSize } = req.body;
+  if (url) {
+    const record = await FileRecord.create({
+      uuid: uuidv4(),
+      name: directName || url.split('/').pop(),
+      originalName: directName || url.split('/').pop(),
+      path: url,
+      mimeType: directMimeType || 'application/octet-stream',
+      size: Number(directSize) || 0,
+      folderId: folderId || null,
+      isFolder: false,
+      uploadedById: user?.id,
+      uploadedByName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
+    } as any);
+    return ResponseFormatter.success(res, withUrl(record), 'File uploaded', 201);
   }
 
   if (req.file) {
@@ -179,7 +218,7 @@ router.post('/upload', upload.single('file'), ErrorMiddleware.asyncHandler(async
       uploadedById: user?.id,
       uploadedByName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
     } as any);
-    return ResponseFormatter.success(res, record, 'File uploaded', 201);
+    return ResponseFormatter.success(res, withUrl(record), 'File uploaded', 201);
   }
 
   // Fallback: base64 upload
@@ -213,7 +252,7 @@ router.post('/upload', upload.single('file'), ErrorMiddleware.asyncHandler(async
     uploadedByName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
   } as any);
 
-  ResponseFormatter.success(res, record, 'File uploaded', 201);
+  ResponseFormatter.success(res, withUrl(record), 'File uploaded', 201);
 }));
 
 // GET /api/files/:id/download
@@ -224,6 +263,10 @@ router.get('/:id/download', ErrorMiddleware.asyncHandler(async (req: Request, re
 
   if (!(await isFolderAccessible(req, file.folderId, user))) {
     return ResponseFormatter.forbidden(res, 'You do not have access to this file', req.path);
+  }
+
+  if (file.path && /^https?:\/\//i.test(file.path)) {
+    return res.redirect(file.path);
   }
 
   if (file.path) {
@@ -269,7 +312,7 @@ router.patch('/:id/rename', ErrorMiddleware.asyncHandler(async (req: Request, re
   }
 
   await file.update({ name });
-  ResponseFormatter.success(res, file, 'File renamed');
+  ResponseFormatter.success(res, withUrl(file), 'File renamed');
 }));
 
 // POST /api/files/:id/share

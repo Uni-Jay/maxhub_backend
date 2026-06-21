@@ -14,6 +14,15 @@ const FileRecord_model_1 = require("../models/FileRecord.model");
 const multer_1 = require("../config/multer");
 const RoleBucket_1 = require("../utils/RoleBucket");
 const router = (0, express_1.Router)();
+function withUrl(file) {
+    const json = typeof file?.toJSON === 'function' ? file.toJSON() : file;
+    if (!json.path)
+        return { ...json, url: null };
+    const url = /^https?:\/\//i.test(json.path)
+        ? json.path
+        : `${process.env.BACKEND_PUBLIC_URL || 'http://localhost:3000'}${json.path}`;
+    return { ...json, url };
+}
 const NAMED_FOLDERS = [
     { name: 'Projects', icon: '📁' },
     { name: 'Certificates', icon: '🎓' },
@@ -138,13 +147,29 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
     if (search)
         where.name = { [sequelize_1.Op.iLike]: `%${search}%` };
     const files = await FileRecord_model_1.FileRecord.findAll({ where, order: [['createdAt', 'DESC']] });
-    ResponseFormatter_1.ResponseFormatter.success(res, files);
+    ResponseFormatter_1.ResponseFormatter.success(res, files.map(withUrl));
 }));
 router.post('/upload', multer_1.upload.single('file'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
     const { folderId } = req.body;
     if (!(await isFolderAccessible(req, folderId, user))) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You do not have access to this folder', req.path);
+    }
+    const { url, name: directName, mimeType: directMimeType, size: directSize } = req.body;
+    if (url) {
+        const record = await FileRecord_model_1.FileRecord.create({
+            uuid: (0, uuid_1.v4)(),
+            name: directName || url.split('/').pop(),
+            originalName: directName || url.split('/').pop(),
+            path: url,
+            mimeType: directMimeType || 'application/octet-stream',
+            size: Number(directSize) || 0,
+            folderId: folderId || null,
+            isFolder: false,
+            uploadedById: user?.id,
+            uploadedByName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
+        });
+        return ResponseFormatter_1.ResponseFormatter.success(res, withUrl(record), 'File uploaded', 201);
     }
     if (req.file) {
         const record = await FileRecord_model_1.FileRecord.create({
@@ -159,7 +184,7 @@ router.post('/upload', multer_1.upload.single('file'), ErrorMiddleware_1.ErrorMi
             uploadedById: user?.id,
             uploadedByName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
         });
-        return ResponseFormatter_1.ResponseFormatter.success(res, record, 'File uploaded', 201);
+        return ResponseFormatter_1.ResponseFormatter.success(res, withUrl(record), 'File uploaded', 201);
     }
     const { name, base64Content, mimeType } = req.body;
     if (!name)
@@ -188,7 +213,7 @@ router.post('/upload', multer_1.upload.single('file'), ErrorMiddleware_1.ErrorMi
         uploadedById: user?.id,
         uploadedByName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
     });
-    ResponseFormatter_1.ResponseFormatter.success(res, record, 'File uploaded', 201);
+    ResponseFormatter_1.ResponseFormatter.success(res, withUrl(record), 'File uploaded', 201);
 }));
 router.get('/:id/download', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
@@ -197,6 +222,9 @@ router.get('/:id/download', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'File not found');
     if (!(await isFolderAccessible(req, file.folderId, user))) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You do not have access to this file', req.path);
+    }
+    if (file.path && /^https?:\/\//i.test(file.path)) {
+        return res.redirect(file.path);
     }
     if (file.path) {
         const localPath = path_1.default.join(process.cwd(), file.path.replace(/^\//, ''));
@@ -234,7 +262,7 @@ router.patch('/:id/rename', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You do not have access to this file', req.path);
     }
     await file.update({ name });
-    ResponseFormatter_1.ResponseFormatter.success(res, file, 'File renamed');
+    ResponseFormatter_1.ResponseFormatter.success(res, withUrl(file), 'File renamed');
 }));
 router.post('/:id/share', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { emails } = req.body;
