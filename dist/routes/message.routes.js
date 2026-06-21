@@ -53,6 +53,7 @@ const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = require("../middleware/AuthMiddleware");
 const ChatSocket_1 = require("../socket/ChatSocket");
+const mentions_1 = require("../utils/mentions");
 const router = (0, express_1.Router)();
 function viewerTitle(conv, participants, viewerUserId) {
     if (conv.conversationType !== 'Direct')
@@ -435,6 +436,12 @@ router.post('/conversations/:id/messages', ErrorMiddleware_1.ErrorMiddleware.asy
     if (io) {
         io.to(`conv:${conversation.id}`).emit('chat:message', full?.toJSON());
     }
+    const senderInfo = full?.sender;
+    const senderName = senderInfo ? `${senderInfo.firstName || ''} ${senderInfo.lastName || ''}`.trim() : user.email;
+    (0, mentions_1.detectAndNotifyMentions)({
+        messageText, conversationId: conversation.id, messageId: message.id,
+        senderUserId: user.id, senderName, io,
+    }).catch(() => { });
     ResponseFormatter_1.ResponseFormatter.success(res, full, 'Message sent', 201);
 }));
 router.patch('/conversations/:convId/messages/:msgId', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {

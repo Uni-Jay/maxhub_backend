@@ -15,6 +15,7 @@ const ConversationParticipant_model_1 = require("../models/ConversationParticipa
 const Message_model_1 = require("../models/Message.model");
 const MessageRead_model_1 = require("../models/MessageRead.model");
 const User_model_1 = require("../models/User.model");
+const mentions_1 = require("../utils/mentions");
 const onlineUsers = new Map();
 exports.onlineUsers = onlineUsers;
 const socketUserMap = new Map();
@@ -132,6 +133,12 @@ function initChatSocket(httpServer) {
                 });
                 const payload = { ...(full?.toJSON() ?? message.toJSON()), tempId: data.tempId };
                 io.to(`conv:${data.conversationId}`).emit('chat:message', payload);
+                const senderInfo = full?.sender;
+                const senderName = senderInfo ? `${senderInfo.firstName || ''} ${senderInfo.lastName || ''}`.trim() : 'Someone';
+                (0, mentions_1.detectAndNotifyMentions)({
+                    messageText: data.messageText || '', conversationId: data.conversationId, messageId: message.id,
+                    senderUserId: userId, senderName, io,
+                }).catch(() => { });
                 ack?.({ success: true, message: payload });
             }
             catch (err) {

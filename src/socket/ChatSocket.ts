@@ -8,6 +8,7 @@ import { ConversationParticipant } from '@models/ConversationParticipant.model';
 import { Message } from '@models/Message.model';
 import { MessageRead } from '@models/MessageRead.model';
 import { User } from '@models/User.model';
+import { detectAndNotifyMentions } from '@utils/mentions';
 
 // In-memory presence store: userId → socketId[]
 const onlineUsers = new Map<number, Set<string>>();
@@ -175,6 +176,13 @@ export function initChatSocket(httpServer: HttpServer): SocketServer {
 
         // Broadcast to all in conversation room
         io.to(`conv:${data.conversationId}`).emit('chat:message', payload);
+
+        const senderInfo = (full as any)?.sender;
+        const senderName = senderInfo ? `${senderInfo.firstName || ''} ${senderInfo.lastName || ''}`.trim() : 'Someone';
+        detectAndNotifyMentions({
+          messageText: data.messageText || '', conversationId: data.conversationId, messageId: (message as any).id,
+          senderUserId: userId, senderName, io,
+        }).catch(() => {});
 
         ack?.({ success: true, message: payload });
       } catch (err: any) {

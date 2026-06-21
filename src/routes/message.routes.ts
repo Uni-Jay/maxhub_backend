@@ -16,6 +16,7 @@ import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import { AuthMiddleware } from '@middleware/AuthMiddleware';
 import { emitToUser } from '../socket/ChatSocket';
+import { detectAndNotifyMentions } from '@utils/mentions';
 
 const router = Router();
 
@@ -509,6 +510,16 @@ router.post('/conversations/:id/messages', ErrorMiddleware.asyncHandler(async (r
   if (io) {
     io.to(`conv:${(conversation as any).id}`).emit('chat:message', full?.toJSON());
   }
+
+  // req.user comes from the JWT, which only carries id/email/roles/
+  // permissions — no firstName/lastName — so this has to use the sender
+  // info already fetched onto `full` above, not `user` directly.
+  const senderInfo = (full as any)?.sender;
+  const senderName = senderInfo ? `${senderInfo.firstName || ''} ${senderInfo.lastName || ''}`.trim() : user.email;
+  detectAndNotifyMentions({
+    messageText, conversationId: (conversation as any).id, messageId: (message as any).id,
+    senderUserId: user.id, senderName, io,
+  }).catch(() => {});
 
   ResponseFormatter.success(res, full, 'Message sent', 201);
 }));
