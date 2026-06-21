@@ -17,6 +17,7 @@ import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import { AuthMiddleware } from '@middleware/AuthMiddleware';
 import { emitToUser } from '../socket/ChatSocket';
 import { detectAndNotifyMentions } from '@utils/mentions';
+import { sanitizeMessageType } from '@utils/messageTypes';
 
 const router = Router();
 
@@ -487,7 +488,7 @@ router.post('/conversations/:id/messages', ErrorMiddleware.asyncHandler(async (r
 
   const message = await Message.create({
     uuid: uuidv4(), conversationId: (conversation as any).id, senderUserId: user.id,
-    messageText, messageType: messageType || 'Text',
+    messageText, messageType: sanitizeMessageType(messageType, !!attachmentUrl),
     replyToMessageId, attachmentUrl, attachmentType, attachmentName, attachmentSize, attachmentDuration,
     isEdited: false, isPinned: false, reactions: {}, starredByUserIds: [],
   } as any);
@@ -531,7 +532,11 @@ router.patch('/conversations/:convId/messages/:msgId', ErrorMiddleware.asyncHand
     where: { ...idOrUuidWhere(req.params.msgId) },
   });
   if (!message) return ResponseFormatter.error(res, 'Message not found', 404);
-  if ((message as any).senderUserId !== user.id) return ResponseFormatter.error(res, 'Can only edit your own messages', 403);
+  // senderUserId is a BIGINT column — pg returns those as strings, while
+  // user.id (from the JWT) is a plain number — so a strict !== here was
+  // always true, even for the actual sender. Editing your own message has
+  // been unconditionally rejected as "not your message" because of this.
+  if (String((message as any).senderUserId) !== String(user.id)) return ResponseFormatter.error(res, 'Can only edit your own messages', 403);
 
   const { messageText } = req.body;
   if (!messageText) return ResponseFormatter.error(res, 'messageText is required', 400);
@@ -564,7 +569,9 @@ router.delete('/conversations/:convId/messages/:msgId', ErrorMiddleware.asyncHan
   const convId = (message as any).conversationId;
 
   if (everyone === 'true') {
-    if ((message as any).senderUserId !== user.id) return ResponseFormatter.error(res, 'Can only delete your own messages for everyone', 403);
+    // Same BIGINT-string vs number mismatch as the edit route above —
+    // delete-for-everyone was unconditionally rejecting the actual sender.
+    if (String((message as any).senderUserId) !== String(user.id)) return ResponseFormatter.error(res, 'Can only delete your own messages for everyone', 403);
     await message.update({ messageText: '🚫 This message was deleted', messageType: 'Text', attachmentUrl: null } as any);
     if (io) io.to(`conv:${convId}`).emit('chat:deleted', { messageId: (message as any).id, deleteForEveryone: true });
   } else {

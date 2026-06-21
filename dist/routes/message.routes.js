@@ -54,6 +54,7 @@ const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = require("../middleware/AuthMiddleware");
 const ChatSocket_1 = require("../socket/ChatSocket");
 const mentions_1 = require("../utils/mentions");
+const messageTypes_1 = require("../utils/messageTypes");
 const router = (0, express_1.Router)();
 function viewerTitle(conv, participants, viewerUserId) {
     if (conv.conversationType !== 'Direct')
@@ -417,7 +418,7 @@ router.post('/conversations/:id/messages', ErrorMiddleware_1.ErrorMiddleware.asy
         return ResponseFormatter_1.ResponseFormatter.error(res, 'messageText is required', 400);
     const message = await Message_model_1.Message.create({
         uuid: (0, uuid_1.v4)(), conversationId: conversation.id, senderUserId: user.id,
-        messageText, messageType: messageType || 'Text',
+        messageText, messageType: (0, messageTypes_1.sanitizeMessageType)(messageType, !!attachmentUrl),
         replyToMessageId, attachmentUrl, attachmentType, attachmentName, attachmentSize, attachmentDuration,
         isEdited: false, isPinned: false, reactions: {}, starredByUserIds: [],
     });
@@ -451,7 +452,7 @@ router.patch('/conversations/:convId/messages/:msgId', ErrorMiddleware_1.ErrorMi
     });
     if (!message)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Message not found', 404);
-    if (message.senderUserId !== user.id)
+    if (String(message.senderUserId) !== String(user.id))
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Can only edit your own messages', 403);
     const { messageText } = req.body;
     if (!messageText)
@@ -479,7 +480,7 @@ router.delete('/conversations/:convId/messages/:msgId', ErrorMiddleware_1.ErrorM
     const io = req.app?.get('io');
     const convId = message.conversationId;
     if (everyone === 'true') {
-        if (message.senderUserId !== user.id)
+        if (String(message.senderUserId) !== String(user.id))
             return ResponseFormatter_1.ResponseFormatter.error(res, 'Can only delete your own messages for everyone', 403);
         await message.update({ messageText: '🚫 This message was deleted', messageType: 'Text', attachmentUrl: null });
         if (io)

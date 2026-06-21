@@ -1,0 +1,1 @@
+{"version":3,"file":"messageTypes.d.ts","sourceRoot":"","sources":["../../src/utils/messageTypes.ts"],"names":[],"mappings":"AAIA,eAAO,MAAM,qBAAqB,2FAExB,CAAC;AAEX,MAAM,MAAM,WAAW,GAAG,OAAO,qBAAqB,CAAC,MAAM,CAAC,CAAC;AAU/D,wBAAgB,mBAAmB,CAAC,KAAK,EAAE,OAAO,EAAE,aAAa,EAAE,OAAO,GAAG,WAAW,CAKvF"}

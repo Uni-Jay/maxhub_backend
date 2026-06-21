@@ -16,6 +16,7 @@ const Message_model_1 = require("../models/Message.model");
 const MessageRead_model_1 = require("../models/MessageRead.model");
 const User_model_1 = require("../models/User.model");
 const mentions_1 = require("../utils/mentions");
+const messageTypes_1 = require("../utils/messageTypes");
 const onlineUsers = new Map();
 exports.onlineUsers = onlineUsers;
 const socketUserMap = new Map();
@@ -115,7 +116,7 @@ function initChatSocket(httpServer) {
                     conversationId: data.conversationId,
                     senderUserId: userId,
                     messageText: data.messageText || '',
-                    messageType: data.messageType || 'Text',
+                    messageType: (0, messageTypes_1.sanitizeMessageType)(data.messageType, !!data.attachmentUrl),
                     attachmentUrl: data.attachmentUrl,
                     attachmentType: data.attachmentType,
                     attachmentName: data.attachmentName,
@@ -150,7 +151,7 @@ function initChatSocket(httpServer) {
                 const msg = await Message_model_1.Message.findByPk(data.messageId);
                 if (!msg)
                     return ack?.({ error: 'Message not found' });
-                if (msg.senderUserId !== userId)
+                if (String(msg.senderUserId) !== String(userId))
                     return ack?.({ error: 'Forbidden' });
                 await msg.update({ messageText: data.messageText, isEdited: true, editedAt: new Date() });
                 const convId = msg.conversationId;
@@ -168,7 +169,7 @@ function initChatSocket(httpServer) {
                     return ack?.({ error: 'Message not found' });
                 const convId = msg.conversationId;
                 if (data.deleteForEveryone) {
-                    if (msg.senderUserId !== userId)
+                    if (String(msg.senderUserId) !== String(userId))
                         return ack?.({ error: 'Can only delete your own messages for everyone' });
                     await msg.update({ messageText: '🚫 This message was deleted', messageType: 'Text', attachmentUrl: null });
                     io.to(`conv:${convId}`).emit('chat:deleted', { messageId: data.messageId, deleteForEveryone: true });

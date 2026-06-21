@@ -9,6 +9,7 @@ import { Message } from '@models/Message.model';
 import { MessageRead } from '@models/MessageRead.model';
 import { User } from '@models/User.model';
 import { detectAndNotifyMentions } from '@utils/mentions';
+import { sanitizeMessageType } from '@utils/messageTypes';
 
 // In-memory presence store: userId → socketId[]
 const onlineUsers = new Map<number, Set<string>>();
@@ -152,7 +153,7 @@ export function initChatSocket(httpServer: HttpServer): SocketServer {
           conversationId: data.conversationId,
           senderUserId: userId,
           messageText: data.messageText || '',
-          messageType: (data.messageType as any) || 'Text',
+          messageType: sanitizeMessageType(data.messageType, !!data.attachmentUrl),
           attachmentUrl: data.attachmentUrl,
           attachmentType: data.attachmentType,
           attachmentName: data.attachmentName,
@@ -195,7 +196,10 @@ export function initChatSocket(httpServer: HttpServer): SocketServer {
       try {
         const msg = await Message.findByPk(data.messageId);
         if (!msg) return ack?.({ error: 'Message not found' });
-        if ((msg as any).senderUserId !== userId) return ack?.({ error: 'Forbidden' });
+        // senderUserId is BIGINT — pg returns it as a string — while userId
+        // here is a number, so a strict !== was always true and editing your
+        // own message always came back "Forbidden".
+        if (String((msg as any).senderUserId) !== String(userId)) return ack?.({ error: 'Forbidden' });
 
         await msg.update({ messageText: data.messageText, isEdited: true, editedAt: new Date() });
         const convId = (msg as any).conversationId;
@@ -214,7 +218,8 @@ export function initChatSocket(httpServer: HttpServer): SocketServer {
         const convId = (msg as any).conversationId;
 
         if (data.deleteForEveryone) {
-          if ((msg as any).senderUserId !== userId) return ack?.({ error: 'Can only delete your own messages for everyone' });
+          // Same BIGINT-string vs number mismatch as chat:edit above.
+          if (String((msg as any).senderUserId) !== String(userId)) return ack?.({ error: 'Can only delete your own messages for everyone' });
           await msg.update({ messageText: '🚫 This message was deleted', messageType: 'Text', attachmentUrl: null } as any);
           io.to(`conv:${convId}`).emit('chat:deleted', { messageId: data.messageId, deleteForEveryone: true });
         } else {
