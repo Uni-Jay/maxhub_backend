@@ -91,6 +91,7 @@ const WeeklyReport_model_1 = require("./models/WeeklyReport.model");
 const CalendarEvent_model_1 = require("./models/CalendarEvent.model");
 const FileRecord_model_1 = require("./models/FileRecord.model");
 const Customer_model_1 = require("./models/Customer.model");
+const CustomerReport_model_1 = require("./models/CustomerReport.model");
 const OrderTracking_model_1 = require("./models/OrderTracking.model");
 const Broadcast_model_1 = require("./models/Broadcast.model");
 const JobApplication_model_1 = require("./models/JobApplication.model");
@@ -271,6 +272,7 @@ class AppBootstrapper {
         CalendarEvent_model_1.CalendarEvent.initModel(this.sequelize);
         FileRecord_model_1.FileRecord.initModel(this.sequelize);
         Customer_model_1.Customer.initModel(this.sequelize);
+        CustomerReport_model_1.CustomerReport.initModel(this.sequelize);
         OrderTracking_model_1.OrderTracking.initModel(this.sequelize);
         Broadcast_model_1.Broadcast.initModel(this.sequelize);
         JobApplication_model_1.JobApplication.initModel(this.sequelize);

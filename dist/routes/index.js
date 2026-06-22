@@ -63,6 +63,7 @@ function setupRoutes(app) {
     apiRouter.use('/admin/permissions', require('./permission.routes').default);
     apiRouter.use('/queries', require('./query.routes').default);
     apiRouter.use('/clients', require('./client.routes').default);
+    apiRouter.use('/customer-reports', require('./customer-report.routes').default);
     apiRouter.use('/communication', require('./communication.routes').default);
     apiRouter.use('/broadcasts', require('./broadcast.routes').default);
     apiRouter.use('/students', require('./student-management.routes').default);

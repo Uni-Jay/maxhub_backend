@@ -104,6 +104,7 @@ function setupRoutes(app: any): void {
 
   // Client Management
   apiRouter.use('/clients', require('./client.routes').default);
+  apiRouter.use('/customer-reports', require('./customer-report.routes').default);
 
   // Communication
   apiRouter.use('/communication', require('./communication.routes').default);

@@ -57,6 +57,7 @@ import { WeeklyReport } from '@models/WeeklyReport.model';
 import { CalendarEvent } from '@models/CalendarEvent.model';
 import { FileRecord } from '@models/FileRecord.model';
 import { Customer } from '@models/Customer.model';
+import { CustomerReport } from '@models/CustomerReport.model';
 import { OrderTracking } from '@models/OrderTracking.model';
 import { Broadcast } from '@models/Broadcast.model';
 // Extended recruitment models
@@ -312,6 +313,7 @@ class AppBootstrapper {
     CalendarEvent.initModel(this.sequelize);
     FileRecord.initModel(this.sequelize);
     Customer.initModel(this.sequelize);
+    CustomerReport.initModel(this.sequelize);
     OrderTracking.initModel(this.sequelize);
     Broadcast.initModel(this.sequelize);
     JobApplication.initModel(this.sequelize);
