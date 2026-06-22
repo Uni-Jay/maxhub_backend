@@ -52,7 +52,13 @@ export declare class StudentService {
     }>;
     getStudentById(studentId: bigint): Promise<StudentProfile>;
     getStudentByUserId(userId: bigint): Promise<StudentProfile>;
-    updateStudent(studentId: bigint, data: Partial<StudentProfile>): Promise<StudentProfile>;
+    updateStudent(studentId: bigint, data: Partial<StudentProfile> & {
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        phone?: string;
+    }): Promise<StudentProfile>;
+    deleteStudent(studentId: bigint): Promise<void>;
     updateStudentStatus(studentId: bigint, status: StudentStatus, notes?: string): Promise<StudentProfile>;
     enrollStudent(studentId: bigint, courseId: bigint, enrolledById?: bigint): Promise<StudentEnrollment>;
     getStudentEnrollments(studentId: bigint): Promise<StudentEnrollment[]>;

@@ -12,10 +12,15 @@ const StudentAttendance_model_1 = require("../models/StudentAttendance.model");
 const ClassSchedule_model_1 = require("../models/ClassSchedule.model");
 const Program_model_1 = require("../models/Program.model");
 const Department_model_1 = require("../models/Department.model");
+const Company_model_1 = require("../models/Company.model");
 const User_model_1 = require("../models/User.model");
 const Course_model_1 = require("../models/Course.model");
 const ErrorHandler_1 = require("../utils/ErrorHandler");
 const bcrypt_1 = __importDefault(require("bcrypt"));
+const STUDENT_ID_PREFIX_BY_COMPANY_CODE = {
+    KURIOS_SAT: 'KST',
+    BEADMAX_SCHOOL: 'BM-VS',
+};
 class StudentService {
     async registerStudent(input) {
         const existing = await User_model_1.User.findOne({ where: { email: input.email } });
@@ -52,7 +57,9 @@ class StudentService {
                 status: 'Active',
                 registeredById: input.registeredById,
             }, { transaction: t });
-            const studentNumber = `BVS-${new Date().getFullYear()}-${String(created.id).padStart(5, '0')}`;
+            const company = await Company_model_1.Company.findByPk(input.companyId, { attributes: ['code'], transaction: t });
+            const prefix = STUDENT_ID_PREFIX_BY_COMPANY_CODE[company?.code] || 'BVS';
+            const studentNumber = `${prefix}-${new Date().getFullYear()}-${String(created.id).padStart(5, '0')}`;
             await created.update({ studentNumber }, { transaction: t });
             return created;
         });
@@ -127,8 +134,32 @@ class StudentService {
         const student = await StudentProfile_model_1.StudentProfile.findByPk(studentId);
         if (!student)
             throw new ErrorHandler_1.NotFoundError('Student not found');
-        await student.update(data);
+        const { firstName, lastName, email, phone, ...profileData } = data;
+        await student.update(profileData);
+        const userUpdates = {};
+        if (firstName !== undefined)
+            userUpdates.firstName = firstName;
+        if (lastName !== undefined)
+            userUpdates.lastName = lastName;
+        if (email !== undefined)
+            userUpdates.email = email;
+        if (phone !== undefined)
+            userUpdates.phone = phone;
+        if (Object.keys(userUpdates).length) {
+            await User_model_1.User.update(userUpdates, { where: { id: student.userId } });
+        }
         return student;
+    }
+    async deleteStudent(studentId) {
+        const student = await StudentProfile_model_1.StudentProfile.findByPk(studentId);
+        if (!student)
+            throw new ErrorHandler_1.NotFoundError('Student not found');
+        const user = await User_model_1.User.findByPk(student.userId);
+        await student.destroy();
+        if (user) {
+            await user.destroy();
+            await user.update({ email: `deleted_${user.email}` });
+        }
     }
     async updateStudentStatus(studentId, status, notes) {
         const student = await StudentProfile_model_1.StudentProfile.findByPk(studentId);

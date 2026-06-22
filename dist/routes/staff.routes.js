@@ -293,6 +293,9 @@ router.patch('/:id', AuthMiddleware_1.default.requirePermission('org.staff.updat
     if (req.body.customPosition?.trim())
         updates.position = req.body.customPosition.trim();
     await staff.update(updates);
+    if (req.body.avatar !== undefined) {
+        await User_model_1.User.update({ avatar: req.body.avatar }, { where: { id: staff.userId } });
+    }
     if (updates.position !== undefined) {
         const targetRoleCode = (0, PositionRoleMap_1.resolveRoleForPosition)(updates.position);
         const targetRole = await Role_model_1.Role.findOne({ where: { code: targetRoleCode } });

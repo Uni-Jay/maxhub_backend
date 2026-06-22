@@ -47,6 +47,15 @@ router.patch(
   StudentController.updateStatus
 );
 
+/** DELETE /api/students/:id — Remove a student (no department-scoped
+ * variant exists; HOD removes access via the Suspend status instead) */
+router.delete(
+  '/:id',
+  AuthMiddleware.verifyToken,
+  AuthMiddleware.requirePermission(PermissionCode.STM_STUDENT_DELETE_ALL),
+  StudentController.remove
+);
+
 /** POST /api/students/:id/enroll — Enroll student in a course */
 router.post(
   '/:id/enroll',

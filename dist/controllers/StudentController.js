@@ -97,6 +97,15 @@ class StudentController {
             next(e);
         }
     }
+    static async remove(req, res, next) {
+        try {
+            await StudentService_1.default.deleteStudent(BigInt(req.params.id));
+            ResponseFormatter_1.ResponseFormatter.success(res, null, 'Student removed');
+        }
+        catch (e) {
+            next(e);
+        }
+    }
     static async enroll(req, res, next) {
         try {
             const { courseId } = req.body;

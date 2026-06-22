@@ -90,6 +90,16 @@ export class StudentController {
     } catch (e) { next(e); }
   }
 
+  // No department-scoped delete permission exists (HOD removes access via
+  // Suspend instead) — the route gate below already restricts this to
+  // STM_STUDENT_DELETE_ALL holders, so no extra scope check is needed here.
+  static async remove(req: Request, res: Response, next: NextFunction) {
+    try {
+      await StudentService.deleteStudent(BigInt(req.params.id));
+      ResponseFormatter.success(res, null, 'Student removed');
+    } catch (e) { next(e); }
+  }
+
   // ─── Enrollment ───────────────────────────────────────────────
   static async enroll(req: Request, res: Response, next: NextFunction) {
     try {

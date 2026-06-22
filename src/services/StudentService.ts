@@ -6,10 +6,18 @@ import { StudentAttendance, AttendanceStatus } from '@models/StudentAttendance.m
 import { ClassSchedule } from '@models/ClassSchedule.model';
 import { Program } from '@models/Program.model';
 import { Department } from '@models/Department.model';
+import { Company } from '@models/Company.model';
 import { User } from '@models/User.model';
 import { Course } from '@models/Course.model';
 import { NotFoundError, ConflictError, ValidationError } from '@utils/ErrorHandler';
 import bcrypt from 'bcrypt';
+
+/** Student ID prefix per company — falls back to the generic BVS for any
+ * company with no specific scheme requested. */
+const STUDENT_ID_PREFIX_BY_COMPANY_CODE: Record<string, string> = {
+  KURIOS_SAT: 'KST',
+  BEADMAX_SCHOOL: 'BM-VS',
+};
 
 interface RegisterStudentInput {
   firstName: string;
@@ -95,7 +103,9 @@ export class StudentService {
         registeredById: input.registeredById,
       }, { transaction: t });
 
-      const studentNumber = `BVS-${new Date().getFullYear()}-${String(created.id).padStart(5, '0')}`;
+      const company = await Company.findByPk(input.companyId, { attributes: ['code'], transaction: t });
+      const prefix = STUDENT_ID_PREFIX_BY_COMPANY_CODE[(company as any)?.code] || 'BVS';
+      const studentNumber = `${prefix}-${new Date().getFullYear()}-${String(created.id).padStart(5, '0')}`;
       await created.update({ studentNumber }, { transaction: t });
 
       return created;
@@ -182,12 +192,42 @@ export class StudentService {
     return student;
   }
 
-  /** Update student profile */
-  async updateStudent(studentId: bigint, data: Partial<StudentProfile>) {
+  /** Update student profile. firstName/lastName/email/phone live on the
+   * linked User row, not StudentProfile — pulled out and synced there
+   * separately instead of being silently dropped by student.update(). */
+  async updateStudent(studentId: bigint, data: Partial<StudentProfile> & { firstName?: string; lastName?: string; email?: string; phone?: string }) {
     const student = await StudentProfile.findByPk(studentId);
     if (!student) throw new NotFoundError('Student not found');
-    await student.update(data);
+
+    const { firstName, lastName, email, phone, ...profileData } = data as any;
+    await student.update(profileData);
+
+    const userUpdates: Record<string, unknown> = {};
+    if (firstName !== undefined) userUpdates.firstName = firstName;
+    if (lastName !== undefined) userUpdates.lastName = lastName;
+    if (email !== undefined) userUpdates.email = email;
+    if (phone !== undefined) userUpdates.phone = phone;
+    if (Object.keys(userUpdates).length) {
+      await User.update(userUpdates, { where: { id: student.userId } });
+    }
+
     return student;
+  }
+
+  /** Remove a student. StudentProfile itself isn't paranoid (no deletedAt
+   * column), so this is a real delete of that row; the linked User is
+   * soft-deleted and its email freed up for reuse the same way the demo
+   * account cleanup had to learn to do — Postgres's unique index on email
+   * doesn't care that a row is "soft-deleted". */
+  async deleteStudent(studentId: bigint) {
+    const student = await StudentProfile.findByPk(studentId);
+    if (!student) throw new NotFoundError('Student not found');
+    const user = await User.findByPk(student.userId);
+    await student.destroy();
+    if (user) {
+      await user.destroy();
+      await user.update({ email: `deleted_${user.email}` } as any);
+    }
   }
 
   /** Suspend or activate student */

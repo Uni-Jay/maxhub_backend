@@ -5,6 +5,7 @@ export declare class StudentController {
     static getById(req: Request, res: Response, next: NextFunction): Promise<void>;
     static update(req: Request, res: Response, next: NextFunction): Promise<void>;
     static updateStatus(req: Request, res: Response, next: NextFunction): Promise<void>;
+    static remove(req: Request, res: Response, next: NextFunction): Promise<void>;
     static enroll(req: Request, res: Response, next: NextFunction): Promise<void>;
     static getEnrollments(req: Request, res: Response, next: NextFunction): Promise<void>;
     static markAttendance(req: Request, res: Response, next: NextFunction): Promise<void>;

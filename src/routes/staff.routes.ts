@@ -375,6 +375,12 @@ router.patch(
 
     await staff.update(updates as any);
 
+    // avatar lives on User, not Staff — without this, a photo change on
+    // the edit form would silently never persist anywhere.
+    if (req.body.avatar !== undefined) {
+      await User.update({ avatar: req.body.avatar } as any, { where: { id: (staff as any).userId } });
+    }
+
     // Keep the RBAC role in sync if the position changed to/from one that maps to a role.
     // Never touch a Super Admin's role this way — position edits must not be able to demote one.
     if (updates.position !== undefined) {
