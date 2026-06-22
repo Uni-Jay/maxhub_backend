@@ -385,6 +385,7 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.FIN_INVOICE_DELETE_OWN_DEPARTMENT,
     // Department announcements only — auto-copied to HR/Admin/Super Admin server-side
     PermissionCode.BROADCAST_CREATE_OWN_DEPARTMENT,
+    PermissionCode.BROADCAST_READ_OWN_DEPARTMENT,
     // Meetings — schedule + send Google Meet links
     PermissionCode.MEETING_CREATE_ALL,
     // BeadMax — she also covers this business unit (read-only; product/order

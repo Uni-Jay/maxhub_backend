@@ -6,7 +6,7 @@ interface BroadcastAttributes {
   uuid: string;
   title: string;
   message: string;
-  audienceType: 'All' | 'BusinessUnit' | 'Department';
+  audienceType: 'All' | 'BusinessUnit' | 'Department' | 'Role';
   audienceValue?: string;
   createdById: bigint;
   deletedAt?: Date;
@@ -35,7 +35,7 @@ export class Broadcast
         uuid: { type: DataTypes.UUID, defaultValue: () => uuidv4(), unique: true },
         title: { type: DataTypes.STRING(255), allowNull: false },
         message: { type: DataTypes.TEXT, allowNull: false },
-        audienceType: { type: DataTypes.ENUM('All', 'BusinessUnit', 'Department'), defaultValue: 'All' },
+        audienceType: { type: DataTypes.ENUM('All', 'BusinessUnit', 'Department', 'Role'), defaultValue: 'All' },
         audienceValue: { type: DataTypes.STRING(255), allowNull: true },
         createdById: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
         deletedAt: { type: DataTypes.DATE, allowNull: true },

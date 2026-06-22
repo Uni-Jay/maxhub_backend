@@ -4,7 +4,7 @@ interface BroadcastAttributes {
     uuid: string;
     title: string;
     message: string;
-    audienceType: 'All' | 'BusinessUnit' | 'Department';
+    audienceType: 'All' | 'BusinessUnit' | 'Department' | 'Role';
     audienceValue?: string;
     createdById: bigint;
     deletedAt?: Date;

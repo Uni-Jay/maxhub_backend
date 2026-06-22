@@ -21,7 +21,7 @@ function hasPermission(req: Request, code: string): boolean {
   return perms.has(code.toLowerCase());
 }
 
-/** Resolves every user id holding any of the given role codes — used to auto-copy HR/Admin/Super Admin on a department announcement. */
+/** Resolves every user id holding any of the given role codes — used to auto-copy HR/Admin/Super Admin on a department announcement, and for Role-targeted broadcasts. */
 async function getUserIdsForRoles(roleCodes: string[]): Promise<bigint[]> {
   const roles = await Role.findAll({ where: { code: { [Op.in]: roleCodes } }, attributes: ['id'] });
   const roleIds = roles.map((r: any) => r.id);
@@ -30,9 +30,22 @@ async function getUserIdsForRoles(roleCodes: string[]): Promise<bigint[]> {
   return [...new Set(userRoles.map((ur: any) => ur.userId))];
 }
 
-// GET /api/broadcasts
-router.get('/', AuthMiddleware.requirePermission(PermissionCode.BROADCAST_READ_ALL), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const broadcasts = await Broadcast.findAll({ order: [['createdAt', 'DESC']], limit: 100 });
+/** True when the caller's only path to this action is the own_department-scoped permission (e.g. HOD). */
+function isDepartmentScopedOnly(req: Request, allCode: string, deptCode: string): boolean {
+  return !hasPermission(req, allCode) && hasPermission(req, deptCode);
+}
+
+const VALID_ROLE_AUDIENCES = ['staff', 'hod', 'hr', 'admin', 'superadmin'];
+
+// GET /api/broadcasts — HOD (own_department-only) sees just the broadcasts
+// they personally sent, since there's no department column on Broadcast
+// itself to scope a query by; HR/Admin/Super Admin see the full history.
+router.get('/', AuthMiddleware.requirePermission(PermissionCode.BROADCAST_READ_ALL, PermissionCode.BROADCAST_READ_OWN_DEPARTMENT), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const where = isDepartmentScopedOnly(req, PermissionCode.BROADCAST_READ_ALL, PermissionCode.BROADCAST_READ_OWN_DEPARTMENT)
+    ? { createdById: BigInt(user.id) }
+    : {};
+  const broadcasts = await Broadcast.findAll({ where, order: [['createdAt', 'DESC']], limit: 100 });
   ResponseFormatter.success(res, broadcasts);
 }));
 
@@ -56,7 +69,10 @@ router.post('/', AuthMiddleware.requirePermission(PermissionCode.BROADCAST_CREAT
   }
 
   if (audienceType !== 'All' && !audienceValue) {
-    return ResponseFormatter.error(res, 'audienceValue is required for BusinessUnit/Department audiences', 400);
+    return ResponseFormatter.error(res, 'audienceValue is required for BusinessUnit/Department/Role audiences', 400);
+  }
+  if (audienceType === 'Role' && !VALID_ROLE_AUDIENCES.includes(String(audienceValue).toLowerCase())) {
+    return ResponseFormatter.error(res, `audienceValue for a Role broadcast must be one of: ${VALID_ROLE_AUDIENCES.join(', ')}`, 400);
   }
 
   const broadcast = await Broadcast.create({
@@ -88,6 +104,9 @@ router.post('/', AuthMiddleware.requirePermission(PermissionCode.BROADCAST_CREAT
       const secondaryStaff = await Staff.findAll({ where: { id: { [Op.in]: secondaryStaffIds } }, attributes: ['userId'] });
       secondaryStaff.forEach((s: any) => s.userId && recipientUserIds.add(s.userId));
     }
+  } else if (audienceType === 'Role') {
+    const roleUserIds = await getUserIdsForRoles([String(audienceValue).toLowerCase()]);
+    roleUserIds.forEach((id) => recipientUserIds.add(id));
   } else if (audienceType === 'All') {
     const recipients = await Staff.findAll({ attributes: ['userId'] });
     recipients.forEach((s: any) => s.userId && recipientUserIds.add(s.userId));

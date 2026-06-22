@@ -32,8 +32,16 @@ async function getUserIdsForRoles(roleCodes) {
     const userRoles = await UserRole_model_1.UserRole.findAll({ where: { roleId: { [sequelize_1.Op.in]: roleIds } }, attributes: ['userId'] });
     return [...new Set(userRoles.map((ur) => ur.userId))];
 }
-router.get('/', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.BROADCAST_READ_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const broadcasts = await Broadcast_model_1.Broadcast.findAll({ order: [['createdAt', 'DESC']], limit: 100 });
+function isDepartmentScopedOnly(req, allCode, deptCode) {
+    return !hasPermission(req, allCode) && hasPermission(req, deptCode);
+}
+const VALID_ROLE_AUDIENCES = ['staff', 'hod', 'hr', 'admin', 'superadmin'];
+router.get('/', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.BROADCAST_READ_ALL, PermissionCodes_1.PermissionCode.BROADCAST_READ_OWN_DEPARTMENT), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const user = req.user;
+    const where = isDepartmentScopedOnly(req, PermissionCodes_1.PermissionCode.BROADCAST_READ_ALL, PermissionCodes_1.PermissionCode.BROADCAST_READ_OWN_DEPARTMENT)
+        ? { createdById: BigInt(user.id) }
+        : {};
+    const broadcasts = await Broadcast_model_1.Broadcast.findAll({ where, order: [['createdAt', 'DESC']], limit: 100 });
     ResponseFormatter_1.ResponseFormatter.success(res, broadcasts);
 }));
 router.post('/', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.BROADCAST_CREATE_ALL, PermissionCodes_1.PermissionCode.BROADCAST_CREATE_OWN_DEPARTMENT), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
@@ -51,7 +59,10 @@ router.post('/', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.Pe
         audienceValue = String(user.departmentId);
     }
     if (audienceType !== 'All' && !audienceValue) {
-        return ResponseFormatter_1.ResponseFormatter.error(res, 'audienceValue is required for BusinessUnit/Department audiences', 400);
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'audienceValue is required for BusinessUnit/Department/Role audiences', 400);
+    }
+    if (audienceType === 'Role' && !VALID_ROLE_AUDIENCES.includes(String(audienceValue).toLowerCase())) {
+        return ResponseFormatter_1.ResponseFormatter.error(res, `audienceValue for a Role broadcast must be one of: ${VALID_ROLE_AUDIENCES.join(', ')}`, 400);
     }
     const broadcast = await Broadcast_model_1.Broadcast.create({
         title,
@@ -77,6 +88,10 @@ router.post('/', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.Pe
             const secondaryStaff = await Staff_model_1.Staff.findAll({ where: { id: { [sequelize_1.Op.in]: secondaryStaffIds } }, attributes: ['userId'] });
             secondaryStaff.forEach((s) => s.userId && recipientUserIds.add(s.userId));
         }
+    }
+    else if (audienceType === 'Role') {
+        const roleUserIds = await getUserIdsForRoles([String(audienceValue).toLowerCase()]);
+        roleUserIds.forEach((id) => recipientUserIds.add(id));
     }
     else if (audienceType === 'All') {
         const recipients = await Staff_model_1.Staff.findAll({ attributes: ['userId'] });

@@ -328,6 +328,7 @@ exports.ROLE_PERMISSIONS = {
         PermissionCodes_1.PermissionCode.FIN_INVOICE_UPDATE_OWN_DEPARTMENT,
         PermissionCodes_1.PermissionCode.FIN_INVOICE_DELETE_OWN_DEPARTMENT,
         PermissionCodes_1.PermissionCode.BROADCAST_CREATE_OWN_DEPARTMENT,
+        PermissionCodes_1.PermissionCode.BROADCAST_READ_OWN_DEPARTMENT,
         PermissionCodes_1.PermissionCode.MEETING_CREATE_ALL,
         PermissionCodes_1.PermissionCode.BM_PRODUCT_READ_ALL,
         PermissionCodes_1.PermissionCode.BM_ORDER_READ_ALL,

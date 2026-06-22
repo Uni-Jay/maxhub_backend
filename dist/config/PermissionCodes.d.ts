@@ -683,6 +683,7 @@ export declare enum PermissionCode {
     BROADCAST_CREATE_ALL = "broadcast.create.all",
     BROADCAST_CREATE_OWN_DEPARTMENT = "broadcast.create.own_department",
     BROADCAST_READ_ALL = "broadcast.read.all",
+    BROADCAST_READ_OWN_DEPARTMENT = "broadcast.read.own_department",
     BROADCAST_DELETE_ALL = "broadcast.delete.all",
     MEETING_CREATE_ALL = "meeting.create.all"
 }
