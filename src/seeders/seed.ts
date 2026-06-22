@@ -585,6 +585,54 @@ async function main() {
   console.log(`   │ ${'receptionist@maxhub.com'.padEnd(39)} │ ${'staff'.padEnd(14)} │ Receptionist        │`);
   console.log('   └─────────────────────────────────────────┴────────────────┴─────────────────────┘');
 
+  // ── 8b. Backfill a Staff row for each demo/admin account ───────────────────
+  // The demo users above only ever got a User + role — nothing keyed off
+  // Staff.userId (leave applications, attendance, payroll) could resolve a
+  // staff profile for them, so every demo login hit "No staff record found
+  // for this account" the moment it tried to use any of those features.
+  console.log('\n🧑‍💼  Backfilling Staff records for demo/admin accounts...');
+  const staffPersonas: Record<string, { position: string; employeeId: string }> = {
+    [SUPER_ADMIN_EMAIL]:       { position: 'CEO',               employeeId: 'DEMO-SUPERADMIN' },
+    'admin@maxhub.com':        { position: 'Head of Admin',      employeeId: 'DEMO-ADMIN' },
+    'hr@maxhub.com':           { position: 'HR Manager',         employeeId: 'DEMO-HR' },
+    'hod@maxhub.com':          { position: 'Head of Department', employeeId: 'DEMO-HOD' },
+    'staff@maxhub.com':        { position: 'General Staff',      employeeId: 'DEMO-STAFF' },
+    'accountant@maxhub.com':   { position: 'Accountant',         employeeId: 'DEMO-ACCOUNTANT' },
+    'instructor@maxhub.com':   { position: 'Instructor',         employeeId: 'DEMO-INSTRUCTOR' },
+    'receptionist@maxhub.com': { position: 'Receptionist',       employeeId: 'DEMO-RECEPTIONIST' },
+  };
+  const defaultDept = await Department.findOne({ order: [['id', 'ASC']] });
+  if (!defaultDept) {
+    console.log('⏭️  No department exists yet — run seed-departments.ts first to enable this step.');
+  } else {
+    let staffBackfilled = 0;
+    for (const [email, persona] of Object.entries(staffPersonas)) {
+      const personaUser = await User.findOne({ where: { email } });
+      if (!personaUser) continue;
+      const [, staffCreated] = await retryFindOrCreate(() =>
+        Staff.findOrCreate({
+          where: { userId: (personaUser as any).id },
+          defaults: {
+            uuid: uuidv4(),
+            userId: (personaUser as any).id,
+            employeeId: persona.employeeId,
+            firstName: (personaUser as any).firstName,
+            lastName: (personaUser as any).lastName,
+            email: (personaUser as any).email,
+            phone: '+2348000000000',
+            dateOfBirth: new Date('1990-01-01'),
+            departmentId: (defaultDept as any).id,
+            joiningDate: new Date(),
+            status: 'Active',
+            position: persona.position,
+          } as any,
+        })
+      );
+      if (staffCreated) staffBackfilled++;
+    }
+    console.log(`✅  Staff backfill: ${staffBackfilled} created, ${Object.keys(staffPersonas).length - staffBackfilled} already existed`);
+  }
+
   // ── 9. Seed Default Leave Types ─────────────────────────────────────────────
   // NOTE: Steps 10-12 follow (Companies, Demo Student, Done)
   console.log('\n🏖️   Seeding default leave types...');

@@ -544,6 +544,49 @@ async function main() {
     console.log(`   │ ${'instructor@maxhub.com'.padEnd(39)} │ ${'staff'.padEnd(14)} │ Instructor          │`);
     console.log(`   │ ${'receptionist@maxhub.com'.padEnd(39)} │ ${'staff'.padEnd(14)} │ Receptionist        │`);
     console.log('   └─────────────────────────────────────────┴────────────────┴─────────────────────┘');
+    console.log('\n🧑‍💼  Backfilling Staff records for demo/admin accounts...');
+    const staffPersonas = {
+        [SUPER_ADMIN_EMAIL]: { position: 'CEO', employeeId: 'DEMO-SUPERADMIN' },
+        'admin@maxhub.com': { position: 'Head of Admin', employeeId: 'DEMO-ADMIN' },
+        'hr@maxhub.com': { position: 'HR Manager', employeeId: 'DEMO-HR' },
+        'hod@maxhub.com': { position: 'Head of Department', employeeId: 'DEMO-HOD' },
+        'staff@maxhub.com': { position: 'General Staff', employeeId: 'DEMO-STAFF' },
+        'accountant@maxhub.com': { position: 'Accountant', employeeId: 'DEMO-ACCOUNTANT' },
+        'instructor@maxhub.com': { position: 'Instructor', employeeId: 'DEMO-INSTRUCTOR' },
+        'receptionist@maxhub.com': { position: 'Receptionist', employeeId: 'DEMO-RECEPTIONIST' },
+    };
+    const defaultDept = await Department_model_1.Department.findOne({ order: [['id', 'ASC']] });
+    if (!defaultDept) {
+        console.log('⏭️  No department exists yet — run seed-departments.ts first to enable this step.');
+    }
+    else {
+        let staffBackfilled = 0;
+        for (const [email, persona] of Object.entries(staffPersonas)) {
+            const personaUser = await User_model_1.User.findOne({ where: { email } });
+            if (!personaUser)
+                continue;
+            const [, staffCreated] = await retryFindOrCreate(() => Staff_model_1.Staff.findOrCreate({
+                where: { userId: personaUser.id },
+                defaults: {
+                    uuid: (0, uuid_1.v4)(),
+                    userId: personaUser.id,
+                    employeeId: persona.employeeId,
+                    firstName: personaUser.firstName,
+                    lastName: personaUser.lastName,
+                    email: personaUser.email,
+                    phone: '+2348000000000',
+                    dateOfBirth: new Date('1990-01-01'),
+                    departmentId: defaultDept.id,
+                    joiningDate: new Date(),
+                    status: 'Active',
+                    position: persona.position,
+                },
+            }));
+            if (staffCreated)
+                staffBackfilled++;
+        }
+        console.log(`✅  Staff backfill: ${staffBackfilled} created, ${Object.keys(staffPersonas).length - staffBackfilled} already existed`);
+    }
     console.log('\n🏖️   Seeding default leave types...');
     const leaveTypes = [
         { name: 'Annual Leave', code: 'ANNUAL', categoryType: 'Paid', maxDaysPerYear: 21, description: 'Annual paid leave entitlement' },
