@@ -119,7 +119,7 @@ router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, re
     ResponseFormatter_1.ResponseFormatter.success(res, staff.toJSON());
 }));
 router.post('/', AuthMiddleware_1.default.requirePermission('org.staff.create.all', 'org.staff.create.own_department'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const { firstName, lastName, email, phone, employeeId, departmentId: bodyDepartmentId, additionalDepartmentIds, designationId, locationId, joiningDate, dateOfBirth, gender, alternatePhone, whatsappNumber, socialMediaHandle, homeAddress, position, customPosition, businessUnit, additionalUnits, branchId, unitId, jobTitle, hireDate, employmentStatus, educationLevel, degree, institution, major, graduationYear, nyscCompleted, emergencyContactName, emergencyContactPhone, emergencyRelationship, emergencyHomeAddress, emergencyOfficeAddress, validIdType, validIdNumber, idDocument, utilityBillDocument, certificateDocument, signatureImage, hasCertification, certifications, previousWorkHistory, skills, guarantor1Name, guarantor1Relationship, guarantor1Phone, guarantor1Address, guarantor1Email, guarantor1Occupation, guarantor1DurationKnown, guarantor2Name, guarantor2Relationship, guarantor2Phone, guarantor2Address, guarantor2Email, guarantor2Occupation, guarantor2DurationKnown, bankName, accountType, accountName, accountNumber, hasMedicalCondition, medicalConditions, medications, readJobDescription, acceptedCompanyPolicy, receivedCompanyAssets, assignedAssets, bloodGroup, maritalStatus, nationality, } = req.body;
+    const { firstName, lastName, email, phone, employeeId, avatar, departmentId: bodyDepartmentId, additionalDepartmentIds, designationId, locationId, joiningDate, dateOfBirth, gender, alternatePhone, whatsappNumber, socialMediaHandle, homeAddress, position, customPosition, businessUnit, additionalUnits, branchId, unitId, jobTitle, hireDate, employmentStatus, educationLevel, degree, institution, major, graduationYear, nyscCompleted, emergencyContactName, emergencyContactPhone, emergencyRelationship, emergencyHomeAddress, emergencyOfficeAddress, validIdType, validIdNumber, idDocument, utilityBillDocument, certificateDocument, signatureImage, hasCertification, certifications, previousWorkHistory, skills, guarantor1Name, guarantor1Relationship, guarantor1Phone, guarantor1Address, guarantor1Email, guarantor1Occupation, guarantor1DurationKnown, guarantor2Name, guarantor2Relationship, guarantor2Phone, guarantor2Address, guarantor2Email, guarantor2Occupation, guarantor2DurationKnown, bankName, accountType, accountName, accountNumber, hasMedicalCondition, medicalConditions, medications, readJobDescription, acceptedCompanyPolicy, receivedCompanyAssets, assignedAssets, bloodGroup, maritalStatus, nationality, } = req.body;
     const departmentId = isDepartmentScopedOnly(req, 'org.staff.create.all', 'org.staff.create.own_department')
         ? req.user?.departmentId
         : bodyDepartmentId;
@@ -147,6 +147,7 @@ router.post('/', AuthMiddleware_1.default.requirePermission('org.staff.create.al
         lastName,
         email,
         phone,
+        avatar,
         passwordHash,
         mustChangePassword: true,
         status: 'Active',

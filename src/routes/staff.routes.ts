@@ -146,7 +146,7 @@ router.post(
   AuthMiddleware.requirePermission('org.staff.create.all', 'org.staff.create.own_department'),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const {
-      firstName, lastName, email, phone, employeeId,
+      firstName, lastName, email, phone, employeeId, avatar,
       departmentId: bodyDepartmentId, additionalDepartmentIds, designationId, locationId,
       joiningDate, dateOfBirth, gender, alternatePhone,
       whatsappNumber, socialMediaHandle, homeAddress,
@@ -211,6 +211,7 @@ router.post(
       lastName,
       email,
       phone,
+      avatar,
       passwordHash,
       mustChangePassword: true,
       status: 'Active',
