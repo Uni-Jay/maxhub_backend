@@ -554,25 +554,16 @@ DashboardController.getHeadOfAdminStats = ErrorMiddleware_1.ErrorMiddleware.asyn
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-    const bucket = getRoleBucket(req);
-    const ownStaff = bucket === 'admin' ? await getOwnStaff(req) : null;
-    const businessUnit = ownStaff?.businessUnit;
     const staffWhere = { status: 'Active' };
-    if (businessUnit)
-        staffWhere.businessUnit = businessUnit;
-    const scopedStaffIds = businessUnit
-        ? (await Staff_model_1.Staff.findAll({ where: staffWhere, attributes: ['id'] })).map((s) => s.id)
-        : null;
-    const attendanceScope = scopedStaffIds ? { staffId: { [sequelize_1.Op.in]: scopedStaffIds.length ? scopedStaffIds : [-1] } } : {};
     const projectWhere = { status: 'Active' };
     const [totalEmployees, pendingApprovals, todayPresent, todayTotal, activeProjects, pendingOvertime, pendingWeeklyReports, studentCount] = await Promise.all([
         Staff_model_1.Staff.count({ where: staffWhere }),
-        LeaveRequest_model_1.LeaveRequest.count({ where: scopedStaffIds ? { status: 'Pending', ...attendanceScope } : { status: 'Pending' } }),
-        Attendance_model_1.Attendance.count({ where: { ...attendanceScope, attendanceDate: { [sequelize_1.Op.between]: [startOfDay, endOfDay] }, status: { [sequelize_1.Op.in]: ['Present', 'Late'] } } }),
-        Attendance_model_1.Attendance.count({ where: { ...attendanceScope, attendanceDate: { [sequelize_1.Op.between]: [startOfDay, endOfDay] } } }),
+        LeaveRequest_model_1.LeaveRequest.count({ where: { status: 'Pending' } }),
+        Attendance_model_1.Attendance.count({ where: { attendanceDate: { [sequelize_1.Op.between]: [startOfDay, endOfDay] }, status: { [sequelize_1.Op.in]: ['Present', 'Late'] } } }),
+        Attendance_model_1.Attendance.count({ where: { attendanceDate: { [sequelize_1.Op.between]: [startOfDay, endOfDay] } } }),
         Project_model_1.Project.count({ where: projectWhere }),
-        Overtime_model_1.Overtime.count({ where: scopedStaffIds ? { status: 'Pending', ...attendanceScope } : { status: 'Pending' } }),
-        WeeklyReport_model_1.WeeklyReport.count({ where: scopedStaffIds ? { approvalStatus: 'Pending', ...attendanceScope } : { approvalStatus: 'Pending' } }),
+        Overtime_model_1.Overtime.count({ where: { status: 'Pending' } }),
+        WeeklyReport_model_1.WeeklyReport.count({ where: { approvalStatus: 'Pending' } }),
         StudentProfile_model_1.StudentProfile.count(),
     ]);
     const averageAttendance = todayTotal > 0 ? Math.round((todayPresent / todayTotal) * 1000) / 10 : 0;

@@ -720,30 +720,22 @@ export class DashboardController {
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-      // Admin (branch/business-unit manager) sees only their own business unit; superadmin/headofadmin see everything.
-      const bucket = getRoleBucket(req);
-      const ownStaff = bucket === 'admin' ? await getOwnStaff(req) : null;
-      const businessUnit = ownStaff?.businessUnit;
+      // Admin used to be scoped to just their own business unit while
+      // superadmin/headofadmin saw everything — company-wide totals were
+      // explicitly wanted here for Admin too (reported live as "admin
+      // sees total staff of 2 instead of 6", since 2 of 6 real staff
+      // happen to share one business unit with the admin viewing it).
       const staffWhere: Record<string, unknown> = { status: 'Active' };
-      if (businessUnit) staffWhere.businessUnit = businessUnit;
-
-      const scopedStaffIds = businessUnit
-        ? (await Staff.findAll({ where: staffWhere, attributes: ['id'] })).map((s: any) => s.id)
-        : null;
-      const attendanceScope = scopedStaffIds ? { staffId: { [Op.in]: scopedStaffIds.length ? scopedStaffIds : [-1] } } : {};
       const projectWhere: Record<string, unknown> = { status: 'Active' };
 
       const [totalEmployees, pendingApprovals, todayPresent, todayTotal, activeProjects, pendingOvertime, pendingWeeklyReports, studentCount] = await Promise.all([
         Staff.count({ where: staffWhere }),
-        LeaveRequest.count({ where: scopedStaffIds ? { status: 'Pending', ...attendanceScope } : { status: 'Pending' } }),
-        Attendance.count({ where: { ...attendanceScope, attendanceDate: { [Op.between]: [startOfDay, endOfDay] }, status: { [Op.in]: ['Present', 'Late'] } } }),
-        Attendance.count({ where: { ...attendanceScope, attendanceDate: { [Op.between]: [startOfDay, endOfDay] } } }),
+        LeaveRequest.count({ where: { status: 'Pending' } }),
+        Attendance.count({ where: { attendanceDate: { [Op.between]: [startOfDay, endOfDay] }, status: { [Op.in]: ['Present', 'Late'] } } }),
+        Attendance.count({ where: { attendanceDate: { [Op.between]: [startOfDay, endOfDay] } } }),
         Project.count({ where: projectWhere }),
-        Overtime.count({ where: scopedStaffIds ? { status: 'Pending', ...attendanceScope } : { status: 'Pending' } }),
-        WeeklyReport.count({ where: scopedStaffIds ? { approvalStatus: 'Pending', ...attendanceScope } : { approvalStatus: 'Pending' } }),
-        // Company-wide — businessUnit is a free-text Staff field with no clean
-        // join to StudentProfile.departmentId, so this isn't scoped the way
-        // staff/attendance above are for a single-business-unit Admin.
+        Overtime.count({ where: { status: 'Pending' } }),
+        WeeklyReport.count({ where: { approvalStatus: 'Pending' } }),
         StudentProfile.count(),
       ]);
 
