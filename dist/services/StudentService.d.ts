@@ -32,7 +32,6 @@ interface AttendanceMarkInput {
     markedById: bigint;
 }
 export declare class StudentService {
-    private generateStudentNumber;
     registerStudent(input: RegisterStudentInput): Promise<StudentProfile>;
     getStudents(filters: {
         companyId?: bigint;

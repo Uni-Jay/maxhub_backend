@@ -17,46 +17,44 @@ const Course_model_1 = require("../models/Course.model");
 const ErrorHandler_1 = require("../utils/ErrorHandler");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 class StudentService {
-    async generateStudentNumber(companyId) {
-        const year = new Date().getFullYear();
-        const prefix = 'BVS';
-        const count = await StudentProfile_model_1.StudentProfile.count({ where: { companyId } });
-        const seq = String(count + 1).padStart(5, '0');
-        return `${prefix}-${year}-${seq}`;
-    }
     async registerStudent(input) {
         const existing = await User_model_1.User.findOne({ where: { email: input.email } });
         if (existing)
             throw new ErrorHandler_1.ConflictError('Email already registered');
         const passwordHash = await bcrypt_1.default.hash(input.password || 'Student@123', 10);
-        const user = await User_model_1.User.create({
-            firstName: input.firstName,
-            lastName: input.lastName,
-            email: input.email,
-            phone: input.phone,
-            passwordHash,
-            status: 'Active',
-            emailVerified: false,
-            loginAttempts: 0,
-        });
-        const studentNumber = await this.generateStudentNumber(input.companyId);
-        const profile = await StudentProfile_model_1.StudentProfile.create({
-            userId: user.id,
-            companyId: input.companyId,
-            programId: input.programId,
-            departmentId: input.departmentId,
-            studentNumber,
-            gender: input.gender,
-            dateOfBirth: input.dateOfBirth,
-            address: input.address,
-            state: input.state,
-            guardianName: input.guardianName,
-            guardianPhone: input.guardianPhone,
-            guardianEmail: input.guardianEmail,
-            guardianRelationship: input.guardianRelationship,
-            enrollmentDate: (input.enrollmentDate || new Date().toISOString().slice(0, 10)),
-            status: 'Active',
-            registeredById: input.registeredById,
+        const sequelize = User_model_1.User.sequelize;
+        const profile = await sequelize.transaction(async (t) => {
+            const user = await User_model_1.User.create({
+                firstName: input.firstName,
+                lastName: input.lastName,
+                email: input.email,
+                phone: input.phone,
+                passwordHash,
+                status: 'Active',
+                emailVerified: false,
+                loginAttempts: 0,
+            }, { transaction: t });
+            const created = await StudentProfile_model_1.StudentProfile.create({
+                userId: user.id,
+                companyId: input.companyId,
+                programId: input.programId,
+                departmentId: input.departmentId,
+                studentNumber: `BVS-TEMP-${user.id}`,
+                gender: input.gender,
+                dateOfBirth: input.dateOfBirth,
+                address: input.address,
+                state: input.state,
+                guardianName: input.guardianName,
+                guardianPhone: input.guardianPhone,
+                guardianEmail: input.guardianEmail,
+                guardianRelationship: input.guardianRelationship,
+                enrollmentDate: (input.enrollmentDate || new Date().toISOString().slice(0, 10)),
+                status: 'Active',
+                registeredById: input.registeredById,
+            }, { transaction: t });
+            const studentNumber = `BVS-${new Date().getFullYear()}-${String(created.id).padStart(5, '0')}`;
+            await created.update({ studentNumber }, { transaction: t });
+            return created;
         });
         return profile;
     }

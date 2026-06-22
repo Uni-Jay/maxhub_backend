@@ -42,15 +42,6 @@ interface AttendanceMarkInput {
 }
 
 export class StudentService {
-  /** Generate unique student number: BVS-2024-00001 */
-  private async generateStudentNumber(companyId: bigint): Promise<string> {
-    const year = new Date().getFullYear();
-    const prefix = 'BVS';
-    const count = await StudentProfile.count({ where: { companyId } });
-    const seq = String(count + 1).padStart(5, '0');
-    return `${prefix}-${year}-${seq}`;
-  }
-
   /** Register a new student (creates User + StudentProfile) */
   async registerStudent(input: RegisterStudentInput): Promise<StudentProfile> {
     const existing = await User.findOne({ where: { email: input.email } });
@@ -58,36 +49,56 @@ export class StudentService {
 
     const passwordHash = await bcrypt.hash(input.password || 'Student@123', 10);
 
-    const user = await User.create({
-      firstName: input.firstName,
-      lastName: input.lastName,
-      email: input.email,
-      phone: input.phone,
-      passwordHash,
-      status: 'Active',
-      emailVerified: false,
-      loginAttempts: 0,
-    });
+    // User + StudentProfile used to be two separate creates with nothing
+    // tying them together — if StudentProfile.create() failed for any
+    // reason (bad FK, enum value, whatever), the User row it had already
+    // committed stuck around permanently. A retry with the same email then
+    // failed the findOne check above with "Email already registered" even
+    // though no student ever actually appeared anywhere — exactly what was
+    // reported live. Wrapping both in one transaction means either both
+    // commit or neither does.
+    const sequelize = User.sequelize!;
+    const profile = await sequelize.transaction(async (t) => {
+      const user = await User.create({
+        firstName: input.firstName,
+        lastName: input.lastName,
+        email: input.email,
+        phone: input.phone,
+        passwordHash,
+        status: 'Active',
+        emailVerified: false,
+        loginAttempts: 0,
+      }, { transaction: t });
 
-    const studentNumber = await this.generateStudentNumber(input.companyId);
+      // studentNumber used to be generated from a count()-then-create()
+      // (count existing students, use count+1) — the same race already
+      // found and fixed elsewhere in this codebase for conversation/job/
+      // client codes: two registrations landing close together could both
+      // compute the same number and the second hits the unique constraint.
+      // Generating it from the row's own DB-assigned id is race-free.
+      const created = await StudentProfile.create({
+        userId: user.id,
+        companyId: input.companyId,
+        programId: input.programId,
+        departmentId: input.departmentId,
+        studentNumber: `BVS-TEMP-${user.id}`,
+        gender: input.gender as any,
+        dateOfBirth: input.dateOfBirth as any,
+        address: input.address,
+        state: input.state,
+        guardianName: input.guardianName,
+        guardianPhone: input.guardianPhone,
+        guardianEmail: input.guardianEmail,
+        guardianRelationship: input.guardianRelationship,
+        enrollmentDate: (input.enrollmentDate || new Date().toISOString().slice(0, 10)) as any,
+        status: 'Active',
+        registeredById: input.registeredById,
+      }, { transaction: t });
 
-    const profile = await StudentProfile.create({
-      userId: user.id,
-      companyId: input.companyId,
-      programId: input.programId,
-      departmentId: input.departmentId,
-      studentNumber,
-      gender: input.gender as any,
-      dateOfBirth: input.dateOfBirth as any,
-      address: input.address,
-      state: input.state,
-      guardianName: input.guardianName,
-      guardianPhone: input.guardianPhone,
-      guardianEmail: input.guardianEmail,
-      guardianRelationship: input.guardianRelationship,
-      enrollmentDate: (input.enrollmentDate || new Date().toISOString().slice(0, 10)) as any,
-      status: 'Active',
-      registeredById: input.registeredById,
+      const studentNumber = `BVS-${new Date().getFullYear()}-${String(created.id).padStart(5, '0')}`;
+      await created.update({ studentNumber }, { transaction: t });
+
+      return created;
     });
 
     return profile;
