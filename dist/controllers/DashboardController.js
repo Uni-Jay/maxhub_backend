@@ -6,6 +6,7 @@ const sequelize_1 = require("sequelize");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const PermissionCodes_1 = require("../config/PermissionCodes");
+const leaveApproval_1 = require("../utils/leaveApproval");
 const Staff_model_1 = require("../models/Staff.model");
 const Department_model_1 = require("../models/Department.model");
 const StaffDepartment_model_1 = require("../models/StaffDepartment.model");
@@ -590,14 +591,15 @@ DashboardController.getHeadOfAdminLeaveApprovals = ErrorMiddleware_1.ErrorMiddle
         order: [['createdAt', 'DESC']],
         limit: 20,
     });
-    const result = approvals.map((a) => ({
+    const result = await Promise.all(approvals.map(async (a) => ({
         id: a.id.toString(),
         employee: `${a.staff?.firstName ?? ''} ${a.staff?.lastName ?? ''}`.trim(),
         type: a.leaveType?.name ?? 'Leave',
         startDate: a.startDate?.toISOString?.()?.slice(0, 10) ?? '',
         days: a.numberofDays,
         status: 'pending',
-    }));
+        requiresSuperAdminApproval: await (0, leaveApproval_1.requesterIsHrOrAdmin)(a.staffId),
+    })));
     ResponseFormatter_1.ResponseFormatter.success(res, result, 'Leave approvals retrieved');
 });
 DashboardController.approveLeave = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
@@ -609,6 +611,9 @@ DashboardController.approveLeave = ErrorMiddleware_1.ErrorMiddleware.asyncHandle
     const leave = await LeaveRequest_model_1.LeaveRequest.findByPk(leaveId);
     if (!leave) {
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Leave request not found');
+    }
+    if (await (0, leaveApproval_1.requesterIsHrOrAdmin)(leave.staffId) && !(0, leaveApproval_1.isSuperAdminOnly)(req)) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only Super Admin can approve leave requests from HR or Admin staff');
     }
     await leave.update({
         status: 'Approved',
@@ -627,6 +632,9 @@ DashboardController.rejectLeave = ErrorMiddleware_1.ErrorMiddleware.asyncHandler
     const leave = await LeaveRequest_model_1.LeaveRequest.findByPk(leaveId);
     if (!leave) {
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Leave request not found');
+    }
+    if (await (0, leaveApproval_1.requesterIsHrOrAdmin)(leave.staffId) && !(0, leaveApproval_1.isSuperAdminOnly)(req)) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only Super Admin can reject leave requests from HR or Admin staff');
     }
     await leave.update({
         status: 'Rejected',

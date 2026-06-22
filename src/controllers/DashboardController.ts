@@ -4,6 +4,7 @@ import { Op, fn, col, literal } from 'sequelize';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { PermissionCode } from '@config/PermissionCodes';
+import { isSuperAdminOnly, requesterIsHrOrAdmin } from '@utils/leaveApproval';
 import { Staff } from '@models/Staff.model';
 import { Department } from '@models/Department.model';
 import { StaffDepartment } from '@models/StaffDepartment.model';
@@ -768,14 +769,15 @@ export class DashboardController {
         limit: 20,
       });
 
-      const result = approvals.map((a: any) => ({
+      const result = await Promise.all(approvals.map(async (a: any) => ({
         id: a.id.toString(),
         employee: `${a.staff?.firstName ?? ''} ${a.staff?.lastName ?? ''}`.trim(),
         type: a.leaveType?.name ?? 'Leave',
         startDate: a.startDate?.toISOString?.()?.slice(0, 10) ?? '',
         days: a.numberofDays,
         status: 'pending',
-      }));
+        requiresSuperAdminApproval: await requesterIsHrOrAdmin(a.staffId),
+      })));
 
       ResponseFormatter.success(res, result, 'Leave approvals retrieved');
     }
@@ -793,6 +795,13 @@ export class DashboardController {
       const leave = await LeaveRequest.findByPk(leaveId);
       if (!leave) {
         return ResponseFormatter.notFound(res, 'Leave request not found');
+      }
+      // Same HR/Admin-vs-Super-Admin restriction as leave.routes.ts's
+      // approve route — this is a second, separate endpoint reaching the
+      // same table (used by the Head of Admin dashboard widget) and needs
+      // the identical guard or it'd be a bypass route around the first one.
+      if (await requesterIsHrOrAdmin(leave.staffId) && !isSuperAdminOnly(req)) {
+        return ResponseFormatter.forbidden(res, 'Only Super Admin can approve leave requests from HR or Admin staff');
       }
 
       await leave.update({
@@ -818,6 +827,10 @@ export class DashboardController {
       const leave = await LeaveRequest.findByPk(leaveId);
       if (!leave) {
         return ResponseFormatter.notFound(res, 'Leave request not found');
+      }
+      // Same HR/Admin-vs-Super-Admin restriction as approveLeave above.
+      if (await requesterIsHrOrAdmin(leave.staffId) && !isSuperAdminOnly(req)) {
+        return ResponseFormatter.forbidden(res, 'Only Super Admin can reject leave requests from HR or Admin staff');
       }
 
       await leave.update({

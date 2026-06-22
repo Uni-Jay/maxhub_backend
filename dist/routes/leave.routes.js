@@ -13,6 +13,7 @@ const LeaveType_model_1 = require("../models/LeaveType.model");
 const Staff_model_1 = require("../models/Staff.model");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
 const PermissionCodes_1 = require("../config/PermissionCodes");
+const leaveApproval_1 = require("../utils/leaveApproval");
 const router = (0, express_1.Router)();
 router.get('/requests', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const page = req.pagination?.page || 1;
@@ -44,18 +45,25 @@ router.get('/requests', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (re
         order: [['createdAt', 'DESC']],
         paranoid: true,
     });
-    ResponseFormatter_1.ResponseFormatter.paginated(res, rows.map(r => r.toJSON()), count, page, limit);
+    const enriched = await Promise.all(rows.map(async (r) => ({
+        ...r.toJSON(),
+        requiresSuperAdminApproval: await (0, leaveApproval_1.requesterIsHrOrAdmin)(r.staffId),
+    })));
+    ResponseFormatter_1.ResponseFormatter.paginated(res, enriched, count, page, limit);
 }));
 router.post('/requests', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { leaveTypeId, startDate, endDate, reason, documentUrl } = req.body;
     const user = req.user;
+    const staff = user?.id ? await Staff_model_1.Staff.findOne({ where: { userId: user.id }, attributes: ['id'] }) : null;
+    if (!staff)
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'No staff record found for this account', 400);
     const start = new Date(startDate);
     const end = new Date(endDate);
     const diffMs = end.getTime() - start.getTime();
     const numberofDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24)) + 1;
     const leave = await LeaveRequest_model_1.LeaveRequest.create({
         leaveTypeId: BigInt(leaveTypeId),
-        staffId: BigInt(user?.staffId || 1),
+        staffId: staff.id,
         startDate: start,
         endDate: end,
         numberofDays,
@@ -74,7 +82,10 @@ router.get('/requests/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async
     });
     if (!leave)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Leave request not found');
-    ResponseFormatter_1.ResponseFormatter.success(res, leave.toJSON());
+    ResponseFormatter_1.ResponseFormatter.success(res, {
+        ...leave.toJSON(),
+        requiresSuperAdminApproval: await (0, leaveApproval_1.requesterIsHrOrAdmin)(leave.staffId),
+    });
 }));
 router.patch('/requests/:id/approve', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.LEAVE_REQUEST_APPROVE_ALL, PermissionCodes_1.PermissionCode.LEAVE_REQUEST_APPROVE_OWN_DEPARTMENT), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const leave = await LeaveRequest_model_1.LeaveRequest.findByPk(req.params.id);
@@ -82,6 +93,9 @@ router.patch('/requests/:id/approve', AuthMiddleware_1.default.requirePermission
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Leave request not found');
     if (leave.status !== 'Pending') {
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Only pending requests can be approved', 400);
+    }
+    if (await (0, leaveApproval_1.requesterIsHrOrAdmin)(leave.staffId) && !(0, leaveApproval_1.isSuperAdminOnly)(req)) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only Super Admin can approve leave requests from HR or Admin staff', req.path);
     }
     const user = req.user;
     await leave.update({
@@ -98,6 +112,9 @@ router.patch('/requests/:id/reject', AuthMiddleware_1.default.requirePermission(
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Leave request not found');
     if (leave.status !== 'Pending') {
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Only pending requests can be rejected', 400);
+    }
+    if (await (0, leaveApproval_1.requesterIsHrOrAdmin)(leave.staffId) && !(0, leaveApproval_1.isSuperAdminOnly)(req)) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only Super Admin can reject leave requests from HR or Admin staff', req.path);
     }
     await leave.update({
         status: 'Rejected',
