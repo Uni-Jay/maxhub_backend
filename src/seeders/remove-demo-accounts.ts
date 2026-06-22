@@ -11,6 +11,16 @@
  * UserRole assignments are hard-deleted — they're pure join-table rows
  * with no standalone meaning once the account is gone.
  *
+ * Also mangles the User.email on each soft-deleted row. Postgres's unique
+ * index on email doesn't care that a row is soft-deleted — it still
+ * physically holds that value — so registering any *new* person (staff or
+ * student) with one of these exact addresses later would pass every
+ * application-level "does this already exist?" check (which correctly
+ * excludes soft-deleted rows) and then fail at the database with a raw
+ * unique-constraint violation, surfacing as a generic "Duplicate entry
+ * detected" pointing at nothing visible. This happened live the first time
+ * this script ran without the mangling step.
+ *
  * Run: npx ts-node --transpile-only --require tsconfig-paths/register src/seeders/remove-demo-accounts.ts
  */
 import * as dotenv from 'dotenv';
@@ -55,7 +65,8 @@ async function main() {
     const roles = await UserRole.findAll({ where: { userId: (user as any).id } });
     if (roles.length) await UserRole.destroy({ where: { userId: (user as any).id } });
     await user.destroy();
-    console.log(`✅ Removed ${email} (user#${(user as any).id}${staff ? `, staff#${(staff as any).id}` : ''}, ${roles.length} role assignment(s) cleared)`);
+    await user.update({ email: `deleted_${email}` } as any);
+    console.log(`✅ Removed ${email} (user#${(user as any).id}${staff ? `, staff#${(staff as any).id}` : ''}, ${roles.length} role assignment(s) cleared, email freed for reuse)`);
   }
 
   console.log('\nDone.');

@@ -72,7 +72,8 @@ async function main() {
         if (roles.length)
             await UserRole_model_1.UserRole.destroy({ where: { userId: user.id } });
         await user.destroy();
-        console.log(`✅ Removed ${email} (user#${user.id}${staff ? `, staff#${staff.id}` : ''}, ${roles.length} role assignment(s) cleared)`);
+        await user.update({ email: `deleted_${email}` });
+        console.log(`✅ Removed ${email} (user#${user.id}${staff ? `, staff#${staff.id}` : ''}, ${roles.length} role assignment(s) cleared, email freed for reuse)`);
     }
     console.log('\nDone.');
     await sequelize.close();
