@@ -565,7 +565,7 @@ DashboardController.getHeadOfAdminStats = ErrorMiddleware_1.ErrorMiddleware.asyn
         : null;
     const attendanceScope = scopedStaffIds ? { staffId: { [sequelize_1.Op.in]: scopedStaffIds.length ? scopedStaffIds : [-1] } } : {};
     const projectWhere = { status: 'Active' };
-    const [totalStaff, pendingApprovals, todayPresent, todayTotal, activeProjects, pendingOvertime, pendingWeeklyReports, studentCount] = await Promise.all([
+    const [totalEmployees, pendingApprovals, todayPresent, todayTotal, activeProjects, pendingOvertime, pendingWeeklyReports, studentCount] = await Promise.all([
         Staff_model_1.Staff.count({ where: staffWhere }),
         LeaveRequest_model_1.LeaveRequest.count({ where: scopedStaffIds ? { status: 'Pending', ...attendanceScope } : { status: 'Pending' } }),
         Attendance_model_1.Attendance.count({ where: { ...attendanceScope, attendanceDate: { [sequelize_1.Op.between]: [startOfDay, endOfDay] }, status: { [sequelize_1.Op.in]: ['Present', 'Late'] } } }),
@@ -576,7 +576,7 @@ DashboardController.getHeadOfAdminStats = ErrorMiddleware_1.ErrorMiddleware.asyn
         StudentProfile_model_1.StudentProfile.count(),
     ]);
     const averageAttendance = todayTotal > 0 ? Math.round((todayPresent / todayTotal) * 1000) / 10 : 0;
-    ResponseFormatter_1.ResponseFormatter.success(res, { totalStaff, pendingApprovals, averageAttendance, activeProjects, pendingOvertime, pendingWeeklyReports, studentCount }, 'Dashboard statistics retrieved');
+    ResponseFormatter_1.ResponseFormatter.success(res, { totalEmployees, pendingApprovals, averageAttendance, activeProjects, pendingOvertime, pendingWeeklyReports, studentCount }, 'Dashboard statistics retrieved');
 });
 DashboardController.getHeadOfAdminLeaveApprovals = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     if (!canApproveLeave(req)) {

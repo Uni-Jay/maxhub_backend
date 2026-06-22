@@ -733,7 +733,7 @@ export class DashboardController {
       const attendanceScope = scopedStaffIds ? { staffId: { [Op.in]: scopedStaffIds.length ? scopedStaffIds : [-1] } } : {};
       const projectWhere: Record<string, unknown> = { status: 'Active' };
 
-      const [totalStaff, pendingApprovals, todayPresent, todayTotal, activeProjects, pendingOvertime, pendingWeeklyReports, studentCount] = await Promise.all([
+      const [totalEmployees, pendingApprovals, todayPresent, todayTotal, activeProjects, pendingOvertime, pendingWeeklyReports, studentCount] = await Promise.all([
         Staff.count({ where: staffWhere }),
         LeaveRequest.count({ where: scopedStaffIds ? { status: 'Pending', ...attendanceScope } : { status: 'Pending' } }),
         Attendance.count({ where: { ...attendanceScope, attendanceDate: { [Op.between]: [startOfDay, endOfDay] }, status: { [Op.in]: ['Present', 'Late'] } } }),
@@ -749,7 +749,7 @@ export class DashboardController {
 
       const averageAttendance = todayTotal > 0 ? Math.round((todayPresent / todayTotal) * 1000) / 10 : 0;
 
-      ResponseFormatter.success(res, { totalStaff, pendingApprovals, averageAttendance, activeProjects, pendingOvertime, pendingWeeklyReports, studentCount }, 'Dashboard statistics retrieved');
+      ResponseFormatter.success(res, { totalEmployees, pendingApprovals, averageAttendance, activeProjects, pendingOvertime, pendingWeeklyReports, studentCount }, 'Dashboard statistics retrieved');
     }
   );
 
