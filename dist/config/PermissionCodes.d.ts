@@ -606,6 +606,7 @@ export declare enum PermissionCode {
     STM_STUDENT_CREATE_ALL = "stm.student.create.all",
     STM_STUDENT_CREATE_OWN_DEPARTMENT = "stm.student.create.own_department",
     STM_STUDENT_READ_ALL = "stm.student.read.all",
+    STM_STUDENT_READ_OWN_DEPARTMENT = "stm.student.read.own_department",
     STM_STUDENT_UPDATE_ALL = "stm.student.update.all",
     STM_STUDENT_UPDATE_OWN_DEPARTMENT = "stm.student.update.own_department",
     STM_STUDENT_DELETE_ALL = "stm.student.delete.all",

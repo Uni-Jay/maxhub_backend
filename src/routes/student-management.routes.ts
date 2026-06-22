@@ -19,7 +19,7 @@ router.post(
 router.get(
   '/',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission(PermissionCode.STM_STUDENT_READ_ALL),
+  AuthMiddleware.requirePermission(PermissionCode.STM_STUDENT_READ_ALL, PermissionCode.STM_STUDENT_READ_OWN_DEPARTMENT),
   StudentController.list
 );
 
@@ -27,7 +27,7 @@ router.get(
 router.get(
   '/:id',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission(PermissionCode.STM_STUDENT_READ_ALL),
+  AuthMiddleware.requirePermission(PermissionCode.STM_STUDENT_READ_ALL, PermissionCode.STM_STUDENT_READ_OWN_DEPARTMENT),
   StudentController.getById
 );
 

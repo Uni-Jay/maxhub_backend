@@ -408,7 +408,7 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     // Student management — read is company-wide (pre-existing), write is
     // scoped to her own department(s) so she can run Kurios SAT's student
     // roster without touching other business units' students.
-    PermissionCode.STM_STUDENT_READ_ALL,
+    PermissionCode.STM_STUDENT_READ_OWN_DEPARTMENT,
     PermissionCode.STM_STUDENT_CREATE_OWN_DEPARTMENT,
     PermissionCode.STM_STUDENT_UPDATE_OWN_DEPARTMENT,
     PermissionCode.STM_STUDENT_SUSPEND_OWN_DEPARTMENT,

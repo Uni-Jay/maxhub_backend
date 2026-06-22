@@ -343,7 +343,7 @@ exports.ROLE_PERMISSIONS = {
         PermissionCodes_1.PermissionCode.CRM_QUOTE_UPDATE_OWN_DEPARTMENT,
         PermissionCodes_1.PermissionCode.CRM_QUOTE_DELETE_OWN_DEPARTMENT,
         PermissionCodes_1.PermissionCode.CRM_QUOTE_SEND_OWN_DEPARTMENT,
-        PermissionCodes_1.PermissionCode.STM_STUDENT_READ_ALL,
+        PermissionCodes_1.PermissionCode.STM_STUDENT_READ_OWN_DEPARTMENT,
         PermissionCodes_1.PermissionCode.STM_STUDENT_CREATE_OWN_DEPARTMENT,
         PermissionCodes_1.PermissionCode.STM_STUDENT_UPDATE_OWN_DEPARTMENT,
         PermissionCodes_1.PermissionCode.STM_STUDENT_SUSPEND_OWN_DEPARTMENT,
