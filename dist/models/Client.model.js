@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Client = void 0;
 const sequelize_1 = require("sequelize");
+const Department_model_1 = require("./Department.model");
 class Client extends sequelize_1.Model {
     static initModel(sequelize) {
         Client.init({
@@ -37,11 +38,20 @@ class Client extends sequelize_1.Model {
             timestamps: true,
             underscored: false,
             hooks: {
-                beforeCreate: async (client) => {
-                    if (!client.clientId) {
-                        const count = await Client.count();
-                        client.clientId = `CLT-${String(count + 1).padStart(4, '0')}`;
+                afterCreate: async (client) => {
+                    if (client.clientId)
+                        return;
+                    let prefix = 'CLT';
+                    if (client.departmentId) {
+                        const dept = await Department_model_1.Department.findByPk(client.departmentId, { attributes: ['code'] });
+                        if (dept?.code)
+                            prefix = dept.code;
                     }
+                    const countInScope = client.departmentId
+                        ? await Client.count({ where: { departmentId: client.departmentId } })
+                        : await Client.count({ where: { departmentId: null } });
+                    client.clientId = `${prefix}-${String(countInScope).padStart(4, '0')}`;
+                    await client.save();
                 },
             },
         });

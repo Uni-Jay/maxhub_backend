@@ -306,6 +306,18 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     // CRM
     PermissionCode.CRM_CONTACT_READ_ALL,
     PermissionCode.CRM_OPPORTUNITY_READ_ALL,
+    // Business-unit module access (Kurios SAT / BeadMax) — HR oversees staff
+    // and operations company-wide, not just whichever department they're
+    // personally linked to. VisaMax has no permission gate of its own (open
+    // to any authenticated user already), so it needs nothing added here.
+    PermissionCode.LMS_COURSE_READ_ALL,
+    PermissionCode.LMS_ENROLLMENT_READ_ALL,
+    PermissionCode.LMS_EXAM_READ_ALL,
+    PermissionCode.LMS_CERTIFICATE_READ_ALL,
+    PermissionCode.LMS_FEE_RECEIPT_READ_ALL,
+    PermissionCode.BM_PRODUCT_READ_ALL,
+    PermissionCode.BM_ORDER_READ_ALL,
+    PermissionCode.BM_ANALYTICS_READ_ALL,
     // System
     PermissionCode.SYS_AUDIT_READ_ALL,
     PermissionCode.SYS_REPORT_GENERATE_ALL,

@@ -1,4 +1,5 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
+import { Department } from './Department.model';
 
 export interface ClientAttributes {
   id: bigint;
@@ -115,11 +116,25 @@ export class Client
         timestamps: true,
         underscored: false,
         hooks: {
-          beforeCreate: async (client) => {
-            if (!client.clientId) {
-              const count = await Client.count();
-              client.clientId = `CLT-${String(count + 1).padStart(4, '0')}`;
+          // File number is scoped per department (e.g. KS-0001, VM-0001,
+          // BM-0001) rather than one flat CLT-#### sequence — has to run
+          // afterCreate, not beforeCreate, since it needs the department's
+          // code looked up and the row doesn't have its own assigned id yet
+          // at beforeCreate time (counting-before-insert is also exactly the
+          // count()-then-create() race already found and fixed elsewhere in
+          // this codebase for conversation/job codes).
+          afterCreate: async (client) => {
+            if (client.clientId) return;
+            let prefix = 'CLT';
+            if (client.departmentId) {
+              const dept = await Department.findByPk(client.departmentId, { attributes: ['code'] });
+              if ((dept as any)?.code) prefix = (dept as any).code;
             }
+            const countInScope = client.departmentId
+              ? await Client.count({ where: { departmentId: client.departmentId } })
+              : await Client.count({ where: { departmentId: null as any } });
+            client.clientId = `${prefix}-${String(countInScope).padStart(4, '0')}`;
+            await client.save();
           },
         },
       }
