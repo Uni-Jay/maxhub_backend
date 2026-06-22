@@ -358,15 +358,34 @@ router.patch(
       'position', 'businessUnit', 'businessUnits',
     ];
 
+    // gender/employmentStatus/accountType/maritalStatus/status are all
+    // ENUM columns — Postgres rejects '' as an invalid enum value (unlike
+    // every other field here, which is plain text and doesn't care), and
+    // the edit form's unselected state for some of these is '' rather than
+    // omitting the field. Treating '' as "not actually provided" here
+    // avoids a 500 regardless of whether the column happens to be
+    // nullable (gender) or not (status) — skipping never violates either.
+    const ENUM_FIELDS = new Set(['gender', 'employmentStatus', 'accountType', 'maritalStatus', 'status']);
     const updates: Record<string, unknown> = {};
     updatableFields.forEach(k => {
-      if (req.body[k] !== undefined) updates[k] = req.body[k];
+      if (req.body[k] === undefined) return;
+      if (ENUM_FIELDS.has(k) && req.body[k] === '') return;
+      updates[k] = req.body[k];
     });
 
-    // BigInt FK updates — department-scoped callers (HOD) can never move a staff member to another department
-    if (req.body.departmentId !== undefined && !departmentScoped) updates.departmentId = BigInt(req.body.departmentId);
-    if (req.body.designationId !== undefined) updates.designationId = BigInt(req.body.designationId);
-    if (req.body.locationId !== undefined) updates.locationId = BigInt(req.body.locationId);
+    // BigInt FK updates — department-scoped callers (HOD) can never move a
+    // staff member to another department. departmentId/designationId used
+    // to call BigInt() unconditionally once present, unlike branchId/unitId
+    // right below them — BigInt(null) throws (a staff member with no
+    // designation populates the edit form's field as null), which is
+    // exactly what surfaced live as a 500 on save.
+    // departmentId is allowNull: false on the model — unlike the others
+    // below, it can never be cleared, only changed, so an empty value just
+    // leaves it untouched rather than attempting a null that would trade
+    // the BigInt(null) crash for a NOT NULL constraint violation instead.
+    if (req.body.departmentId && !departmentScoped) updates.departmentId = BigInt(req.body.departmentId);
+    if (req.body.designationId !== undefined) updates.designationId = req.body.designationId ? BigInt(req.body.designationId) : null;
+    if (req.body.locationId !== undefined) updates.locationId = req.body.locationId ? BigInt(req.body.locationId) : null;
     if (req.body.branchId !== undefined) updates.branchId = req.body.branchId ? BigInt(req.body.branchId) : null;
     if (req.body.unitId !== undefined) updates.unitId = req.body.unitId ? BigInt(req.body.unitId) : null;
 

@@ -275,17 +275,21 @@ router.patch('/:id', AuthMiddleware_1.default.requirePermission('org.staff.updat
         'bloodGroup', 'maritalStatus', 'nationality',
         'position', 'businessUnit', 'businessUnits',
     ];
+    const ENUM_FIELDS = new Set(['gender', 'employmentStatus', 'accountType', 'maritalStatus', 'status']);
     const updates = {};
     updatableFields.forEach(k => {
-        if (req.body[k] !== undefined)
-            updates[k] = req.body[k];
+        if (req.body[k] === undefined)
+            return;
+        if (ENUM_FIELDS.has(k) && req.body[k] === '')
+            return;
+        updates[k] = req.body[k];
     });
-    if (req.body.departmentId !== undefined && !departmentScoped)
+    if (req.body.departmentId && !departmentScoped)
         updates.departmentId = BigInt(req.body.departmentId);
     if (req.body.designationId !== undefined)
-        updates.designationId = BigInt(req.body.designationId);
+        updates.designationId = req.body.designationId ? BigInt(req.body.designationId) : null;
     if (req.body.locationId !== undefined)
-        updates.locationId = BigInt(req.body.locationId);
+        updates.locationId = req.body.locationId ? BigInt(req.body.locationId) : null;
     if (req.body.branchId !== undefined)
         updates.branchId = req.body.branchId ? BigInt(req.body.branchId) : null;
     if (req.body.unitId !== undefined)
