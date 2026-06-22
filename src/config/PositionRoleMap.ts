@@ -12,6 +12,8 @@ import { RoleCode } from './RolesConfig';
  * listed here defaults to RoleCode.STAFF.
  */
 export const POSITION_ROLE_MAP: Record<string, RoleCode> = {
+  'ceo': RoleCode.SUPERADMIN,
+  'chief executive officer': RoleCode.SUPERADMIN,
   'manager': RoleCode.ADMIN,
   'head of admin': RoleCode.ADMIN,
   'hr': RoleCode.HR,
