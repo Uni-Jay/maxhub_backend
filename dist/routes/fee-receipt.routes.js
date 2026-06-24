@@ -10,6 +10,7 @@ const FeeReceipt_model_1 = require("../models/FeeReceipt.model");
 const Enrollment_model_1 = require("../models/Enrollment.model");
 const Course_model_1 = require("../models/Course.model");
 const Staff_model_1 = require("../models/Staff.model");
+const StudentProfile_model_1 = require("../models/StudentProfile.model");
 const User_model_1 = require("../models/User.model");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
@@ -45,6 +46,7 @@ router.get('/', AuthMiddleware_1.default.requirePermission('LMS.FEE_RECEIPT.READ
                 include: [
                     { model: Course_model_1.Course, as: 'course', where: courseWhere, attributes: ['id', 'title', 'courseCode'] },
                     { model: Staff_model_1.Staff, as: 'staff', include: [{ model: User_model_1.User, attributes: ['firstName', 'lastName', 'email'] }] },
+                    { model: StudentProfile_model_1.StudentProfile, as: 'student', include: [{ model: User_model_1.User, as: 'user', attributes: ['firstName', 'lastName', 'email'] }] },
                 ],
             }],
         order: [['paymentDate', 'DESC']],
@@ -81,6 +83,7 @@ router.get('/:id', AuthMiddleware_1.default.requirePermission('LMS.FEE_RECEIPT.R
                 include: [
                     { model: Course_model_1.Course, as: 'course', attributes: ['id', 'title', 'courseCode', 'departmentId'] },
                     { model: Staff_model_1.Staff, as: 'staff', include: [{ model: User_model_1.User, attributes: ['firstName', 'lastName', 'email'] }] },
+                    { model: StudentProfile_model_1.StudentProfile, as: 'student', include: [{ model: User_model_1.User, as: 'user', attributes: ['firstName', 'lastName', 'email'] }] },
                 ],
             }],
     });

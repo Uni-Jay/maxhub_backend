@@ -285,6 +285,8 @@ export class AssociationManager {
     Exam.hasMany(Question, { foreignKey: 'examId', as: 'questions' });
     Enrollment.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
     Enrollment.belongsTo(Staff, { foreignKey: 'staffId', as: 'staff' });
+    Enrollment.belongsTo(StudentProfile, { foreignKey: 'studentId', as: 'student' });
+    StudentProfile.hasMany(Enrollment, { foreignKey: 'studentId', as: 'courseEnrollments' });
     ExamResult.belongsTo(Enrollment, { foreignKey: 'enrollmentId', as: 'enrollment' });
     Certificate.belongsTo(Enrollment, { foreignKey: 'enrollmentId', as: 'enrollment' });
     FeeReceipt.belongsTo(Enrollment, { foreignKey: 'enrollmentId', as: 'enrollment' });

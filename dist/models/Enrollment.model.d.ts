@@ -3,7 +3,8 @@ interface EnrollmentAttributes {
     id: bigint;
     uuid: string;
     courseId: bigint;
-    staffId: bigint;
+    staffId?: bigint;
+    studentId?: bigint;
     enrollmentDate: Date;
     completionDate?: Date;
     status: 'Enrolled' | 'InProgress' | 'Completed' | 'Failed' | 'Dropped' | 'OnHold';
@@ -18,7 +19,8 @@ export declare class Enrollment extends Model<EnrollmentAttributes, EnrollmentCr
     id: bigint;
     uuid: string;
     courseId: bigint;
-    staffId: bigint;
+    staffId?: bigint;
+    studentId?: bigint;
     enrollmentDate: Date;
     completionDate?: Date;
     status: 'Enrolled' | 'InProgress' | 'Completed' | 'Failed' | 'Dropped' | 'OnHold';

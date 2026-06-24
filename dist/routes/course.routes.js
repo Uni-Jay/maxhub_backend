@@ -16,6 +16,7 @@ const Question_model_1 = require("../models/Question.model");
 const ExamResult_model_1 = require("../models/ExamResult.model");
 const Certificate_model_1 = require("../models/Certificate.model");
 const Staff_model_1 = require("../models/Staff.model");
+const StudentProfile_model_1 = require("../models/StudentProfile.model");
 const User_model_1 = require("../models/User.model");
 const Department_model_1 = require("../models/Department.model");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
@@ -192,11 +193,11 @@ router.get('/student/exams', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asyn
     const userId = req.user?.id;
     if (!userId)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Unauthorized', 401);
-    const staffRecord = await Staff_model_1.Staff.findOne({ where: { userId }, attributes: ['id'] });
-    if (!staffRecord)
+    const studentRecord = await StudentProfile_model_1.StudentProfile.findOne({ where: { userId }, attributes: ['id'] });
+    if (!studentRecord)
         return ResponseFormatter_1.ResponseFormatter.success(res, [], 'No exams found');
     const enrollments = await Enrollment_model_1.Enrollment.findAll({
-        where: { staffId: staffRecord.id },
+        where: { studentId: studentRecord.id },
         attributes: ['id', 'courseId', 'status'],
     });
     const courseIds = [...new Set(enrollments.map((e) => e.courseId))];
@@ -257,26 +258,26 @@ router.get('/student/enrollments', AuthMiddleware_1.default.verifyToken, ErrorMi
     const userId = req.user?.id;
     if (!userId)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Unauthorized', 401);
-    const staff = await Staff_model_1.Staff.findOne({ where: { userId }, attributes: ['id'] });
-    if (!staff)
+    const student = await StudentProfile_model_1.StudentProfile.findOne({ where: { userId }, attributes: ['id'] });
+    if (!student)
         return ResponseFormatter_1.ResponseFormatter.success(res, [], 'No enrollments found');
     const enrollments = await Enrollment_model_1.Enrollment.findAll({
-        where: { staffId: staff.id },
-        include: [{ model: Course_model_1.Course, as: 'course', attributes: ['id', 'uuid', 'courseCode', 'courseName', 'description', 'duration', 'instructor', 'thumbnail', 'status'] }],
+        where: { studentId: student.id },
+        include: [{ model: Course_model_1.Course, as: 'course', attributes: ['id', 'uuid', 'courseCode', 'title', 'description', 'duration', 'instructorName', 'status'] }],
         order: [['enrollmentDate', 'DESC']],
     });
     const result = enrollments.map((e) => ({
         id: Number(e.id),
         courseId: Number(e.courseId),
-        title: e.course?.courseName ?? 'Unknown Course',
-        instructor: e.course?.instructor ?? '',
+        title: e.course?.title ?? 'Unknown Course',
+        instructor: e.course?.instructorName ?? '',
         progress: Number(e.progressPercentage) ?? 0,
         totalLessons: 0,
         doneLessons: 0,
         enrolledDate: e.enrollmentDate?.toISOString?.()?.slice(0, 10) ?? '',
         completedDate: e.completionDate?.toISOString?.()?.slice(0, 10) ?? null,
         status: e.status,
-        thumbnail: e.course?.thumbnail ?? null,
+        thumbnail: null,
     }));
     ResponseFormatter_1.ResponseFormatter.success(res, result, 'Enrollments retrieved');
 }));
@@ -284,11 +285,11 @@ router.get('/student/certificates', AuthMiddleware_1.default.verifyToken, ErrorM
     const userId = req.user?.id;
     if (!userId)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Unauthorized', 401);
-    const staff = await Staff_model_1.Staff.findOne({ where: { userId }, attributes: ['id'] });
-    if (!staff)
+    const student = await StudentProfile_model_1.StudentProfile.findOne({ where: { userId }, attributes: ['id'] });
+    if (!student)
         return ResponseFormatter_1.ResponseFormatter.success(res, [], 'No certificates found');
     const enrollments = await Enrollment_model_1.Enrollment.findAll({
-        where: { staffId: staff.id },
+        where: { studentId: student.id },
         attributes: ['id'],
     });
     const enrollmentIds = enrollments.map(e => e.id);
@@ -299,7 +300,7 @@ router.get('/student/certificates', AuthMiddleware_1.default.verifyToken, ErrorM
         include: [{
                 model: Enrollment_model_1.Enrollment,
                 as: 'enrollment',
-                include: [{ model: Course_model_1.Course, as: 'course', attributes: ['courseName', 'instructor'] }],
+                include: [{ model: Course_model_1.Course, as: 'course', attributes: ['title', 'instructorName'] }],
             }],
         order: [['issuedDate', 'DESC']],
     });
@@ -307,8 +308,8 @@ router.get('/student/certificates', AuthMiddleware_1.default.verifyToken, ErrorM
         id: Number(c.id),
         credentialId: c.certificateCode,
         title: c.certificateName || 'Certificate of Completion',
-        course: c.enrollment?.course?.courseName ?? 'Unknown Course',
-        instructor: c.enrollment?.course?.instructor ?? '',
+        course: c.enrollment?.course?.title ?? 'Unknown Course',
+        instructor: c.enrollment?.course?.instructorName ?? '',
         issueDate: c.issuedDate?.toISOString?.()?.slice(0, 10) ?? '',
         status: c.status,
         certificateUrl: c.certificateUrl ?? null,
@@ -326,13 +327,19 @@ router.get('/exams/:examId/leaderboard', AuthMiddleware_1.default.verifyToken, E
         include: [{
                 model: Enrollment_model_1.Enrollment,
                 as: 'enrollment',
-                include: [{ model: Staff_model_1.Staff, as: 'staff', attributes: ['id', 'firstName', 'lastName'] }],
+                include: [
+                    { model: Staff_model_1.Staff, as: 'staff', attributes: ['id', 'firstName', 'lastName'] },
+                    { model: StudentProfile_model_1.StudentProfile, as: 'student', include: [{ model: User_model_1.User, as: 'user', attributes: ['firstName', 'lastName'] }] },
+                ],
             }],
         order: [['score', 'DESC']],
     });
     const ranked = results.map((r, idx) => {
         const staff = r.enrollment?.staff;
-        const name = staff ? `${staff.firstName ?? ''} ${staff.lastName ?? ''}`.trim() : `Student #${r.enrollmentId}`;
+        const studentUser = r.enrollment?.student?.user;
+        const name = studentUser
+            ? `${studentUser.firstName ?? ''} ${studentUser.lastName ?? ''}`.trim()
+            : staff ? `${staff.firstName ?? ''} ${staff.lastName ?? ''}`.trim() : `Student #${r.enrollmentId}`;
         const secs = r.completedAt && r.startedAt
             ? Math.round((new Date(r.completedAt).getTime() - new Date(r.startedAt).getTime()) / 1000)
             : 0;
@@ -354,10 +361,10 @@ router.get('/exams/:examId/leaderboard', AuthMiddleware_1.default.verifyToken, E
         const userId = req.user?.id;
         if (!userId)
             return null;
-        const staff = await Staff_model_1.Staff.findOne({ where: { userId }, attributes: ['id'] });
-        if (!staff)
-            return null;
-        const enr = await Enrollment_model_1.Enrollment.findOne({ where: { staffId: staff.id, courseId: exam.courseId } });
+        const student = await StudentProfile_model_1.StudentProfile.findOne({ where: { userId }, attributes: ['id'] });
+        const enr = student
+            ? await Enrollment_model_1.Enrollment.findOne({ where: { studentId: student.id, courseId: exam.courseId } })
+            : null;
         return enr ? results.find((r) => String(r.enrollmentId) === String(enr.id)) : null;
     })();
     ResponseFormatter_1.ResponseFormatter.success(res, {
@@ -463,7 +470,10 @@ router.get('/:id/enrollments', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(as
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Course not found', 404);
     const enrollments = await Enrollment_model_1.Enrollment.findAll({
         where: { courseId: course.id },
-        include: [{ model: Staff_model_1.Staff, as: 'staff', include: [{ model: User_model_1.User, attributes: ['firstName', 'lastName', 'email', 'avatar'] }] }],
+        include: [
+            { model: Staff_model_1.Staff, as: 'staff', include: [{ model: User_model_1.User, attributes: ['firstName', 'lastName', 'email', 'avatar'] }] },
+            { model: StudentProfile_model_1.StudentProfile, as: 'student', include: [{ model: User_model_1.User, as: 'user', attributes: ['firstName', 'lastName', 'email', 'avatar'] }] },
+        ],
         order: [['enrollmentDate', 'DESC']],
     });
     ResponseFormatter_1.ResponseFormatter.success(res, enrollments);
@@ -478,7 +488,13 @@ router.get('/:id/certificates', AuthMiddleware_1.default.verifyToken, ErrorMiddl
         return ResponseFormatter_1.ResponseFormatter.success(res, []);
     const certs = await Certificate_model_1.Certificate.findAll({
         where: { enrollmentId: { [sequelize_1.Op.in]: enrollmentIds } },
-        include: [{ model: Enrollment_model_1.Enrollment, as: 'enrollment', include: [{ model: Staff_model_1.Staff, as: 'staff', include: [{ model: User_model_1.User, attributes: ['firstName', 'lastName', 'email'] }] }] }],
+        include: [{
+                model: Enrollment_model_1.Enrollment, as: 'enrollment',
+                include: [
+                    { model: Staff_model_1.Staff, as: 'staff', include: [{ model: User_model_1.User, attributes: ['firstName', 'lastName', 'email'] }] },
+                    { model: StudentProfile_model_1.StudentProfile, as: 'student', include: [{ model: User_model_1.User, as: 'user', attributes: ['firstName', 'lastName', 'email'] }] },
+                ],
+            }],
         order: [['issuedDate', 'DESC']],
     });
     ResponseFormatter_1.ResponseFormatter.success(res, certs);
@@ -516,7 +532,13 @@ router.get('/:courseId/exams/:examId/results', ErrorMiddleware_1.ErrorMiddleware
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Exam not found', 404);
     const results = await ExamResult_model_1.ExamResult.findAll({
         where: { examId: exam.id },
-        include: [{ model: Enrollment_model_1.Enrollment, as: 'enrollment', include: [{ model: Staff_model_1.Staff, as: 'staff', include: [{ model: User_model_1.User, attributes: ['firstName', 'lastName'] }] }] }],
+        include: [{
+                model: Enrollment_model_1.Enrollment, as: 'enrollment',
+                include: [
+                    { model: Staff_model_1.Staff, as: 'staff', include: [{ model: User_model_1.User, attributes: ['firstName', 'lastName'] }] },
+                    { model: StudentProfile_model_1.StudentProfile, as: 'student', include: [{ model: User_model_1.User, as: 'user', attributes: ['firstName', 'lastName'] }] },
+                ],
+            }],
         order: [['completedAt', 'DESC']],
     });
     ResponseFormatter_1.ResponseFormatter.success(res, results);

@@ -6,6 +6,7 @@ import { FeeReceipt } from '@models/FeeReceipt.model';
 import { Enrollment } from '@models/Enrollment.model';
 import { Course } from '@models/Course.model';
 import { Staff } from '@models/Staff.model';
+import { StudentProfile } from '@models/StudentProfile.model';
 import { User } from '@models/User.model';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
@@ -49,6 +50,7 @@ router.get('/', AuthMiddleware.requirePermission('LMS.FEE_RECEIPT.READ.ALL', 'LM
       include: [
         { model: Course, as: 'course', where: courseWhere, attributes: ['id', 'title', 'courseCode'] },
         { model: Staff, as: 'staff', include: [{ model: User, attributes: ['firstName', 'lastName', 'email'] }] },
+        { model: StudentProfile, as: 'student', include: [{ model: User, as: 'user', attributes: ['firstName', 'lastName', 'email'] }] },
       ],
     }],
     order: [['paymentDate', 'DESC']],
@@ -92,6 +94,7 @@ router.get('/:id', AuthMiddleware.requirePermission('LMS.FEE_RECEIPT.READ.ALL', 
       include: [
         { model: Course, as: 'course', attributes: ['id', 'title', 'courseCode', 'departmentId'] },
         { model: Staff, as: 'staff', include: [{ model: User, attributes: ['firstName', 'lastName', 'email'] }] },
+        { model: StudentProfile, as: 'student', include: [{ model: User, as: 'user', attributes: ['firstName', 'lastName', 'email'] }] },
       ],
     }],
   });

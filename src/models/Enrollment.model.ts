@@ -5,7 +5,8 @@ interface EnrollmentAttributes {
   id: bigint;
   uuid: string;
   courseId: bigint;
-  staffId: bigint;
+  staffId?: bigint;
+  studentId?: bigint;
   enrollmentDate: Date;
   completionDate?: Date;
   status: 'Enrolled' | 'InProgress' | 'Completed' | 'Failed' | 'Dropped' | 'OnHold';
@@ -22,7 +23,8 @@ export class Enrollment extends Model<EnrollmentAttributes, EnrollmentCreationAt
   public id!: bigint;
   public uuid!: string;
   public courseId!: bigint;
-  public staffId!: bigint;
+  public staffId?: bigint;
+  public studentId?: bigint;
   public enrollmentDate!: Date;
   public completionDate?: Date;
   public status!: 'Enrolled' | 'InProgress' | 'Completed' | 'Failed' | 'Dropped' | 'OnHold';
@@ -40,7 +42,8 @@ export class Enrollment extends Model<EnrollmentAttributes, EnrollmentCreationAt
         id: { type: DataTypes.BIGINT.UNSIGNED, primaryKey: true, autoIncrement: true, allowNull: false },
         uuid: { type: DataTypes.UUID, defaultValue: () => uuidv4(), unique: true, allowNull: false },
         courseId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'Course ID' },
-        staffId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'Staff/participant ID' },
+        staffId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Staff participant ID — legacy, most enrollments use studentId instead' },
+        studentId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Reference to student_profiles table' },
         enrollmentDate: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW, comment: 'Enrollment date' },
         completionDate: { type: DataTypes.DATE, allowNull: true, comment: 'Completion date' },
         status: { type: DataTypes.ENUM('Enrolled', 'InProgress', 'Completed', 'Failed', 'Dropped', 'OnHold'), defaultValue: 'Enrolled' },
@@ -54,6 +57,7 @@ export class Enrollment extends Model<EnrollmentAttributes, EnrollmentCreationAt
         indexes: [
           { fields: ['courseId'], name: 'idx_enrollments_courseId' },
           { fields: ['staffId'], name: 'idx_enrollments_staffId' },
+          { fields: ['studentId'], name: 'idx_enrollments_studentId' },
           { fields: ['status'], name: 'idx_enrollments_status' },
           { fields: ['enrollmentDate'], name: 'idx_enrollments_enrollmentDate' },
           { fields: ['courseId', 'staffId'], name: 'idx_enrollments_course_staff' },

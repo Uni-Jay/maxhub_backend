@@ -9,6 +9,7 @@ const uuid_1 = require("uuid");
 const Enrollment_model_1 = require("../models/Enrollment.model");
 const Course_model_1 = require("../models/Course.model");
 const Staff_model_1 = require("../models/Staff.model");
+const StudentProfile_model_1 = require("../models/StudentProfile.model");
 const User_model_1 = require("../models/User.model");
 const Exam_model_1 = require("../models/Exam.model");
 const Question_model_1 = require("../models/Question.model");
@@ -30,7 +31,7 @@ function getDeptScope(req, allPermission) {
     return { scoped: true, departmentId: user.departmentId ?? null };
 }
 router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const { page = 1, limit = 20, status, courseId, staffId } = req.query;
+    const { page = 1, limit = 20, status, courseId, staffId, studentId } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
     const where = {};
     if (status)
@@ -39,11 +40,14 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
         where.courseId = courseId;
     if (staffId)
         where.staffId = staffId;
+    if (studentId)
+        where.studentId = studentId;
     const { count, rows } = await Enrollment_model_1.Enrollment.findAndCountAll({
         where,
         include: [
             { model: Course_model_1.Course, as: 'course', attributes: ['id', 'uuid', 'title', 'courseCode', 'status'] },
             { model: Staff_model_1.Staff, as: 'staff', include: [{ model: User_model_1.User, attributes: ['firstName', 'lastName', 'email', 'avatar'] }] },
+            { model: StudentProfile_model_1.StudentProfile, as: 'student', include: [{ model: User_model_1.User, as: 'user', attributes: ['firstName', 'lastName', 'email', 'avatar'] }] },
         ],
         order: [['enrollmentDate', 'DESC']],
         limit: Number(limit),
@@ -52,9 +56,9 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
     ResponseFormatter_1.ResponseFormatter.paginated(res, rows, count, Number(page), Number(limit));
 }));
 router.post('/', AuthMiddleware_1.default.requirePermission('LMS.ENROLLMENT.CREATE.ALL', 'LMS.ENROLLMENT.CREATE.OWN_DEPARTMENT'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const { courseId, staffId, notes } = req.body;
-    if (!courseId || !staffId)
-        return ResponseFormatter_1.ResponseFormatter.error(res, 'courseId and staffId are required', 400);
+    const { courseId, studentId, staffId, notes } = req.body;
+    if (!courseId || (!studentId && !staffId))
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'courseId and studentId are required', 400);
     const course = await Course_model_1.Course.findByPk(courseId);
     if (!course)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Course not found', 404);
@@ -64,7 +68,8 @@ router.post('/', AuthMiddleware_1.default.requirePermission('LMS.ENROLLMENT.CREA
     if (scope.scoped && String(course.departmentId) !== String(scope.departmentId)) {
         return ResponseFormatter_1.ResponseFormatter.error(res, 'You can only enroll students into courses in your own department', 403);
     }
-    const existing = await Enrollment_model_1.Enrollment.findOne({ where: { courseId, staffId } });
+    const matchWhere = studentId ? { courseId, studentId } : { courseId, staffId };
+    const existing = await Enrollment_model_1.Enrollment.findOne({ where: matchWhere });
     if (existing && existing.status !== 'Dropped')
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Already enrolled', 409);
     if (existing) {
@@ -72,18 +77,23 @@ router.post('/', AuthMiddleware_1.default.requirePermission('LMS.ENROLLMENT.CREA
         return ResponseFormatter_1.ResponseFormatter.success(res, existing, 'Re-enrolled', 201);
     }
     const enrollment = await Enrollment_model_1.Enrollment.create({
-        uuid: (0, uuid_1.v4)(), courseId, staffId, enrollmentDate: new Date(),
+        uuid: (0, uuid_1.v4)(), courseId, studentId: studentId || undefined, staffId: staffId || undefined, enrollmentDate: new Date(),
         status: 'Enrolled', progressPercentage: 0, notes,
     });
     ResponseFormatter_1.ResponseFormatter.success(res, enrollment, 'Enrolled successfully', 201);
 }));
 router.get('/my', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
-    const staff = await Staff_model_1.Staff.findOne({ where: { userId: user.id } });
-    if (!staff)
-        return ResponseFormatter_1.ResponseFormatter.error(res, 'No staff profile found', 404);
+    const student = await StudentProfile_model_1.StudentProfile.findOne({ where: { userId: user.id } });
+    const where = student ? { studentId: student.id } : {};
+    if (!student) {
+        const staff = await Staff_model_1.Staff.findOne({ where: { userId: user.id } });
+        if (!staff)
+            return ResponseFormatter_1.ResponseFormatter.error(res, 'No student or staff profile found', 404);
+        where.staffId = staff.id;
+    }
     const enrollments = await Enrollment_model_1.Enrollment.findAll({
-        where: { staffId: staff.id },
+        where,
         include: [{ model: Course_model_1.Course, as: 'course', include: [{ model: Staff_model_1.Staff, as: 'instructor', include: [{ model: User_model_1.User, attributes: ['firstName', 'lastName'] }] }] }],
         order: [['enrollmentDate', 'DESC']],
     });
@@ -95,6 +105,7 @@ router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, re
         include: [
             { model: Course_model_1.Course, as: 'course' },
             { model: Staff_model_1.Staff, as: 'staff', include: [{ model: User_model_1.User, attributes: ['firstName', 'lastName', 'email'] }] },
+            { model: StudentProfile_model_1.StudentProfile, as: 'student', include: [{ model: User_model_1.User, as: 'user', attributes: ['firstName', 'lastName', 'email'] }] },
         ],
     });
     if (!enrollment)

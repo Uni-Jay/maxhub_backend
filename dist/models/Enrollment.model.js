@@ -9,7 +9,8 @@ class Enrollment extends sequelize_1.Model {
             id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, primaryKey: true, autoIncrement: true, allowNull: false },
             uuid: { type: sequelize_1.DataTypes.UUID, defaultValue: () => (0, uuid_1.v4)(), unique: true, allowNull: false },
             courseId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'Course ID' },
-            staffId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'Staff/participant ID' },
+            staffId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Staff participant ID — legacy, most enrollments use studentId instead' },
+            studentId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Reference to student_profiles table' },
             enrollmentDate: { type: sequelize_1.DataTypes.DATE, allowNull: false, defaultValue: sequelize_1.DataTypes.NOW, comment: 'Enrollment date' },
             completionDate: { type: sequelize_1.DataTypes.DATE, allowNull: true, comment: 'Completion date' },
             status: { type: sequelize_1.DataTypes.ENUM('Enrolled', 'InProgress', 'Completed', 'Failed', 'Dropped', 'OnHold'), defaultValue: 'Enrolled' },
@@ -22,6 +23,7 @@ class Enrollment extends sequelize_1.Model {
             indexes: [
                 { fields: ['courseId'], name: 'idx_enrollments_courseId' },
                 { fields: ['staffId'], name: 'idx_enrollments_staffId' },
+                { fields: ['studentId'], name: 'idx_enrollments_studentId' },
                 { fields: ['status'], name: 'idx_enrollments_status' },
                 { fields: ['enrollmentDate'], name: 'idx_enrollments_enrollmentDate' },
                 { fields: ['courseId', 'staffId'], name: 'idx_enrollments_course_staff' },

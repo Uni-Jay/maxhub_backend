@@ -206,6 +206,8 @@ class AssociationManager {
         Exam_model_1.Exam.hasMany(Question_model_1.Question, { foreignKey: 'examId', as: 'questions' });
         Enrollment_model_1.Enrollment.belongsTo(Course_model_1.Course, { foreignKey: 'courseId', as: 'course' });
         Enrollment_model_1.Enrollment.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId', as: 'staff' });
+        Enrollment_model_1.Enrollment.belongsTo(StudentProfile_model_1.StudentProfile, { foreignKey: 'studentId', as: 'student' });
+        StudentProfile_model_1.StudentProfile.hasMany(Enrollment_model_1.Enrollment, { foreignKey: 'studentId', as: 'courseEnrollments' });
         ExamResult_model_1.ExamResult.belongsTo(Enrollment_model_1.Enrollment, { foreignKey: 'enrollmentId', as: 'enrollment' });
         Certificate_model_1.Certificate.belongsTo(Enrollment_model_1.Enrollment, { foreignKey: 'enrollmentId', as: 'enrollment' });
         FeeReceipt_model_1.FeeReceipt.belongsTo(Enrollment_model_1.Enrollment, { foreignKey: 'enrollmentId', as: 'enrollment' });

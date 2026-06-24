@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Enrollment } from '@models/Enrollment.model';
 import { Course } from '@models/Course.model';
 import { Staff } from '@models/Staff.model';
+import { StudentProfile } from '@models/StudentProfile.model';
 import { User } from '@models/User.model';
 import { Exam } from '@models/Exam.model';
 import { Question } from '@models/Question.model';
@@ -33,18 +34,20 @@ function getDeptScope(req: Request, allPermission: string): { scoped: boolean; d
 
 // GET /api/enrollments — list all enrollments (admin)
 router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const { page = 1, limit = 20, status, courseId, staffId } = req.query;
+  const { page = 1, limit = 20, status, courseId, staffId, studentId } = req.query;
   const offset = (Number(page) - 1) * Number(limit);
   const where: any = {};
   if (status) where.status = status;
   if (courseId) where.courseId = courseId;
   if (staffId) where.staffId = staffId;
+  if (studentId) where.studentId = studentId;
 
   const { count, rows } = await Enrollment.findAndCountAll({
     where,
     include: [
       { model: Course, as: 'course', attributes: ['id', 'uuid', 'title', 'courseCode', 'status'] },
       { model: Staff, as: 'staff', include: [{ model: User, attributes: ['firstName', 'lastName', 'email', 'avatar'] }] },
+      { model: StudentProfile, as: 'student', include: [{ model: User, as: 'user', attributes: ['firstName', 'lastName', 'email', 'avatar'] }] },
     ],
     order: [['enrollmentDate', 'DESC']],
     limit: Number(limit),
@@ -53,10 +56,10 @@ router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response)
   ResponseFormatter.paginated(res, rows, count, Number(page), Number(limit));
 }));
 
-// POST /api/enrollments — enroll a staff member
+// POST /api/enrollments — enroll a student (or, legacy, a staff member) in a course
 router.post('/', AuthMiddleware.requirePermission('LMS.ENROLLMENT.CREATE.ALL', 'LMS.ENROLLMENT.CREATE.OWN_DEPARTMENT'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const { courseId, staffId, notes } = req.body;
-  if (!courseId || !staffId) return ResponseFormatter.error(res, 'courseId and staffId are required', 400);
+  const { courseId, studentId, staffId, notes } = req.body;
+  if (!courseId || (!studentId && !staffId)) return ResponseFormatter.error(res, 'courseId and studentId are required', 400);
 
   const course = await Course.findByPk(courseId);
   if (!course) return ResponseFormatter.error(res, 'Course not found', 404);
@@ -67,7 +70,8 @@ router.post('/', AuthMiddleware.requirePermission('LMS.ENROLLMENT.CREATE.ALL', '
     return ResponseFormatter.error(res, 'You can only enroll students into courses in your own department', 403);
   }
 
-  const existing = await Enrollment.findOne({ where: { courseId, staffId } });
+  const matchWhere = studentId ? { courseId, studentId } : { courseId, staffId };
+  const existing = await Enrollment.findOne({ where: matchWhere });
   if (existing && existing.status !== 'Dropped') return ResponseFormatter.error(res, 'Already enrolled', 409);
 
   if (existing) {
@@ -76,7 +80,7 @@ router.post('/', AuthMiddleware.requirePermission('LMS.ENROLLMENT.CREATE.ALL', '
   }
 
   const enrollment = await Enrollment.create({
-    uuid: uuidv4(), courseId, staffId, enrollmentDate: new Date(),
+    uuid: uuidv4(), courseId, studentId: studentId || undefined, staffId: staffId || undefined, enrollmentDate: new Date(),
     status: 'Enrolled', progressPercentage: 0, notes,
   } as any);
   ResponseFormatter.success(res, enrollment, 'Enrolled successfully', 201);
@@ -85,11 +89,17 @@ router.post('/', AuthMiddleware.requirePermission('LMS.ENROLLMENT.CREATE.ALL', '
 // GET /api/enrollments/my — logged-in user's own enrollments
 router.get('/my', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
-  const staff = await Staff.findOne({ where: { userId: user.id } });
-  if (!staff) return ResponseFormatter.error(res, 'No staff profile found', 404);
+  const student = await StudentProfile.findOne({ where: { userId: user.id } });
+
+  const where: any = student ? { studentId: student.id } : {};
+  if (!student) {
+    const staff = await Staff.findOne({ where: { userId: user.id } });
+    if (!staff) return ResponseFormatter.error(res, 'No student or staff profile found', 404);
+    where.staffId = staff.id;
+  }
 
   const enrollments = await Enrollment.findAll({
-    where: { staffId: staff.id },
+    where,
     include: [{ model: Course, as: 'course', include: [{ model: Staff, as: 'instructor', include: [{ model: User, attributes: ['firstName', 'lastName'] }] }] }],
     order: [['enrollmentDate', 'DESC']],
   });
@@ -103,6 +113,7 @@ router.get('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Respon
     include: [
       { model: Course, as: 'course' },
       { model: Staff, as: 'staff', include: [{ model: User, attributes: ['firstName', 'lastName', 'email'] }] },
+      { model: StudentProfile, as: 'student', include: [{ model: User, as: 'user', attributes: ['firstName', 'lastName', 'email'] }] },
     ],
   });
   if (!enrollment) return ResponseFormatter.error(res, 'Enrollment not found', 404);
