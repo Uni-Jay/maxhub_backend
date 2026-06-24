@@ -14,7 +14,7 @@ class FeeReceipt extends sequelize_1.Model {
             paymentMethod: { type: sequelize_1.DataTypes.ENUM('Cash', 'BankTransfer', 'POS', 'Online'), allowNull: false },
             paymentDate: { type: sequelize_1.DataTypes.DATEONLY, allowNull: false, comment: 'Date payment was made' },
             session: { type: sequelize_1.DataTypes.STRING(20), allowNull: false, comment: 'Academic session, e.g. 2026/2027' },
-            term: { type: sequelize_1.DataTypes.ENUM('First Term', 'Second Term', 'Third Term'), allowNull: false },
+            balance: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0, comment: 'Remaining balance owed after this payment' },
             status: { type: sequelize_1.DataTypes.ENUM('Paid', 'PartPayment', 'Pending'), defaultValue: 'Paid' },
             notes: { type: sequelize_1.DataTypes.TEXT, allowNull: true },
             issuedById: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'User who recorded this payment' },

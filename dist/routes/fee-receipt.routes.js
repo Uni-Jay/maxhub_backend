@@ -54,9 +54,9 @@ router.get('/', AuthMiddleware_1.default.requirePermission('LMS.FEE_RECEIPT.READ
     ResponseFormatter_1.ResponseFormatter.success(res, receipts);
 }));
 router.post('/', AuthMiddleware_1.default.requirePermission('LMS.FEE_RECEIPT.CREATE.ALL', 'LMS.FEE_RECEIPT.CREATE.OWN_DEPARTMENT'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const { enrollmentId, amountPaid, paymentMethod, paymentDate, session, term, status, notes } = req.body;
-    if (!enrollmentId || !amountPaid || !paymentMethod || !paymentDate || !session || !term) {
-        return ResponseFormatter_1.ResponseFormatter.error(res, 'enrollmentId, amountPaid, paymentMethod, paymentDate, session and term are required', 400);
+    const { enrollmentId, amountPaid, paymentMethod, paymentDate, session, balance, status, notes } = req.body;
+    if (!enrollmentId || !amountPaid || !paymentMethod || !paymentDate || !session) {
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'enrollmentId, amountPaid, paymentMethod, paymentDate and session are required', 400);
     }
     const enrollment = await Enrollment_model_1.Enrollment.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(enrollmentId) } });
     if (!enrollment)
@@ -70,7 +70,7 @@ router.post('/', AuthMiddleware_1.default.requirePermission('LMS.FEE_RECEIPT.CRE
     }
     const receipt = await FeeReceipt_model_1.FeeReceipt.create({
         uuid: (0, uuid_1.v4)(), enrollmentId: enrollment.id, receiptNumber: generateReceiptNumber(),
-        amountPaid: Number(amountPaid), paymentMethod, paymentDate, session, term,
+        amountPaid: Number(amountPaid), paymentMethod, paymentDate, session, balance: Number(balance) || 0,
         status: status || 'Paid', notes, issuedById: req.user.id,
     });
     ResponseFormatter_1.ResponseFormatter.success(res, receipt, 'Fee receipt issued', 201);

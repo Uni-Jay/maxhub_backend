@@ -8,7 +8,7 @@ interface FeeReceiptAttributes {
     paymentMethod: 'Cash' | 'BankTransfer' | 'POS' | 'Online';
     paymentDate: Date;
     session: string;
-    term: 'First Term' | 'Second Term' | 'Third Term';
+    balance: number;
     status: 'Paid' | 'PartPayment' | 'Pending';
     notes?: string;
     issuedById: bigint;
@@ -25,7 +25,7 @@ export declare class FeeReceipt extends Model<FeeReceiptAttributes, FeeReceiptCr
     paymentMethod: 'Cash' | 'BankTransfer' | 'POS' | 'Online';
     paymentDate: Date;
     session: string;
-    term: 'First Term' | 'Second Term' | 'Third Term';
+    balance: number;
     status: 'Paid' | 'PartPayment' | 'Pending';
     notes?: string;
     issuedById: bigint;

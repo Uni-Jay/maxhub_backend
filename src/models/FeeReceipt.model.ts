@@ -10,7 +10,7 @@ interface FeeReceiptAttributes {
   paymentMethod: 'Cash' | 'BankTransfer' | 'POS' | 'Online';
   paymentDate: Date;
   session: string;
-  term: 'First Term' | 'Second Term' | 'Third Term';
+  balance: number;
   status: 'Paid' | 'PartPayment' | 'Pending';
   notes?: string;
   issuedById: bigint;
@@ -29,7 +29,7 @@ export class FeeReceipt extends Model<FeeReceiptAttributes, FeeReceiptCreationAt
   public paymentMethod!: 'Cash' | 'BankTransfer' | 'POS' | 'Online';
   public paymentDate!: Date;
   public session!: string;
-  public term!: 'First Term' | 'Second Term' | 'Third Term';
+  public balance!: number;
   public status!: 'Paid' | 'PartPayment' | 'Pending';
   public notes?: string;
   public issuedById!: bigint;
@@ -49,7 +49,7 @@ export class FeeReceipt extends Model<FeeReceiptAttributes, FeeReceiptCreationAt
         paymentMethod: { type: DataTypes.ENUM('Cash', 'BankTransfer', 'POS', 'Online'), allowNull: false },
         paymentDate: { type: DataTypes.DATEONLY, allowNull: false, comment: 'Date payment was made' },
         session: { type: DataTypes.STRING(20), allowNull: false, comment: 'Academic session, e.g. 2026/2027' },
-        term: { type: DataTypes.ENUM('First Term', 'Second Term', 'Third Term'), allowNull: false },
+        balance: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0, comment: 'Remaining balance owed after this payment' },
         status: { type: DataTypes.ENUM('Paid', 'PartPayment', 'Pending'), defaultValue: 'Paid' },
         notes: { type: DataTypes.TEXT, allowNull: true },
         issuedById: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'User who recorded this payment' },
