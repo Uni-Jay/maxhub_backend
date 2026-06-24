@@ -34,6 +34,7 @@ const ConversationParticipant_model_1 = require("../models/ConversationParticipa
 const Message_model_1 = require("../models/Message.model");
 const MessageRead_model_1 = require("../models/MessageRead.model");
 const StudentProfile_model_1 = require("../models/StudentProfile.model");
+const FeeReceipt_model_1 = require("../models/FeeReceipt.model");
 const payroll_routes_1 = require("../routes/payroll.routes");
 function normaliseRole(r) {
     return r.toLowerCase().replace(/[^a-z]/g, '');
@@ -86,7 +87,7 @@ DashboardController.getSuperAdminStats = ErrorMiddleware_1.ErrorMiddleware.async
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-    const [totalEmployees, totalDepartments, todayAttendance, todayTotal, activeProjects, totalStudents, revenueResult, pendingApprovals,] = await Promise.all([
+    const [totalEmployees, totalDepartments, todayAttendance, todayTotal, activeProjects, totalStudents, invoiceRevenue, feeReceiptRevenue, pendingApprovals,] = await Promise.all([
         Staff_model_1.Staff.count({ where: { status: 'Active' } }),
         Department_model_1.Department.count(),
         Attendance_model_1.Attendance.count({ where: { attendanceDate: { [sequelize_1.Op.between]: [startOfDay, endOfDay] }, status: { [sequelize_1.Op.in]: ['Present', 'Late'] } } }),
@@ -94,6 +95,7 @@ DashboardController.getSuperAdminStats = ErrorMiddleware_1.ErrorMiddleware.async
         Project_model_1.Project.count({ where: { status: 'Active' } }),
         Enrollment_model_1.Enrollment.count({ where: { status: { [sequelize_1.Op.in]: ['Enrolled', 'InProgress'] } } }),
         Invoice_model_1.Invoice.sum('total', { where: { status: 'Paid' } }),
+        FeeReceipt_model_1.FeeReceipt.sum('amountPaid'),
         LeaveRequest_model_1.LeaveRequest.count({ where: { status: 'Pending' } }),
     ]);
     const attendanceRate = todayTotal > 0 ? Math.round((todayAttendance / todayTotal) * 1000) / 10 : 0;
@@ -103,7 +105,7 @@ DashboardController.getSuperAdminStats = ErrorMiddleware_1.ErrorMiddleware.async
         attendanceRate,
         activeProjects,
         totalStudents,
-        totalRevenue: revenueResult ?? 0,
+        totalRevenue: (invoiceRevenue ?? 0) + (feeReceiptRevenue ?? 0),
         pendingApprovals,
         activePayrolls: totalEmployees,
     }, 'Dashboard statistics retrieved');
@@ -146,10 +148,11 @@ DashboardController.getSuperAdminRevenue = ErrorMiddleware_1.ErrorMiddleware.asy
         const month = d.getMonth();
         const start = new Date(year, month, 1);
         const end = new Date(year, month + 1, 1);
-        const value = await Invoice_model_1.Invoice.sum('total', {
-            where: { status: 'Paid', invoiceDate: { [sequelize_1.Op.between]: [start, end] } },
-        });
-        results.push({ month: MONTH_NAMES[month], revenue: value ?? 0, target: 0 });
+        const [invoiceValue, feeReceiptValue] = await Promise.all([
+            Invoice_model_1.Invoice.sum('total', { where: { status: 'Paid', invoiceDate: { [sequelize_1.Op.between]: [start, end] } } }),
+            FeeReceipt_model_1.FeeReceipt.sum('amountPaid', { where: { paymentDate: { [sequelize_1.Op.between]: [start, end] } } }),
+        ]);
+        results.push({ month: MONTH_NAMES[month], revenue: (invoiceValue ?? 0) + (feeReceiptValue ?? 0), target: 0 });
     }
     ResponseFormatter_1.ResponseFormatter.success(res, results, 'Revenue data retrieved');
 });
@@ -467,10 +470,11 @@ DashboardController.getAccountantStats = ErrorMiddleware_1.ErrorMiddleware.async
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const [payrollOverview, pendingInvoices, revenueMTD, recentInvoices] = await Promise.all([
+    const [payrollOverview, pendingInvoices, invoiceRevenueMTD, feeReceiptRevenueMTD, recentInvoices] = await Promise.all([
         (0, payroll_routes_1.getPayrollOverview)(),
         Invoice_model_1.Invoice.count({ where: { status: { [sequelize_1.Op.in]: ['Issued', 'PartiallyPaid', 'Overdue'] } } }),
         Invoice_model_1.Invoice.sum('total', { where: { status: 'Paid', invoiceDate: { [sequelize_1.Op.gte]: startOfMonth, [sequelize_1.Op.lt]: startOfNextMonth } } }),
+        FeeReceipt_model_1.FeeReceipt.sum('amountPaid', { where: { paymentDate: { [sequelize_1.Op.gte]: startOfMonth, [sequelize_1.Op.lt]: startOfNextMonth } } }),
         Invoice_model_1.Invoice.findAll({ order: [['invoiceDate', 'DESC']], limit: 4 }),
     ]);
     let departmentBudget = null;
@@ -496,7 +500,7 @@ DashboardController.getAccountantStats = ErrorMiddleware_1.ErrorMiddleware.async
     ResponseFormatter_1.ResponseFormatter.success(res, {
         monthlyPayroll: payrollOverview.currentMonth?.totalNet ?? 0,
         pendingInvoices,
-        revenueMTD: revenueMTD ?? 0,
+        revenueMTD: (invoiceRevenueMTD ?? 0) + (feeReceiptRevenueMTD ?? 0),
         departmentBudget,
         pendingExpenseApprovals,
         recentInvoices: recentInvoices.map((inv) => ({

@@ -4,7 +4,7 @@ interface PaymentAttributes {
     uuid: string;
     paymentCode: string;
     invoiceId?: bigint;
-    accountId: bigint;
+    accountId?: bigint;
     paymentDate: Date;
     amount: number;
     currency: string;
@@ -23,7 +23,7 @@ export declare class Payment extends Model<PaymentAttributes, PaymentCreationAtt
     uuid: string;
     paymentCode: string;
     invoiceId?: bigint;
-    accountId: bigint;
+    accountId?: bigint;
     paymentDate: Date;
     amount: number;
     currency: string;

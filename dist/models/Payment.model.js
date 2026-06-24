@@ -10,7 +10,7 @@ class Payment extends sequelize_1.Model {
             uuid: { type: sequelize_1.DataTypes.UUID, defaultValue: () => (0, uuid_1.v4)(), unique: true, allowNull: false },
             paymentCode: { type: sequelize_1.DataTypes.STRING(50), allowNull: false, unique: true, comment: 'Payment code' },
             invoiceId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Invoice ID' },
-            accountId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'Account ID' },
+            accountId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Account ID — legacy CRM Account; most payments link via invoiceId instead' },
             paymentDate: { type: sequelize_1.DataTypes.DATE, allowNull: false, defaultValue: sequelize_1.DataTypes.NOW, comment: 'Payment date' },
             amount: { type: sequelize_1.DataTypes.DECIMAL(15, 2), allowNull: false, comment: 'Payment amount' },
             currency: { type: sequelize_1.DataTypes.STRING(3), allowNull: false, defaultValue: 'USD', comment: 'Currency code' },

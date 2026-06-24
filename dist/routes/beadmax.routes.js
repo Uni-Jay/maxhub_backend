@@ -83,7 +83,7 @@ router.get('/products', AuthMiddleware_1.default.requirePermission(PermissionCod
             rating: 5.0,
         };
     });
-    ResponseFormatter_1.ResponseFormatter.success(res, { data: products, pagination: { total: count, page: Number(page), limit: Number(limit) } });
+    ResponseFormatter_1.ResponseFormatter.paginated(res, products, count, Number(page), Number(limit));
 }));
 router.post('/products', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.BM_PRODUCT_CREATE_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { name, categoryId, sku, price, stock, description } = req.body;
@@ -125,7 +125,7 @@ router.get('/orders', AuthMiddleware_1.default.requirePermission(PermissionCodes
         limit: Number(limit),
         offset,
     });
-    ResponseFormatter_1.ResponseFormatter.success(res, { data: rows.map(toFrontendOrder), pagination: { total: count, page: Number(page), limit: Number(limit) } });
+    ResponseFormatter_1.ResponseFormatter.paginated(res, rows.map(toFrontendOrder), count, Number(page), Number(limit));
 }));
 router.post('/orders', AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.BM_ORDER_CREATE_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { customerId, total, items, address, notes, paymentStatus } = req.body;

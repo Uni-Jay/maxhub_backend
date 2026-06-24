@@ -6,7 +6,7 @@ interface PaymentAttributes {
   uuid: string;
   paymentCode: string;
   invoiceId?: bigint;
-  accountId: bigint;
+  accountId?: bigint;
   paymentDate: Date;
   amount: number;
   currency: string;
@@ -27,7 +27,7 @@ export class Payment extends Model<PaymentAttributes, PaymentCreationAttributes>
   public uuid!: string;
   public paymentCode!: string;
   public invoiceId?: bigint;
-  public accountId!: bigint;
+  public accountId?: bigint;
   public paymentDate!: Date;
   public amount!: number;
   public currency!: string;
@@ -49,7 +49,7 @@ export class Payment extends Model<PaymentAttributes, PaymentCreationAttributes>
         uuid: { type: DataTypes.UUID, defaultValue: () => uuidv4(), unique: true, allowNull: false },
         paymentCode: { type: DataTypes.STRING(50), allowNull: false, unique: true, comment: 'Payment code' },
         invoiceId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Invoice ID' },
-        accountId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false, comment: 'Account ID' },
+        accountId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Account ID — legacy CRM Account; most payments link via invoiceId instead' },
         paymentDate: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW, comment: 'Payment date' },
         amount: { type: DataTypes.DECIMAL(15, 2), allowNull: false, comment: 'Payment amount' },
         currency: { type: DataTypes.STRING(3), allowNull: false, defaultValue: 'USD', comment: 'Currency code' },

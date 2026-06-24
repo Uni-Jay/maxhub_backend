@@ -32,6 +32,7 @@ import { ConversationParticipant } from '@models/ConversationParticipant.model';
 import { Message } from '@models/Message.model';
 import { MessageRead } from '@models/MessageRead.model';
 import { StudentProfile } from '@models/StudentProfile.model';
+import { FeeReceipt } from '@models/FeeReceipt.model';
 import { getPayrollOverview } from '@routes/payroll.routes';
 
 interface AuthenticatedRequest extends Request {
@@ -113,7 +114,8 @@ export class DashboardController {
         todayTotal,
         activeProjects,
         totalStudents,
-        revenueResult,
+        invoiceRevenue,
+        feeReceiptRevenue,
         pendingApprovals,
       ] = await Promise.all([
         Staff.count({ where: { status: 'Active' } }),
@@ -123,6 +125,7 @@ export class DashboardController {
         Project.count({ where: { status: 'Active' } }),
         Enrollment.count({ where: { status: { [Op.in]: ['Enrolled', 'InProgress'] } } }),
         Invoice.sum('total', { where: { status: 'Paid' } }),
+        FeeReceipt.sum('amountPaid'),
         LeaveRequest.count({ where: { status: 'Pending' } }),
       ]);
 
@@ -134,7 +137,7 @@ export class DashboardController {
         attendanceRate,
         activeProjects,
         totalStudents,
-        totalRevenue: revenueResult ?? 0,
+        totalRevenue: (invoiceRevenue ?? 0) + (feeReceiptRevenue ?? 0),
         pendingApprovals,
         activePayrolls: totalEmployees,
       }, 'Dashboard statistics retrieved');
@@ -191,11 +194,12 @@ export class DashboardController {
         const start = new Date(year, month, 1);
         const end = new Date(year, month + 1, 1);
 
-        const value = await Invoice.sum('total', {
-          where: { status: 'Paid', invoiceDate: { [Op.between]: [start, end] } },
-        });
+        const [invoiceValue, feeReceiptValue] = await Promise.all([
+          Invoice.sum('total', { where: { status: 'Paid', invoiceDate: { [Op.between]: [start, end] } } }),
+          FeeReceipt.sum('amountPaid', { where: { paymentDate: { [Op.between]: [start, end] } } }),
+        ]);
 
-        results.push({ month: MONTH_NAMES[month], revenue: value ?? 0, target: 0 });
+        results.push({ month: MONTH_NAMES[month], revenue: (invoiceValue ?? 0) + (feeReceiptValue ?? 0), target: 0 });
       }
 
       ResponseFormatter.success(res, results, 'Revenue data retrieved');
@@ -616,10 +620,11 @@ export class DashboardController {
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-      const [payrollOverview, pendingInvoices, revenueMTD, recentInvoices] = await Promise.all([
+      const [payrollOverview, pendingInvoices, invoiceRevenueMTD, feeReceiptRevenueMTD, recentInvoices] = await Promise.all([
         getPayrollOverview(),
         Invoice.count({ where: { status: { [Op.in]: ['Issued', 'PartiallyPaid', 'Overdue'] } } }),
         Invoice.sum('total', { where: { status: 'Paid', invoiceDate: { [Op.gte]: startOfMonth, [Op.lt]: startOfNextMonth } } }),
+        FeeReceipt.sum('amountPaid', { where: { paymentDate: { [Op.gte]: startOfMonth, [Op.lt]: startOfNextMonth } } }),
         Invoice.findAll({ order: [['invoiceDate', 'DESC']], limit: 4 }),
       ]);
 
@@ -649,7 +654,7 @@ export class DashboardController {
       ResponseFormatter.success(res, {
         monthlyPayroll: payrollOverview.currentMonth?.totalNet ?? 0,
         pendingInvoices,
-        revenueMTD: revenueMTD ?? 0,
+        revenueMTD: (invoiceRevenueMTD ?? 0) + (feeReceiptRevenueMTD ?? 0),
         departmentBudget,
         pendingExpenseApprovals,
         recentInvoices: recentInvoices.map((inv: any) => ({

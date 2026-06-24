@@ -86,7 +86,7 @@ router.get('/products', AuthMiddleware.requirePermission(PermissionCode.BM_PRODU
     };
   });
 
-  ResponseFormatter.success(res, { data: products, pagination: { total: count, page: Number(page), limit: Number(limit) } });
+  ResponseFormatter.paginated(res, products, count, Number(page), Number(limit));
 }));
 
 // POST /api/beadmax/products — create inventory item
@@ -134,7 +134,7 @@ router.get('/orders', AuthMiddleware.requirePermission(PermissionCode.BM_ORDER_R
     limit: Number(limit),
     offset,
   });
-  ResponseFormatter.success(res, { data: rows.map(toFrontendOrder), pagination: { total: count, page: Number(page), limit: Number(limit) } });
+  ResponseFormatter.paginated(res, rows.map(toFrontendOrder), count, Number(page), Number(limit));
 }));
 
 // POST /api/beadmax/orders — create new order

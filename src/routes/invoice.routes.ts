@@ -191,13 +191,15 @@ router.post('/:id/payments', AuthMiddleware.requirePermission('fin.invoice.updat
   const { amount, paymentMethod, paymentDate, reference } = req.body;
   if (!amount || !paymentMethod) return ResponseFormatter.error(res, 'amount and paymentMethod are required', 400);
 
+  const paymentCode = `PAY-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}`;
   const payment = await Payment.create({
-    uuid: uuidv4(), invoiceId: (invoice as any).id, amount,
+    uuid: uuidv4(), paymentCode, invoiceId: (invoice as any).id, amount,
+    currency: (invoice as any).currency ?? 'NGN',
     paymentMethod, paymentDate: paymentDate || new Date(),
-    reference, status: 'Completed', createdById: (req as any).user.id,
+    referenceNumber: reference, status: 'Processed', processedBy: (req as any).user.id, processedDate: new Date(),
   } as any);
 
-  const allPayments = await Payment.findAll({ where: { invoiceId: (invoice as any).id, status: 'Completed' } });
+  const allPayments = await Payment.findAll({ where: { invoiceId: (invoice as any).id, status: 'Processed' } });
   const totalPaid = allPayments.reduce((sum: number, p: any) => sum + Number(p.amount), 0);
   const invoiceTotal = Number((invoice as any).total);
 
