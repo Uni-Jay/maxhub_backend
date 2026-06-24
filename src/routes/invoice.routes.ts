@@ -100,16 +100,18 @@ router.post('/', AuthMiddleware.requirePermission('fin.invoice.create.all', 'acc
     }
   }
 
-  const count = await Invoice.count();
-  const invoiceCode = `INV-${String(count + 1).padStart(6, '0')}`;
-
+  // invoiceCode is derived from the row's own DB-assigned id after creation
+  // (not a count()) - a count-based code collides with the invoiceCode of
+  // any earlier soft-deleted invoice, since the unique constraint on that
+  // column doesn't know about paranoid deletion.
   const invoice = await Invoice.create({
-    uuid: uuidv4(), invoiceCode, accountId, clientId, departmentId, orderId, items,
+    uuid: uuidv4(), invoiceCode: '', accountId, clientId, departmentId, orderId, items,
     invoiceDate: invoiceDate || new Date(),
     dueDate, subtotal, discount: discount || 0, tax: tax || 0, total,
     currency: currency || 'NGN', description,
     status: 'Draft', createdById: (req as any).user.id,
   } as any);
+  await invoice.update({ invoiceCode: `INV-${String(invoice.id).padStart(6, '0')}` });
   ResponseFormatter.success(res, invoice, 'Invoice created', 201);
 }));
 

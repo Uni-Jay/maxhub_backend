@@ -94,15 +94,14 @@ router.post('/', AuthMiddleware_1.default.requirePermission('fin.invoice.create.
             }
         }
     }
-    const count = await Invoice_model_1.Invoice.count();
-    const invoiceCode = `INV-${String(count + 1).padStart(6, '0')}`;
     const invoice = await Invoice_model_1.Invoice.create({
-        uuid: (0, uuid_1.v4)(), invoiceCode, accountId, clientId, departmentId, orderId, items,
+        uuid: (0, uuid_1.v4)(), invoiceCode: '', accountId, clientId, departmentId, orderId, items,
         invoiceDate: invoiceDate || new Date(),
         dueDate, subtotal, discount: discount || 0, tax: tax || 0, total,
         currency: currency || 'NGN', description,
         status: 'Draft', createdById: req.user.id,
     });
+    await invoice.update({ invoiceCode: `INV-${String(invoice.id).padStart(6, '0')}` });
     ResponseFormatter_1.ResponseFormatter.success(res, invoice, 'Invoice created', 201);
 }));
 router.put('/:id', AuthMiddleware_1.default.requirePermission('fin.invoice.update.all', 'acc.invoice.update.all', 'fin.invoice.update.own_department'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
