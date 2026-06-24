@@ -74,9 +74,9 @@ router.get('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, re
     ResponseFormatter_1.ResponseFormatter.success(res, { ...course.toJSON(), enrollmentCount });
 }));
 router.post('/', AuthMiddleware_1.default.requirePermission('LMS.COURSE.CREATE.ALL', 'LMS.COURSE.CREATE.OWN_DEPARTMENT'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const { title, courseCode, description, instructorId, duration, fee, startDate, endDate, status, certificateRequired, passingScore, maxParticipants, minParticipants } = req.body;
-    if (!title || !courseCode || !instructorId || !duration || !startDate) {
-        return ResponseFormatter_1.ResponseFormatter.error(res, 'title, courseCode, instructorId, duration, startDate are required', 400);
+    const { title, courseCode, description, instructorId, instructorName, duration, fee, startDate, endDate, status, certificateRequired, passingScore, maxParticipants, minParticipants } = req.body;
+    if (!title || !courseCode || !instructorName || !duration || !startDate) {
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'title, courseCode, instructorName, duration, startDate are required', 400);
     }
     const scope = getDeptScope(req, 'lms.course.create.all');
     let { departmentId } = req.body;
@@ -89,7 +89,7 @@ router.post('/', AuthMiddleware_1.default.requirePermission('LMS.COURSE.CREATE.A
     if (existing)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Course code already exists', 409);
     const course = await Course_model_1.Course.create({
-        uuid: (0, uuid_1.v4)(), title, courseCode, description, departmentId, instructorId,
+        uuid: (0, uuid_1.v4)(), title, courseCode, description, departmentId, instructorId: instructorId || undefined, instructorName,
         duration, fee, startDate, endDate, status: status || 'Draft',
         certificateRequired: certificateRequired ?? false,
         passingScore, maxParticipants, minParticipants,
@@ -105,7 +105,7 @@ router.put('/:id', AuthMiddleware_1.default.requirePermission('LMS.COURSE.UPDATE
     if (scope.scoped && String(course.departmentId) !== String(scope.departmentId)) {
         return ResponseFormatter_1.ResponseFormatter.error(res, 'You can only manage courses in your own department', 403);
     }
-    const allowed = ['title', 'description', 'departmentId', 'instructorId', 'duration', 'fee',
+    const allowed = ['title', 'description', 'departmentId', 'instructorId', 'instructorName', 'duration', 'fee',
         'startDate', 'endDate', 'status', 'certificateRequired', 'passingScore', 'maxParticipants', 'minParticipants'];
     const updates = {};
     allowed.forEach(k => { if (req.body[k] !== undefined)

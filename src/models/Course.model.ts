@@ -8,7 +8,8 @@ interface CourseAttributes {
   title: string;
   description?: string;
   departmentId?: bigint;
-  instructorId: bigint;
+  instructorId?: bigint;
+  instructorName: string;
   categoryId?: bigint;
   duration: number;
   maxParticipants?: number;
@@ -32,7 +33,8 @@ export class Course extends Model<CourseAttributes, CourseCreationAttributes> im
   public title!: string;
   public description?: string;
   public departmentId?: bigint;
-  public instructorId!: bigint;
+  public instructorId?: bigint;
+  public instructorName!: string;
   public categoryId?: bigint;
   public duration!: number;
   public maxParticipants?: number;
@@ -87,8 +89,13 @@ export class Course extends Model<CourseAttributes, CourseCreationAttributes> im
         },
         instructorId: {
           type: DataTypes.BIGINT.UNSIGNED,
+          allowNull: true,
+          comment: 'Reference to staff table — optional, most instructors are not registered staff',
+        },
+        instructorName: {
+          type: DataTypes.STRING(200),
           allowNull: false,
-          comment: 'Reference to staff table',
+          comment: 'Instructor display name, entered freely (most instructors are not staff)',
         },
         categoryId: {
           type: DataTypes.BIGINT.UNSIGNED,

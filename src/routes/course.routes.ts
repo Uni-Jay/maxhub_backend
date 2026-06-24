@@ -81,11 +81,11 @@ router.get('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Respon
 
 // POST /api/courses — create course
 router.post('/', AuthMiddleware.requirePermission('LMS.COURSE.CREATE.ALL', 'LMS.COURSE.CREATE.OWN_DEPARTMENT'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const { title, courseCode, description, instructorId, duration, fee,
+  const { title, courseCode, description, instructorId, instructorName, duration, fee,
     startDate, endDate, status, certificateRequired, passingScore, maxParticipants, minParticipants } = req.body;
 
-  if (!title || !courseCode || !instructorId || !duration || !startDate) {
-    return ResponseFormatter.error(res, 'title, courseCode, instructorId, duration, startDate are required', 400);
+  if (!title || !courseCode || !instructorName || !duration || !startDate) {
+    return ResponseFormatter.error(res, 'title, courseCode, instructorName, duration, startDate are required', 400);
   }
 
   const scope = getDeptScope(req, 'lms.course.create.all');
@@ -99,7 +99,7 @@ router.post('/', AuthMiddleware.requirePermission('LMS.COURSE.CREATE.ALL', 'LMS.
   if (existing) return ResponseFormatter.error(res, 'Course code already exists', 409);
 
   const course = await Course.create({
-    uuid: uuidv4(), title, courseCode, description, departmentId, instructorId,
+    uuid: uuidv4(), title, courseCode, description, departmentId, instructorId: instructorId || undefined, instructorName,
     duration, fee, startDate, endDate, status: status || 'Draft',
     certificateRequired: certificateRequired ?? false,
     passingScore, maxParticipants, minParticipants,
@@ -119,7 +119,7 @@ router.put('/:id', AuthMiddleware.requirePermission('LMS.COURSE.UPDATE.ALL', 'LM
     return ResponseFormatter.error(res, 'You can only manage courses in your own department', 403);
   }
 
-  const allowed = ['title', 'description', 'departmentId', 'instructorId', 'duration', 'fee',
+  const allowed = ['title', 'description', 'departmentId', 'instructorId', 'instructorName', 'duration', 'fee',
     'startDate', 'endDate', 'status', 'certificateRequired', 'passingScore', 'maxParticipants', 'minParticipants'];
   const updates: any = {};
   allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });

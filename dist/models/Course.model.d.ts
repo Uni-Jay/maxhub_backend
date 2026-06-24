@@ -6,7 +6,8 @@ interface CourseAttributes {
     title: string;
     description?: string;
     departmentId?: bigint;
-    instructorId: bigint;
+    instructorId?: bigint;
+    instructorName: string;
     categoryId?: bigint;
     duration: number;
     maxParticipants?: number;
@@ -29,7 +30,8 @@ export declare class Course extends Model<CourseAttributes, CourseCreationAttrib
     title: string;
     description?: string;
     departmentId?: bigint;
-    instructorId: bigint;
+    instructorId?: bigint;
+    instructorName: string;
     categoryId?: bigint;
     duration: number;
     maxParticipants?: number;

@@ -41,8 +41,13 @@ class Course extends sequelize_1.Model {
             },
             instructorId: {
                 type: sequelize_1.DataTypes.BIGINT.UNSIGNED,
+                allowNull: true,
+                comment: 'Reference to staff table — optional, most instructors are not registered staff',
+            },
+            instructorName: {
+                type: sequelize_1.DataTypes.STRING(200),
                 allowNull: false,
-                comment: 'Reference to staff table',
+                comment: 'Instructor display name, entered freely (most instructors are not staff)',
             },
             categoryId: {
                 type: sequelize_1.DataTypes.BIGINT.UNSIGNED,
