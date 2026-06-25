@@ -2,8 +2,7 @@ import { Request } from 'express';
 import { BaseService } from './BaseService';
 import { PermissionCode } from '../config/PermissionCodes';
 import crypto from 'crypto';
-// @ts-ignore — geohash-bounding-box not yet installed
-import * as geohash from 'geohash-bounding-box';
+import { Attendance } from '../models/Attendance.model';
 
 export interface ClockInRequest {
   latitude: number;
@@ -30,10 +29,7 @@ export interface OvertimeRequest {
 }
 
 export class AttendanceService extends BaseService {
-  private readonly MIN_GPS_ACCURACY = 100; // meters
   private readonly QR_VALID_DURATION = 5; // minutes
-  private readonly MAX_GPS_DRIFT = 5000; // 5km in meters
-  private readonly GEOHASH_PRECISION = 6; // ~1km accuracy
 
   /**
    * IMPROVED: Add manager authority validation
@@ -48,131 +44,80 @@ export class AttendanceService extends BaseService {
   }
 
   /**
-   * Clock in staff member with security improvements
+   * Clock in staff member. GPS coordinates/IP are recorded for the audit
+   * trail (checkInLatitude/Longitude columns) but never block the check-in -
+   * office wifi/GPS accuracy indoors is unreliable, and remote/field staff
+   * legitimately clock in from outside any fixed geofence.
    */
   async clockIn(req: Request, staffId: bigint, clockInData: ClockInRequest) {
     await this.checkPermission(req, PermissionCode.ATT_CLOCKIN_CREATE_OWN);
 
-    // IMPROVEMENT: Validate GPS accuracy
-    if (clockInData.accuracy && clockInData.accuracy > this.MIN_GPS_ACCURACY) {
-      throw new Error('GPS accuracy too low for check-in (required: <100m)');
+    const today = new Date().toISOString().slice(0, 10);
+
+    const [record, created] = await Attendance.findOrCreate({
+      where: { staffId, attendanceDate: today as any },
+      defaults: {
+        staffId,
+        attendanceDate: today as any,
+        checkInTime: new Date(),
+        checkInLatitude: clockInData.latitude || null,
+        checkInLongitude: clockInData.longitude || null,
+        checkInIpAddress: clockInData.ipAddress,
+        status: 'Present',
+        approvalStatus: 'Pending',
+      } as any,
+    });
+
+    if (!created) {
+      if (record.checkInTime) {
+        throw new Error('Already clocked in today');
+      }
+      await record.update({
+        checkInTime: new Date(),
+        checkInLatitude: clockInData.latitude || null,
+        checkInLongitude: clockInData.longitude || null,
+        checkInIpAddress: clockInData.ipAddress,
+        status: 'Present',
+      } as any);
     }
-
-    // IMPROVEMENT: Geohash-based location validation
-    const currentGeohash = this.getGeohash(clockInData.latitude, clockInData.longitude);
-    const validGeohashes = await this.getValidClockInGeohashes(staffId);
-    if (!validGeohashes.includes(currentGeohash)) {
-      throw new Error('Location not authorized for clock-in. Please visit office.');
-    }
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // IMPROVEMENT: Check if already clocked in today (prevent duplicate check-in)
-    // const existingRecord = await attendanceRepo.findOne({
-    //   where: { 
-    //     staffId, 
-    //     attendanceDate: today, 
-    //     checkInTime: { [Op.not]: null } 
-    //   }
-    // });
-    // if (existingRecord) throw new Error('Already clocked in today');
-
-    // Create GPS tracking record with geohash
-    const gpsRecord = {
-      staffId,
-      latitude: clockInData.latitude,
-      longitude: clockInData.longitude,
-      accuracy: clockInData.accuracy,
-      geohash: currentGeohash, // IMPROVEMENT: Add geohash for indexing
-      timestamp: new Date(),
-      isValidLocation: (clockInData.accuracy || 0) <= this.MIN_GPS_ACCURACY,
-    };
-
-    // Create or update attendance record
-    const attendanceRecord = {
-      staffId,
-      attendanceDate: today,
-      checkInTime: new Date(),
-      checkInLatitude: clockInData.latitude,
-      checkInLongitude: clockInData.longitude,
-      checkInIpAddress: clockInData.ipAddress,
-      status: 'Present',
-      approvalStatus: 'Pending',
-    };
-
-    // IMPROVEMENT: Audit logging
-    // await auditService.log({
-    //   action: 'CLOCK_IN',
-    //   staffId,
-    //   details: {
-    //     latitude: clockInData.latitude,
-    //     longitude: clockInData.longitude,
-    //     deviceId: clockInData.deviceId
-    //   },
-    //   ipAddress: clockInData.ipAddress
-    // });
 
     return {
       message: 'Clocked in successfully',
-      checkInTime: new Date(),
-      gpsAccuracy: clockInData.accuracy,
-      geohash: currentGeohash,
+      checkInTime: record.checkInTime,
     };
   }
 
   /**
-   * Clock out with validation
+   * Clock out. Same as clockIn - location is recorded, never enforced.
    */
   async clockOut(req: Request, staffId: bigint, clockOutData: ClockOutRequest) {
     await this.checkPermission(req, PermissionCode.ATT_CLOCKOUT_CREATE_OWN);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = new Date().toISOString().slice(0, 10);
 
-    // Get today's attendance record
-    // const attendance = await attendanceRepo.findOne({
-    //   where: { staffId, attendanceDate: today }
-    // });
-    // if (!attendance || !attendance.checkInTime) {
-    //   throw new Error('Not clocked in today');
-    // }
+    const record = await Attendance.findOne({ where: { staffId, attendanceDate: today as any } });
+    if (!record || !record.checkInTime) {
+      throw new Error('Not clocked in today');
+    }
+    if (record.checkOutTime) {
+      throw new Error('Already clocked out today');
+    }
 
-    // IMPROVEMENT: Validate clock out is after clock in
-    // if (new Date() <= attendance.checkInTime) {
-    //   throw new Error('Invalid clock out time');
-    // }
+    const checkOutTime = new Date();
+    const workingHours = (checkOutTime.getTime() - new Date(record.checkInTime).getTime()) / (1000 * 60 * 60);
 
-    // Create GPS tracking record
-    const currentGeohash = this.getGeohash(clockOutData.latitude, clockOutData.longitude);
-    const gpsRecord = {
-      staffId,
-      latitude: clockOutData.latitude,
-      longitude: clockOutData.longitude,
-      accuracy: clockOutData.accuracy,
-      geohash: currentGeohash,
-      timestamp: new Date(),
-      isValidLocation: (clockOutData.accuracy || 0) <= this.MIN_GPS_ACCURACY,
-    };
-
-    // Update attendance record
-    // const checkInTime = new Date(attendance.checkInTime);
-    // const checkOutTime = new Date();
-    // const workingHours = (checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60);
-
-    // await attendance.update({
-    //   checkOutTime: new Date(),
-    //   checkOutLatitude: clockOutData.latitude,
-    //   checkOutLongitude: clockOutData.longitude,
-    //   checkOutIpAddress: clockOutData.ipAddress,
-    //   workingHours,
-    // });
+    await record.update({
+      checkOutTime,
+      checkOutLatitude: clockOutData.latitude || null,
+      checkOutLongitude: clockOutData.longitude || null,
+      checkOutIpAddress: clockOutData.ipAddress,
+      workingHours: Math.round(workingHours * 100) / 100,
+    } as any);
 
     return {
       message: 'Clocked out successfully',
-      checkOutTime: new Date(),
-      gpsAccuracy: clockOutData.accuracy,
-      geohash: currentGeohash,
+      checkOutTime: record.checkOutTime,
+      workingHours: record.workingHours,
     };
   }
 
@@ -291,33 +236,5 @@ export class AttendanceService extends BaseService {
     };
   }
 
-  /**
-   * IMPROVED: Helper function for geohashing
-   */
-  private getGeohash(latitude: number, longitude: number): string {
-    // Use geohash-bounding-box or similar library
-    // return geohash.encode(latitude, longitude, this.GEOHASH_PRECISION);
-    return 'ezs42'; // Placeholder
-  }
-
-  /**
-   * IMPROVED: Get valid clock-in locations (geofences)
-   */
-  private async getValidClockInGeohashes(staffId: bigint): Promise<string[]> {
-    // Query office locations and convert to geohashes
-    // const locations = await officeLocationRepo.findAll();
-    // return locations.map(loc => 
-    //   geohash.encode(loc.latitude, loc.longitude, GEOHASH_PRECISION)
-    // );
-    return ['ezs42', 'ezs43', 'ezs44']; // Placeholder
-  }
-
-  /**
-   * IMPROVED: Calculate distance between geohashes
-   */
-  private geohashDistance(hash1: string, hash2: string): number {
-    // Calculate grid distance between geohashes
-    return 0; // Placeholder
-  }
 }
 

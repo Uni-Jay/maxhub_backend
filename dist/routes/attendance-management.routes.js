@@ -23,6 +23,13 @@ function hasPermission(req, code) {
     const perms = new Set((req.user?.permissions || []).map((p) => String(p).toLowerCase()));
     return perms.has(code.toLowerCase());
 }
+async function getOwnStaffId(req) {
+    const userId = req.user?.id;
+    if (!userId)
+        return null;
+    const staff = await Staff_model_1.Staff.findOne({ where: { userId }, attributes: ['id'] });
+    return staff ? staff.id : null;
+}
 router.get('/', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.ATT_ATTENDANCE_READ_ALL, PermissionCodes_1.PermissionCode.ATT_ATTENDANCE_READ_OWN_DEPARTMENT, PermissionCodes_1.PermissionCode.ATT_ATTENDANCE_READ_OWN), async (req, res) => {
     try {
         const { date, page = '1', limit = '20' } = req.query;
@@ -70,7 +77,7 @@ router.get('/', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.r
 });
 router.get('/today', AuthMiddleware_1.default.verifyToken, async (req, res) => {
     try {
-        const staffId = req.user?.staffId;
+        const staffId = await getOwnStaffId(req);
         if (!staffId) {
             return res.status(404).json({ success: false, message: 'No staff profile linked to this account' });
         }
@@ -89,7 +96,9 @@ router.get('/today', AuthMiddleware_1.default.verifyToken, async (req, res) => {
 });
 router.post('/clock-in', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.ATT_CLOCKIN_CREATE_OWN), async (req, res) => {
     try {
-        const staffId = req.user.staffId;
+        const staffId = await getOwnStaffId(req);
+        if (!staffId)
+            return res.status(400).json({ success: false, error: 'No staff profile linked to this account' });
         const clockInData = req.body;
         const result = await attendanceService.clockIn(req, staffId, clockInData);
         res.json({ success: true, data: result });
@@ -100,7 +109,9 @@ router.post('/clock-in', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.
 });
 router.post('/clock-out', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.ATT_CLOCKOUT_CREATE_OWN), async (req, res) => {
     try {
-        const staffId = req.user.staffId;
+        const staffId = await getOwnStaffId(req);
+        if (!staffId)
+            return res.status(400).json({ success: false, error: 'No staff profile linked to this account' });
         const clockOutData = req.body;
         const result = await attendanceService.clockOut(req, staffId, clockOutData);
         res.json({ success: true, data: result });
@@ -159,7 +170,9 @@ router.post('/qr/generate', AuthMiddleware_1.default.verifyToken, AuthMiddleware
 });
 router.post('/qr/scan', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.ATT_QR_USE_OWN), async (req, res) => {
     try {
-        const staffId = req.user.staffId;
+        const staffId = await getOwnStaffId(req);
+        if (!staffId)
+            return res.status(400).json({ success: false, error: 'No staff profile linked to this account' });
         const { qrToken, location } = req.body;
         const result = await attendanceService.scanQRCode(req, staffId, qrToken, location);
         res.json({ success: true, data: result });
@@ -170,7 +183,9 @@ router.post('/qr/scan', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.d
 });
 router.post('/overtime/request', AuthMiddleware_1.default.verifyToken, AuthMiddleware_1.default.requirePermission(PermissionCodes_1.PermissionCode.ATT_ATTENDANCE_CREATE_OWN), async (req, res) => {
     try {
-        const staffId = req.user.staffId;
+        const staffId = await getOwnStaffId(req);
+        if (!staffId)
+            return res.status(400).json({ success: false, error: 'No staff profile linked to this account' });
         const { attendanceId, date, startTime, endTime, overtimeHours, overtimeRate, reason } = req.body;
         if (!attendanceId || !date || !startTime || !endTime || !overtimeHours) {
             return res.status(400).json({ success: false, message: 'attendanceId, date, startTime, endTime and overtimeHours are required' });

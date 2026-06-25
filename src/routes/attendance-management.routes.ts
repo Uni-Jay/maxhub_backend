@@ -21,6 +21,16 @@ function hasPermission(req: Request, code: string): boolean {
   return perms.has(code.toLowerCase());
 }
 
+// The JWT/session user object never carries a staffId field - it must be
+// resolved from the Staff row linked to the logged-in user, same pattern
+// used in project.routes.ts/task.routes.ts/weekly-report.routes.ts.
+async function getOwnStaffId(req: Request): Promise<bigint | null> {
+  const userId = (req as any).user?.id;
+  if (!userId) return null;
+  const staff = await Staff.findOne({ where: { userId }, attributes: ['id'] });
+  return staff ? (staff as any).id : null;
+}
+
 /**
  * GET /api/attendance
  * List attendance records with optional date filter.
@@ -92,7 +102,7 @@ router.get(
   AuthMiddleware.verifyToken,
   async (req: Request, res: Response) => {
     try {
-      const staffId = (req as any).user?.staffId;
+      const staffId = await getOwnStaffId(req);
       if (!staffId) {
         return res.status(404).json({ success: false, message: 'No staff profile linked to this account' });
       }
@@ -120,7 +130,8 @@ router.post(
   AuthMiddleware.requirePermission(PermissionCode.ATT_CLOCKIN_CREATE_OWN),
   async (req: Request, res: Response) => {
     try {
-      const staffId = (req as any).user.staffId;
+      const staffId = await getOwnStaffId(req);
+      if (!staffId) return res.status(400).json({ success: false, error: 'No staff profile linked to this account' });
       const clockInData: ClockInRequest = req.body;
       const result = await attendanceService.clockIn(req, staffId, clockInData);
       res.json({ success: true, data: result });
@@ -140,7 +151,8 @@ router.post(
   AuthMiddleware.requirePermission(PermissionCode.ATT_CLOCKOUT_CREATE_OWN),
   async (req: Request, res: Response) => {
     try {
-      const staffId = (req as any).user.staffId;
+      const staffId = await getOwnStaffId(req);
+      if (!staffId) return res.status(400).json({ success: false, error: 'No staff profile linked to this account' });
       const clockOutData: ClockOutRequest = req.body;
       const result = await attendanceService.clockOut(req, staffId, clockOutData);
       res.json({ success: true, data: result });
@@ -241,7 +253,8 @@ router.post(
   AuthMiddleware.requirePermission(PermissionCode.ATT_QR_USE_OWN),
   async (req: Request, res: Response) => {
     try {
-      const staffId = (req as any).user.staffId;
+      const staffId = await getOwnStaffId(req);
+      if (!staffId) return res.status(400).json({ success: false, error: 'No staff profile linked to this account' });
       const { qrToken, location } = req.body;
       const result = await attendanceService.scanQRCode(req, staffId, qrToken, location);
       res.json({ success: true, data: result });
@@ -261,7 +274,8 @@ router.post(
   AuthMiddleware.requirePermission(PermissionCode.ATT_ATTENDANCE_CREATE_OWN),
   async (req: Request, res: Response) => {
     try {
-      const staffId = (req as any).user.staffId;
+      const staffId = await getOwnStaffId(req);
+      if (!staffId) return res.status(400).json({ success: false, error: 'No staff profile linked to this account' });
       const { attendanceId, date, startTime, endTime, overtimeHours, overtimeRate, reason } = req.body;
       if (!attendanceId || !date || !startTime || !endTime || !overtimeHours) {
         return res.status(400).json({ success: false, message: 'attendanceId, date, startTime, endTime and overtimeHours are required' });

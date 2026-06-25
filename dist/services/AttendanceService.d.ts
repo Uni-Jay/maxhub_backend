@@ -22,22 +22,16 @@ export interface OvertimeRequest {
     overtimeRate?: number;
 }
 export declare class AttendanceService extends BaseService {
-    private readonly MIN_GPS_ACCURACY;
     private readonly QR_VALID_DURATION;
-    private readonly MAX_GPS_DRIFT;
-    private readonly GEOHASH_PRECISION;
     private validateManagerAuthority;
     clockIn(req: Request, staffId: bigint, clockInData: ClockInRequest): Promise<{
         message: string;
-        checkInTime: Date;
-        gpsAccuracy: number | undefined;
-        geohash: string;
+        checkInTime: Date | undefined;
     }>;
     clockOut(req: Request, staffId: bigint, clockOutData: ClockOutRequest): Promise<{
         message: string;
-        checkOutTime: Date;
-        gpsAccuracy: number | undefined;
-        geohash: string;
+        checkOutTime: undefined;
+        workingHours: number | undefined;
     }>;
     generateQRCode(req: Request, organizationId: bigint): Promise<{
         qrCode: string;
@@ -46,9 +40,7 @@ export declare class AttendanceService extends BaseService {
     }>;
     scanQRCode(req: Request, staffId: bigint, qrToken: string, location: ClockInRequest): Promise<{
         message: string;
-        checkInTime: Date;
-        gpsAccuracy: number | undefined;
-        geohash: string;
+        checkInTime: Date | undefined;
     }>;
     approveOvertime(req: Request, overtimeId: bigint): Promise<{
         message: string;
@@ -60,8 +52,5 @@ export declare class AttendanceService extends BaseService {
         estimatedTime: string;
         checkStatusUrl: string;
     }>;
-    private getGeohash;
-    private getValidClockInGeohashes;
-    private geohashDistance;
 }
 //# sourceMappingURL=AttendanceService.d.ts.map
