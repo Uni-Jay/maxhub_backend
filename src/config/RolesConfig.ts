@@ -276,6 +276,11 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.ATT_ATTENDANCE_READ_ALL,
     PermissionCode.ATT_ATTENDANCE_UPDATE_ALL,
     PermissionCode.ATT_TIMESHEET_READ_ALL,
+    // Clocking her own attendance in/out is a baseline capability every
+    // employee needs regardless of role - not just plain "Staff".
+    PermissionCode.ATT_CLOCKIN_CREATE_OWN,
+    PermissionCode.ATT_CLOCKOUT_CREATE_OWN,
+    PermissionCode.ATT_ATTENDANCE_READ_OWN,
     // Payroll view
     PermissionCode.HR_PAYROLL_VIEW_ALL,
     PermissionCode.PAY_SALARY_READ_ALL,
@@ -358,6 +363,8 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.ATT_ATTENDANCE_UPDATE_OWN_DEPARTMENT,
     PermissionCode.ATT_ATTENDANCE_READ_OWN,
     PermissionCode.ATT_ATTENDANCE_CREATE_OWN,
+    PermissionCode.ATT_CLOCKIN_CREATE_OWN,
+    PermissionCode.ATT_CLOCKOUT_CREATE_OWN,
     PermissionCode.ATT_TIMESHEET_READ_OWN_DEPARTMENT,
     PermissionCode.ATT_TIMESHEET_APPROVE_OWN_DEPARTMENT,
     PermissionCode.LEAVE_REQUEST_READ_OWN_DEPARTMENT,
