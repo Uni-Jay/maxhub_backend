@@ -8,6 +8,7 @@ const BaseService_1 = require("./BaseService");
 const PermissionCodes_1 = require("../config/PermissionCodes");
 const crypto_1 = __importDefault(require("crypto"));
 const Attendance_model_1 = require("../models/Attendance.model");
+const dateUtils_1 = require("../utils/dateUtils");
 class AttendanceService extends BaseService_1.BaseService {
     constructor() {
         super(...arguments);
@@ -17,7 +18,7 @@ class AttendanceService extends BaseService_1.BaseService {
     }
     async clockIn(req, staffId, clockInData) {
         await this.checkPermission(req, PermissionCodes_1.PermissionCode.ATT_CLOCKIN_CREATE_OWN);
-        const today = new Date().toISOString().slice(0, 10);
+        const today = (0, dateUtils_1.todayLocalDate)();
         const [record, created] = await Attendance_model_1.Attendance.findOrCreate({
             where: { staffId, attendanceDate: today },
             defaults: {
@@ -50,7 +51,7 @@ class AttendanceService extends BaseService_1.BaseService {
     }
     async clockOut(req, staffId, clockOutData) {
         await this.checkPermission(req, PermissionCodes_1.PermissionCode.ATT_CLOCKOUT_CREATE_OWN);
-        const today = new Date().toISOString().slice(0, 10);
+        const today = (0, dateUtils_1.todayLocalDate)();
         const record = await Attendance_model_1.Attendance.findOne({ where: { staffId, attendanceDate: today } });
         if (!record || !record.checkInTime) {
             throw new Error('Not clocked in today');

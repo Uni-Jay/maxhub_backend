@@ -6,6 +6,7 @@ import { AttendanceService, ClockInRequest, ClockOutRequest } from '../services/
 import { Attendance } from '../models/Attendance.model';
 import { Staff } from '../models/Staff.model';
 import { Overtime } from '../models/Overtime.model';
+import { todayLocalDate } from '../utils/dateUtils';
 
 const router = Router();
 const attendanceService = new AttendanceService();
@@ -106,7 +107,7 @@ router.get(
       if (!staffId) {
         return res.status(404).json({ success: false, message: 'No staff profile linked to this account' });
       }
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocalDate();
       const record = await (Attendance as any).findOne({
         where: { staffId, attendanceDate: today },
       }) as InstanceType<typeof Attendance> | null;

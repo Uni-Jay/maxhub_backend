@@ -11,6 +11,7 @@ const AttendanceService_1 = require("../services/AttendanceService");
 const Attendance_model_1 = require("../models/Attendance.model");
 const Staff_model_1 = require("../models/Staff.model");
 const Overtime_model_1 = require("../models/Overtime.model");
+const dateUtils_1 = require("../utils/dateUtils");
 const router = (0, express_1.Router)();
 const attendanceService = new AttendanceService_1.AttendanceService();
 function isBypassRole(req) {
@@ -81,7 +82,7 @@ router.get('/today', AuthMiddleware_1.default.verifyToken, async (req, res) => {
         if (!staffId) {
             return res.status(404).json({ success: false, message: 'No staff profile linked to this account' });
         }
-        const today = new Date().toISOString().slice(0, 10);
+        const today = (0, dateUtils_1.todayLocalDate)();
         const record = await Attendance_model_1.Attendance.findOne({
             where: { staffId, attendanceDate: today },
         });

@@ -3,6 +3,7 @@ import { BaseService } from './BaseService';
 import { PermissionCode } from '../config/PermissionCodes';
 import crypto from 'crypto';
 import { Attendance } from '../models/Attendance.model';
+import { todayLocalDate } from '../utils/dateUtils';
 
 export interface ClockInRequest {
   latitude: number;
@@ -52,7 +53,7 @@ export class AttendanceService extends BaseService {
   async clockIn(req: Request, staffId: bigint, clockInData: ClockInRequest) {
     await this.checkPermission(req, PermissionCode.ATT_CLOCKIN_CREATE_OWN);
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocalDate();
 
     const [record, created] = await Attendance.findOrCreate({
       where: { staffId, attendanceDate: today as any },
@@ -93,7 +94,7 @@ export class AttendanceService extends BaseService {
   async clockOut(req: Request, staffId: bigint, clockOutData: ClockOutRequest) {
     await this.checkPermission(req, PermissionCode.ATT_CLOCKOUT_CREATE_OWN);
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocalDate();
 
     const record = await Attendance.findOne({ where: { staffId, attendanceDate: today as any } });
     if (!record || !record.checkInTime) {
