@@ -12,7 +12,7 @@ class CalendarEvent extends sequelize_1.Model {
             date: { type: sequelize_1.DataTypes.DATE, allowNull: false },
             endDate: { type: sequelize_1.DataTypes.DATE, allowNull: true },
             type: {
-                type: sequelize_1.DataTypes.ENUM('Meeting', 'Task', 'Reminder', 'Holiday', 'Other'),
+                type: sequelize_1.DataTypes.ENUM('Meeting', 'Leave', 'Holiday', 'Birthday', 'Deadline', 'Training', 'Task', 'Reminder', 'Other'),
                 defaultValue: 'Meeting',
             },
             description: { type: sequelize_1.DataTypes.TEXT, allowNull: true },

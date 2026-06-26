@@ -5,7 +5,7 @@ interface CalendarEventAttributes {
     title: string;
     date: Date;
     endDate?: Date;
-    type: 'Meeting' | 'Task' | 'Reminder' | 'Holiday' | 'Other';
+    type: 'Meeting' | 'Leave' | 'Holiday' | 'Birthday' | 'Deadline' | 'Training';
     description?: string;
     attendees?: string;
     createdById?: bigint;
@@ -19,7 +19,7 @@ export declare class CalendarEvent extends Model<CalendarEventAttributes, Calend
     title: string;
     date: Date;
     endDate?: Date;
-    type: 'Meeting' | 'Task' | 'Reminder' | 'Holiday' | 'Other';
+    type: 'Meeting' | 'Leave' | 'Holiday' | 'Birthday' | 'Deadline' | 'Training';
     description?: string;
     attendees?: string;
     createdById?: bigint;

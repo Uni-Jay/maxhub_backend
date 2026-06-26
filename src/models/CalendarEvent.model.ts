@@ -7,7 +7,7 @@ interface CalendarEventAttributes {
   title: string;
   date: Date;
   endDate?: Date;
-  type: 'Meeting' | 'Task' | 'Reminder' | 'Holiday' | 'Other';
+  type: 'Meeting' | 'Leave' | 'Holiday' | 'Birthday' | 'Deadline' | 'Training';
   description?: string;
   attendees?: string;
   createdById?: bigint;
@@ -24,7 +24,7 @@ export class CalendarEvent
   declare title: string;
   declare date: Date;
   declare endDate?: Date;
-  declare type: 'Meeting' | 'Task' | 'Reminder' | 'Holiday' | 'Other';
+  declare type: 'Meeting' | 'Leave' | 'Holiday' | 'Birthday' | 'Deadline' | 'Training';
   declare description?: string;
   declare attendees?: string;
   declare createdById?: bigint;
@@ -41,7 +41,11 @@ export class CalendarEvent
         date: { type: DataTypes.DATE, allowNull: false },
         endDate: { type: DataTypes.DATE, allowNull: true },
         type: {
-          type: DataTypes.ENUM('Meeting', 'Task', 'Reminder', 'Holiday', 'Other'),
+          // DB enum also still allows the older Task/Reminder/Other values
+          // (never removed, since no rows used them and Postgres enum value
+          // removal requires recreating the type) - the frontend's own
+          // picker only ever offers the values below.
+          type: DataTypes.ENUM('Meeting', 'Leave', 'Holiday', 'Birthday', 'Deadline', 'Training', 'Task', 'Reminder', 'Other'),
           defaultValue: 'Meeting',
         },
         description: { type: DataTypes.TEXT, allowNull: true },
