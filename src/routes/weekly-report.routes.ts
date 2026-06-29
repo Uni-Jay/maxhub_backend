@@ -58,6 +58,13 @@ router.get('/', AuthMiddleware.requirePermission('hr.weeklyreport.read.own'), Er
     weekEnding: r.weekEnding,
     status: 'Submitted',
     summary: r.accomplishments,
+    challenges: r.challenges,
+    nextWeekPlans: r.nextWeekPlans,
+    hoursWorked: r.hoursWorked,
+    hasBlocker: r.hasBlocker,
+    blockerNotes: r.blockerNotes,
+    taskStatus: r.taskStatus,
+    attachments: r.attachments,
     submittedAt: r.createdAt,
     approvalStatus: r.approvalStatus,
     approvedBy: r.approvedById ? `User #${r.approvedById}` : undefined,
@@ -95,7 +102,7 @@ router.post('/', AuthMiddleware.requirePermission('hr.weeklyreport.create.own'),
 }));
 
 // PATCH /api/hr/weekly-reports/:id/approve
-router.patch('/:id/approve', AuthMiddleware.requireRole('superadmin'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.patch('/:id/approve', AuthMiddleware.requireRole('superadmin', 'admin', 'headofadmin'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const report = await WeeklyReport.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!report) return ResponseFormatter.notFound(res, 'Weekly report not found');
 
@@ -106,7 +113,7 @@ router.patch('/:id/approve', AuthMiddleware.requireRole('superadmin'), ErrorMidd
 }));
 
 // PATCH /api/hr/weekly-reports/:id/comment — feedback only, never touches the report content or approval status
-router.patch('/:id/comment', AuthMiddleware.requireRole('superadmin'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.patch('/:id/comment', AuthMiddleware.requireRole('superadmin', 'admin', 'headofadmin'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const report = await WeeklyReport.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!report) return ResponseFormatter.notFound(res, 'Weekly report not found');
 
@@ -116,7 +123,7 @@ router.patch('/:id/comment', AuthMiddleware.requireRole('superadmin'), ErrorMidd
 }));
 
 // PATCH /api/hr/weekly-reports/:id/reject
-router.patch('/:id/reject', AuthMiddleware.requireRole('superadmin'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+router.patch('/:id/reject', AuthMiddleware.requireRole('superadmin', 'admin', 'headofadmin'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const report = await WeeklyReport.findOne({ where: { ...idOrUuidWhere(req.params.id) } });
   if (!report) return ResponseFormatter.notFound(res, 'Weekly report not found');
 
