@@ -60,7 +60,7 @@ router.get('/', AuthMiddleware.requirePermission('LMS.FEE_RECEIPT.READ.ALL', 'LM
 
 // POST /api/fee-receipts — record a payment and issue a receipt
 router.post('/', AuthMiddleware.requirePermission('LMS.FEE_RECEIPT.CREATE.ALL', 'LMS.FEE_RECEIPT.CREATE.OWN_DEPARTMENT'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const { enrollmentId, amountPaid, paymentMethod, paymentDate, session, balance, status, notes } = req.body;
+  const { enrollmentId, amountPaid, paymentMethod, paymentDate, session, totalFee, status, notes } = req.body;
   if (!enrollmentId || !amountPaid || !paymentMethod || !paymentDate || !session) {
     return ResponseFormatter.error(res, 'enrollmentId, amountPaid, paymentMethod, paymentDate and session are required', 400);
   }
@@ -76,13 +76,28 @@ router.post('/', AuthMiddleware.requirePermission('LMS.FEE_RECEIPT.CREATE.ALL', 
     return ResponseFormatter.error(res, 'You can only issue fee receipts for students in your own department', 403);
   }
 
+  // The agreed total fee is set once (first payment for this enrollment) and
+  // reused from then on — it's never re-derived from client input again, so a
+  // later payment can't silently change what "100% paid" means for this student.
+  let effectiveTotalFee = Number(enrollment.totalFee);
+  if (!enrollment.totalFee) {
+    effectiveTotalFee = Number(totalFee) || Number(course.fee) || 0;
+    await enrollment.update({ totalFee: effectiveTotalFee } as any);
+  }
+
+  const priorPaid = Number(
+    (await FeeReceipt.sum('amountPaid', { where: { enrollmentId: enrollment.id } })) || 0
+  );
+  const cumulativePaid = priorPaid + Number(amountPaid);
+  const balance = Math.max(effectiveTotalFee - cumulativePaid, 0);
+
   const receipt = await FeeReceipt.create({
     uuid: uuidv4(), enrollmentId: enrollment.id, receiptNumber: generateReceiptNumber(),
-    amountPaid: Number(amountPaid), paymentMethod, paymentDate, session, balance: Number(balance) || 0,
-    status: status || 'Paid', notes, issuedById: (req as any).user.id,
+    amountPaid: Number(amountPaid), paymentMethod, paymentDate, session, balance,
+    status: status || (balance <= 0 ? 'Paid' : 'PartPayment'), notes, issuedById: (req as any).user.id,
   } as any);
 
-  ResponseFormatter.success(res, receipt, 'Fee receipt issued', 201);
+  ResponseFormatter.success(res, { ...receipt.toJSON(), totalFee: effectiveTotalFee, totalPaid: cumulativePaid }, 'Fee receipt issued', 201);
 }));
 
 // GET /api/fee-receipts/:id

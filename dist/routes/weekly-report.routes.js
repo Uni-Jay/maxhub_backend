@@ -53,6 +53,13 @@ router.get('/', AuthMiddleware_1.default.requirePermission('hr.weeklyreport.read
         weekEnding: r.weekEnding,
         status: 'Submitted',
         summary: r.accomplishments,
+        challenges: r.challenges,
+        nextWeekPlans: r.nextWeekPlans,
+        hoursWorked: r.hoursWorked,
+        hasBlocker: r.hasBlocker,
+        blockerNotes: r.blockerNotes,
+        taskStatus: r.taskStatus,
+        attachments: r.attachments,
         submittedAt: r.createdAt,
         approvalStatus: r.approvalStatus,
         approvedBy: r.approvedById ? `User #${r.approvedById}` : undefined,
@@ -82,7 +89,7 @@ router.post('/', AuthMiddleware_1.default.requirePermission('hr.weeklyreport.cre
     });
     ResponseFormatter_1.ResponseFormatter.success(res, report, 'Weekly report submitted', 201);
 }));
-router.patch('/:id/approve', AuthMiddleware_1.default.requireRole('superadmin'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.patch('/:id/approve', AuthMiddleware_1.default.requireRole('superadmin', 'admin', 'headofadmin'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const report = await WeeklyReport_model_1.WeeklyReport.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!report)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Weekly report not found');
@@ -91,7 +98,7 @@ router.patch('/:id/approve', AuthMiddleware_1.default.requireRole('superadmin'),
     });
     ResponseFormatter_1.ResponseFormatter.success(res, report, 'Weekly report approved');
 }));
-router.patch('/:id/comment', AuthMiddleware_1.default.requireRole('superadmin'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.patch('/:id/comment', AuthMiddleware_1.default.requireRole('superadmin', 'admin', 'headofadmin'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const report = await WeeklyReport_model_1.WeeklyReport.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!report)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Weekly report not found');
@@ -99,7 +106,7 @@ router.patch('/:id/comment', AuthMiddleware_1.default.requireRole('superadmin'),
     await report.update({ comments });
     ResponseFormatter_1.ResponseFormatter.success(res, report, 'Comment saved');
 }));
-router.patch('/:id/reject', AuthMiddleware_1.default.requireRole('superadmin'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+router.patch('/:id/reject', AuthMiddleware_1.default.requireRole('superadmin', 'admin', 'headofadmin'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const report = await WeeklyReport_model_1.WeeklyReport.findOne({ where: { ...(0, idOrUuid_1.idOrUuidWhere)(req.params.id) } });
     if (!report)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Weekly report not found');

@@ -4,6 +4,7 @@ import sequelize from '../config/Database';
 export interface IVisaApplicant {
   id: bigint;
   organizationId: bigint;
+  clientCode: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -28,6 +29,7 @@ export interface IVisaApplicant {
 export class VisaApplicant extends Model<IVisaApplicant> implements IVisaApplicant {
   declare id: bigint;
   declare organizationId: bigint;
+  declare clientCode: string;
   declare firstName: string;
   declare lastName: string;
   declare email: string;
@@ -59,6 +61,11 @@ VisaApplicant.init(
     organizationId: {
       type: DataTypes.BIGINT,
       allowNull: false,
+    },
+    clientCode: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      unique: true,
     },
     firstName: {
       type: DataTypes.STRING(100),

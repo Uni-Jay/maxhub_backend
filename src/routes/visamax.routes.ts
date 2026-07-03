@@ -8,8 +8,12 @@ import AuthMiddleware from '@middleware/AuthMiddleware';
 
 const router = Router();
 
+const VISA_TYPE_ENUM = ['Tourist', 'Business', 'Student', 'Work', 'Residence'];
+
 // Map frontend service types → backend visaType enum
 function toVisaType(serviceType: string): string {
+  // Already a valid enum value (e.g. sent directly by the CRM Business Hub tab) — passthrough.
+  if (VISA_TYPE_ENUM.includes(serviceType)) return serviceType;
   const map: Record<string, string> = {
     'Overseas Study': 'Student',
     'Work Visa / Job Travel': 'Work',
@@ -17,6 +21,20 @@ function toVisaType(serviceType: string): string {
     'Immigration Consulting': 'Residence',
   };
   return map[serviceType] ?? 'Tourist';
+}
+
+// Next sequential VMC-XXX client code
+async function nextClientCode(): Promise<string> {
+  const all = await VisaApplicant.findAll({
+    where: { clientCode: { [Op.like]: 'VMC-%' } },
+    attributes: ['clientCode'],
+    paranoid: false,
+  });
+  const maxNum = all.reduce((max, row) => {
+    const n = parseInt((row as any).clientCode.replace('VMC-', ''), 10);
+    return Number.isFinite(n) && n > max ? n : max;
+  }, 0);
+  return `VMC-${String(maxNum + 1).padStart(3, '0')}`;
 }
 
 // Map frontend AppStatus → backend status enum
@@ -56,6 +74,7 @@ function toFrontend(a: any): object {
 
   return {
     id: Number(a.id),
+    clientCode: a.clientCode,
     clientName: `${a.firstName} ${a.lastName}`.trim(),
     clientPhone: a.phone,
     clientEmail: a.email,
@@ -99,6 +118,7 @@ router.get('/applications', AuthMiddleware.verifyToken, ErrorMiddleware.asyncHan
       { passportNumber: { [Op.iLike]: `%${search}%` } },
       { email: { [Op.iLike]: `%${search}%` } },
       { destinationCountry: { [Op.iLike]: `%${search}%` } },
+      { clientCode: { [Op.iLike]: `%${search}%` } },
     ];
   }
 
@@ -150,6 +170,7 @@ router.post('/applications', AuthMiddleware.verifyToken, ErrorMiddleware.asyncHa
 
   const app = await VisaApplicant.create({
     organizationId: BigInt(1),
+    clientCode: await nextClientCode(),
     firstName,
     lastName,
     email: clientEmail || `${Date.now()}@placeholder.com`,

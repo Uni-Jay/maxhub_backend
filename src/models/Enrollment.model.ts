@@ -13,6 +13,7 @@ interface EnrollmentAttributes {
   progressPercentage: number;
   certificateId?: bigint;
   notes?: string;
+  totalFee?: number;
   deletedAt?: Date;
 }
 
@@ -31,6 +32,7 @@ export class Enrollment extends Model<EnrollmentAttributes, EnrollmentCreationAt
   public progressPercentage!: number;
   public certificateId?: bigint;
   public notes?: string;
+  public totalFee?: number;
   public deletedAt?: Date;
 
   public readonly createdAt!: Date;
@@ -50,6 +52,7 @@ export class Enrollment extends Model<EnrollmentAttributes, EnrollmentCreationAt
         progressPercentage: { type: DataTypes.INTEGER.UNSIGNED, defaultValue: 0, allowNull: false, comment: 'Progress 0-100' },
         certificateId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Certificate ID' },
         notes: { type: DataTypes.TEXT, allowNull: true, comment: 'Notes' },
+        totalFee: { type: DataTypes.DECIMAL(12, 2), allowNull: true, comment: 'Total fee agreed for this enrollment — falls back to the course fee when unset. Authoritative source for fee_receipts.balance.' },
         deletedAt: { type: DataTypes.DATE, allowNull: true, comment: 'Soft delete timestamp' },
       },
       {
