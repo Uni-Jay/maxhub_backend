@@ -60,7 +60,7 @@ router.get('/', AuthMiddleware.requirePermission('LMS.FEE_RECEIPT.READ.ALL', 'LM
 
 // POST /api/fee-receipts — record a payment and issue a receipt
 router.post('/', AuthMiddleware.requirePermission('LMS.FEE_RECEIPT.CREATE.ALL', 'LMS.FEE_RECEIPT.CREATE.OWN_DEPARTMENT'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
-  const { enrollmentId, amountPaid, paymentMethod, paymentDate, session, totalFee, status, notes } = req.body;
+  const { enrollmentId, amountPaid, paymentMethod, paymentDate, session, balanceRemaining, status, notes } = req.body;
   if (!enrollmentId || !amountPaid || !paymentMethod || !paymentDate || !session) {
     return ResponseFormatter.error(res, 'enrollmentId, amountPaid, paymentMethod, paymentDate and session are required', 400);
   }
@@ -76,20 +76,19 @@ router.post('/', AuthMiddleware.requirePermission('LMS.FEE_RECEIPT.CREATE.ALL', 
     return ResponseFormatter.error(res, 'You can only issue fee receipts for students in your own department', 403);
   }
 
-  // The agreed total fee is set once (first payment for this enrollment) and
-  // reused from then on — it's never re-derived from client input again, so a
-  // later payment can't silently change what "100% paid" means for this student.
-  let effectiveTotalFee = Number(enrollment.totalFee);
-  if (!enrollment.totalFee) {
-    effectiveTotalFee = Number(totalFee) || Number(course.fee) || 0;
-    await enrollment.update({ totalFee: effectiveTotalFee } as any);
-  }
-
+  // Staff enters what's actually left owing after this payment — a number they
+  // already know from the student — rather than an abstract "total course fee"
+  // that has to be reverse-engineered and is easy to enter wrong (that
+  // confusion is exactly what produced bad data before). The agreed total fee
+  // is then derived fresh from cumulative paid + this input every time, so it
+  // self-corrects each installment instead of being locked in once and drifting.
   const priorPaid = Number(
     (await FeeReceipt.sum('amountPaid', { where: { enrollmentId: enrollment.id } })) || 0
   );
   const cumulativePaid = priorPaid + Number(amountPaid);
-  const balance = Math.max(effectiveTotalFee - cumulativePaid, 0);
+  const balance = Math.max(Number(balanceRemaining) || 0, 0);
+  const effectiveTotalFee = cumulativePaid + balance;
+  await enrollment.update({ totalFee: effectiveTotalFee } as any);
 
   const receipt = await FeeReceipt.create({
     uuid: uuidv4(), enrollmentId: enrollment.id, receiptNumber: generateReceiptNumber(),

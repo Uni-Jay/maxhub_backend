@@ -54,7 +54,7 @@ router.get('/', AuthMiddleware_1.default.requirePermission('LMS.FEE_RECEIPT.READ
     ResponseFormatter_1.ResponseFormatter.success(res, receipts);
 }));
 router.post('/', AuthMiddleware_1.default.requirePermission('LMS.FEE_RECEIPT.CREATE.ALL', 'LMS.FEE_RECEIPT.CREATE.OWN_DEPARTMENT'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
-    const { enrollmentId, amountPaid, paymentMethod, paymentDate, session, totalFee, status, notes } = req.body;
+    const { enrollmentId, amountPaid, paymentMethod, paymentDate, session, balanceRemaining, status, notes } = req.body;
     if (!enrollmentId || !amountPaid || !paymentMethod || !paymentDate || !session) {
         return ResponseFormatter_1.ResponseFormatter.error(res, 'enrollmentId, amountPaid, paymentMethod, paymentDate and session are required', 400);
     }
@@ -68,14 +68,11 @@ router.post('/', AuthMiddleware_1.default.requirePermission('LMS.FEE_RECEIPT.CRE
     if (scope.scoped && String(course.departmentId) !== String(scope.departmentId)) {
         return ResponseFormatter_1.ResponseFormatter.error(res, 'You can only issue fee receipts for students in your own department', 403);
     }
-    let effectiveTotalFee = Number(enrollment.totalFee);
-    if (!enrollment.totalFee) {
-        effectiveTotalFee = Number(totalFee) || Number(course.fee) || 0;
-        await enrollment.update({ totalFee: effectiveTotalFee });
-    }
     const priorPaid = Number((await FeeReceipt_model_1.FeeReceipt.sum('amountPaid', { where: { enrollmentId: enrollment.id } })) || 0);
     const cumulativePaid = priorPaid + Number(amountPaid);
-    const balance = Math.max(effectiveTotalFee - cumulativePaid, 0);
+    const balance = Math.max(Number(balanceRemaining) || 0, 0);
+    const effectiveTotalFee = cumulativePaid + balance;
+    await enrollment.update({ totalFee: effectiveTotalFee });
     const receipt = await FeeReceipt_model_1.FeeReceipt.create({
         uuid: (0, uuid_1.v4)(), enrollmentId: enrollment.id, receiptNumber: generateReceiptNumber(),
         amountPaid: Number(amountPaid), paymentMethod, paymentDate, session, balance,
