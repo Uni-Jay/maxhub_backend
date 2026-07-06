@@ -17,6 +17,7 @@ class Enrollment extends sequelize_1.Model {
             progressPercentage: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, defaultValue: 0, allowNull: false, comment: 'Progress 0-100' },
             certificateId: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Certificate ID' },
             notes: { type: sequelize_1.DataTypes.TEXT, allowNull: true, comment: 'Notes' },
+            totalFee: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: true, field: 'total_fee', comment: 'Total fee agreed for this enrollment — falls back to the course fee when unset. Authoritative source for fee_receipts.balance.' },
             deletedAt: { type: sequelize_1.DataTypes.DATE, allowNull: true, comment: 'Soft delete timestamp' },
         }, {
             sequelize, tableName: 'enrollments', timestamps: true, paranoid: true, underscored: false, freezeTableName: true,

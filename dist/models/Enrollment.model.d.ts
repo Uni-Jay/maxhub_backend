@@ -11,6 +11,7 @@ interface EnrollmentAttributes {
     progressPercentage: number;
     certificateId?: bigint;
     notes?: string;
+    totalFee?: number;
     deletedAt?: Date;
 }
 interface EnrollmentCreationAttributes extends Optional<EnrollmentAttributes, 'id' | 'uuid'> {
@@ -27,6 +28,7 @@ export declare class Enrollment extends Model<EnrollmentAttributes, EnrollmentCr
     progressPercentage: number;
     certificateId?: bigint;
     notes?: string;
+    totalFee?: number;
     deletedAt?: Date;
     readonly createdAt: Date;
     readonly updatedAt: Date;

@@ -10,7 +10,10 @@ const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
 const router = (0, express_1.Router)();
+const VISA_TYPE_ENUM = ['Tourist', 'Business', 'Student', 'Work', 'Residence'];
 function toVisaType(serviceType) {
+    if (VISA_TYPE_ENUM.includes(serviceType))
+        return serviceType;
     const map = {
         'Overseas Study': 'Student',
         'Work Visa / Job Travel': 'Work',
@@ -18,6 +21,18 @@ function toVisaType(serviceType) {
         'Immigration Consulting': 'Residence',
     };
     return map[serviceType] ?? 'Tourist';
+}
+async function nextClientCode() {
+    const all = await VisaApplicant_model_1.VisaApplicant.findAll({
+        where: { clientCode: { [sequelize_1.Op.like]: 'VMC-%' } },
+        attributes: ['clientCode'],
+        paranoid: false,
+    });
+    const maxNum = all.reduce((max, row) => {
+        const n = parseInt(row.clientCode.replace('VMC-', ''), 10);
+        return Number.isFinite(n) && n > max ? n : max;
+    }, 0);
+    return `VMC-${String(maxNum + 1).padStart(3, '0')}`;
 }
 function toBackendStatus(s) {
     const map = {
@@ -51,6 +66,7 @@ function toFrontend(a) {
     }
     return {
         id: Number(a.id),
+        clientCode: a.clientCode,
         clientName: `${a.firstName} ${a.lastName}`.trim(),
         clientPhone: a.phone,
         clientEmail: a.email,
@@ -92,6 +108,7 @@ router.get('/applications', AuthMiddleware_1.default.verifyToken, ErrorMiddlewar
             { passportNumber: { [sequelize_1.Op.iLike]: `%${search}%` } },
             { email: { [sequelize_1.Op.iLike]: `%${search}%` } },
             { destinationCountry: { [sequelize_1.Op.iLike]: `%${search}%` } },
+            { clientCode: { [sequelize_1.Op.iLike]: `%${search}%` } },
         ];
     }
     const offset = (Number(page) - 1) * Number(limit);
@@ -132,6 +149,7 @@ router.post('/applications', AuthMiddleware_1.default.verifyToken, ErrorMiddlewa
     const lastName = nameParts.slice(1).join(' ') || '-';
     const app = await VisaApplicant_model_1.VisaApplicant.create({
         organizationId: BigInt(1),
+        clientCode: await nextClientCode(),
         firstName,
         lastName,
         email: clientEmail || `${Date.now()}@placeholder.com`,

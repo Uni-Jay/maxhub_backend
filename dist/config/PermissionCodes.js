@@ -190,6 +190,8 @@ var PermissionCode;
     PermissionCode["LMS_FEE_RECEIPT_READ_OWN_DEPARTMENT"] = "lms.fee_receipt.read.own_department";
     PermissionCode["LMS_FEE_RECEIPT_CREATE_ALL"] = "lms.fee_receipt.create.all";
     PermissionCode["LMS_FEE_RECEIPT_CREATE_OWN_DEPARTMENT"] = "lms.fee_receipt.create.own_department";
+    PermissionCode["LMS_FEE_RECEIPT_DELETE_ALL"] = "lms.fee_receipt.delete.all";
+    PermissionCode["LMS_FEE_RECEIPT_DELETE_OWN_DEPARTMENT"] = "lms.fee_receipt.delete.own_department";
     PermissionCode["REC_POSTING_CREATE_ALL"] = "rec.posting.create.all";
     PermissionCode["REC_POSTING_READ_ALL"] = "rec.posting.read.all";
     PermissionCode["REC_POSTING_UPDATE_ALL"] = "rec.posting.update.all";

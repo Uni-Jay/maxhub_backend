@@ -19,6 +19,11 @@ VisaApplicant.init({
         type: sequelize_1.DataTypes.BIGINT,
         allowNull: false,
     },
+    clientCode: {
+        type: sequelize_1.DataTypes.STRING(20),
+        allowNull: false,
+        unique: true,
+    },
     firstName: {
         type: sequelize_1.DataTypes.STRING(100),
         allowNull: false,

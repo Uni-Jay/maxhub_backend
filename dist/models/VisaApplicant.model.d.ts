@@ -2,6 +2,7 @@ import { Model } from 'sequelize';
 export interface IVisaApplicant {
     id: bigint;
     organizationId: bigint;
+    clientCode: string;
     firstName: string;
     lastName: string;
     email: string;
@@ -25,6 +26,7 @@ export interface IVisaApplicant {
 export declare class VisaApplicant extends Model<IVisaApplicant> implements IVisaApplicant {
     id: bigint;
     organizationId: bigint;
+    clientCode: string;
     firstName: string;
     lastName: string;
     email: string;
