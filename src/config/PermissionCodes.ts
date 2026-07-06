@@ -231,6 +231,8 @@ export enum PermissionCode {
   LMS_FEE_RECEIPT_READ_OWN_DEPARTMENT = 'lms.fee_receipt.read.own_department',
   LMS_FEE_RECEIPT_CREATE_ALL = 'lms.fee_receipt.create.all',
   LMS_FEE_RECEIPT_CREATE_OWN_DEPARTMENT = 'lms.fee_receipt.create.own_department',
+  LMS_FEE_RECEIPT_DELETE_ALL = 'lms.fee_receipt.delete.all',
+  LMS_FEE_RECEIPT_DELETE_OWN_DEPARTMENT = 'lms.fee_receipt.delete.own_department',
 
   // ==================== RECRUITMENT ====================
   REC_POSTING_CREATE_ALL = 'rec.posting.create.all',

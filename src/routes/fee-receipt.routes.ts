@@ -126,4 +126,36 @@ router.get('/:id', AuthMiddleware.requirePermission('LMS.FEE_RECEIPT.READ.ALL', 
   ResponseFormatter.success(res, receipt);
 }));
 
+// DELETE /api/fee-receipts/:id — remove a receipt and recompute the running
+// balance for every remaining receipt on that enrollment, so deleting one
+// payment can never leave the others showing a stale balance.
+router.delete('/:id', AuthMiddleware.requirePermission('LMS.FEE_RECEIPT.DELETE.ALL', 'LMS.FEE_RECEIPT.DELETE.OWN_DEPARTMENT'), ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const receipt = await FeeReceipt.findOne({
+    where: { ...idOrUuidWhere(req.params.id) },
+    include: [{ model: Enrollment, as: 'enrollment', include: [{ model: Course, as: 'course', attributes: ['id', 'departmentId'] }] }],
+  });
+  if (!receipt) return ResponseFormatter.error(res, 'Fee receipt not found', 404);
+
+  const scope = getDeptScope(req, 'lms.fee_receipt.delete.all');
+  if (scope.scoped) {
+    const course = (receipt as any).enrollment?.course;
+    if (!course || String(course.departmentId) !== String(scope.departmentId)) {
+      return ResponseFormatter.error(res, 'You can only delete fee receipts for students in your own department', 403);
+    }
+  }
+
+  const enrollment = (receipt as any).enrollment;
+  await receipt.destroy();
+
+  const remaining = await FeeReceipt.findAll({ where: { enrollmentId: enrollment.id }, order: [['paymentDate', 'ASC'], ['id', 'ASC']] });
+  const totalFee = Number(enrollment.totalFee) || 0;
+  let running = 0;
+  for (const r of remaining) {
+    running += Number(r.amountPaid);
+    await r.update({ balance: Math.max(totalFee - running, 0) } as any);
+  }
+
+  ResponseFormatter.success(res, null, 'Fee receipt deleted');
+}));
+
 export default router;

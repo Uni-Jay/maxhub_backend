@@ -52,7 +52,7 @@ export class Enrollment extends Model<EnrollmentAttributes, EnrollmentCreationAt
         progressPercentage: { type: DataTypes.INTEGER.UNSIGNED, defaultValue: 0, allowNull: false, comment: 'Progress 0-100' },
         certificateId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true, comment: 'Certificate ID' },
         notes: { type: DataTypes.TEXT, allowNull: true, comment: 'Notes' },
-        totalFee: { type: DataTypes.DECIMAL(12, 2), allowNull: true, comment: 'Total fee agreed for this enrollment — falls back to the course fee when unset. Authoritative source for fee_receipts.balance.' },
+        totalFee: { type: DataTypes.DECIMAL(12, 2), allowNull: true, field: 'total_fee', comment: 'Total fee agreed for this enrollment — falls back to the course fee when unset. Authoritative source for fee_receipts.balance.' },
         deletedAt: { type: DataTypes.DATE, allowNull: true, comment: 'Soft delete timestamp' },
       },
       {
