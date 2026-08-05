@@ -8,11 +8,11 @@ const sequelize_1 = require("sequelize");
 const uuid_1 = require("uuid");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
-const ResponseFormatter_1 = require("../utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
-const FileRecord_model_1 = require("../models/FileRecord.model");
-const multer_1 = require("../config/multer");
-const RoleBucket_1 = require("../utils/RoleBucket");
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const FileRecord_model_1 = require("@models/FileRecord.model");
+const multer_1 = require("@config/multer");
+const RoleBucket_1 = require("@utils/RoleBucket");
 const router = (0, express_1.Router)();
 function withUrl(file) {
     const json = typeof file?.toJSON === 'function' ? file.toJSON() : file;

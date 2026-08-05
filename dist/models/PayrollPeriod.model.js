@@ -3,6 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PayrollPeriod = void 0;
 const sequelize_1 = require("sequelize");
 const uuid_1 = require("uuid");
+const MONTH_NAMES = [
+    '', 'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+];
 class PayrollPeriod extends sequelize_1.Model {
     static initModel(sequelize) {
         PayrollPeriod.init({
@@ -85,6 +89,12 @@ class PayrollPeriod extends sequelize_1.Model {
                 type: sequelize_1.DataTypes.DATE,
                 allowNull: true,
                 comment: 'Soft delete timestamp',
+            },
+            periodName: {
+                type: sequelize_1.DataTypes.VIRTUAL,
+                get() {
+                    return `${MONTH_NAMES[this.month] ?? ''} ${this.year}`.trim();
+                },
             },
         }, {
             sequelize,

@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.detectAndNotifyMentions = detectAndNotifyMentions;
-const ConversationParticipant_model_1 = require("../models/ConversationParticipant.model");
-const User_model_1 = require("../models/User.model");
+const ConversationParticipant_model_1 = require("@models/ConversationParticipant.model");
+const User_model_1 = require("@models/User.model");
 const notify_1 = require("./notify");
 async function detectAndNotifyMentions(params) {
     const { messageText, conversationId, messageId, senderUserId, senderName, io } = params;

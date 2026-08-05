@@ -5,16 +5,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
-const idOrUuid_1 = require("../utils/idOrUuid");
+const idOrUuid_1 = require("@utils/idOrUuid");
 const uuid_1 = require("uuid");
-const Appraisal_model_1 = require("../models/Appraisal.model");
-const Staff_model_1 = require("../models/Staff.model");
-const User_model_1 = require("../models/User.model");
-const Goal_model_1 = require("../models/Goal.model");
-const ResponseFormatter_1 = require("../utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
-const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
-const isSuperAdmin_1 = require("../utils/isSuperAdmin");
+const Appraisal_model_1 = require("@models/Appraisal.model");
+const Staff_model_1 = require("@models/Staff.model");
+const User_model_1 = require("@models/User.model");
+const Goal_model_1 = require("@models/Goal.model");
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const AuthMiddleware_1 = __importDefault(require("@middleware/AuthMiddleware"));
+const isSuperAdmin_1 = require("@utils/isSuperAdmin");
 const router = (0, express_1.Router)();
 router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { page = 1, limit = 20, status, staffId, appraisalPeriod } = req.query;

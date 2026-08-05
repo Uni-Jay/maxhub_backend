@@ -665,6 +665,7 @@ export declare enum PermissionCode {
     HR_STAFF_OFFBOARD_ALL = "hr.staff.offboard.all",
     HR_LEAVE_MANAGE_ALL = "hr.leave.manage.all",
     HR_PAYROLL_VIEW_ALL = "hr.payroll.view.all",
+    HR_PAYROLL_MANAGE_ALL = "hr.payroll.manage.all",
     HR_DOCUMENT_MANAGE_ALL = "hr.document.manage.all",
     ACC_FULL_FINANCE_READ = "acc.finance.read.all",
     ACC_FULL_FINANCE_WRITE = "acc.finance.write.all",

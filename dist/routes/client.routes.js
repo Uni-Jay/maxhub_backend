@@ -5,13 +5,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const sequelize_1 = require("sequelize");
-const idOrUuid_1 = require("../utils/idOrUuid");
+const idOrUuid_1 = require("@utils/idOrUuid");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
 const Client_model_1 = require("../models/Client.model");
 const ClientDocument_model_1 = require("../models/ClientDocument.model");
 const ClientNote_model_1 = require("../models/ClientNote.model");
-const ResponseFormatter_1 = require("../utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
 const router = express_1.default.Router();
 router.get('/', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { search, status, departmentId, assignedStaffId, country, page = '1', limit = '20', } = req.query;

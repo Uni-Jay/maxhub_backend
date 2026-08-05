@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RBACService = void 0;
-const PermissionCodes_1 = require("../config/PermissionCodes");
-const RolesConfig_1 = require("../config/RolesConfig");
+const PermissionCodes_1 = require("@config/PermissionCodes");
+const RolesConfig_1 = require("@config/RolesConfig");
 class RBACService {
     constructor(sequelize) {
         this.sequelize = sequelize;

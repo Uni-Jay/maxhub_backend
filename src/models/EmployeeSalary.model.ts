@@ -23,6 +23,7 @@ interface EmployeeSalaryAttributes {
   bankAccountNumber?: string;
   remarks?: string;
   deletedAt?: Date;
+  readonly salaryCode?: string;
 }
 
 interface EmployeeSalaryCreationAttributes extends Optional<EmployeeSalaryAttributes, 'id' | 'uuid'> {}
@@ -50,6 +51,7 @@ export class EmployeeSalary extends Model<EmployeeSalaryAttributes, EmployeeSala
   public bankAccountNumber?: string;
   public remarks?: string;
   public deletedAt?: Date;
+  public readonly salaryCode?: string;
 
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -164,6 +166,17 @@ export class EmployeeSalary extends Model<EmployeeSalaryAttributes, EmployeeSala
           type: DataTypes.DATE,
           allowNull: true,
           comment: 'Soft delete timestamp',
+        },
+        // Display code ("SAL-000123") derived from id — the /payroll/my-slips
+        // route already synthesized this by hand; exposing it as a virtual here
+        // means every other serialized EmployeeSalary (GET /payroll/salaries,
+        // /salaries/:id) carries it too, instead of being undefined there (the
+        // admin Salary Slips page's PDF download crashed on that undefined).
+        salaryCode: {
+          type: DataTypes.VIRTUAL,
+          get(this: EmployeeSalary) {
+            return `SAL-${String(this.id).padStart(6, '0')}`;
+          },
         },
       },
       {

@@ -669,6 +669,7 @@ var PermissionCode;
     PermissionCode["HR_STAFF_OFFBOARD_ALL"] = "hr.staff.offboard.all";
     PermissionCode["HR_LEAVE_MANAGE_ALL"] = "hr.leave.manage.all";
     PermissionCode["HR_PAYROLL_VIEW_ALL"] = "hr.payroll.view.all";
+    PermissionCode["HR_PAYROLL_MANAGE_ALL"] = "hr.payroll.manage.all";
     PermissionCode["HR_DOCUMENT_MANAGE_ALL"] = "hr.document.manage.all";
     PermissionCode["ACC_FULL_FINANCE_READ"] = "acc.finance.read.all";
     PermissionCode["ACC_FULL_FINANCE_WRITE"] = "acc.finance.write.all";

@@ -15,6 +15,7 @@ interface PayrollPeriodAttributes {
     approvalDate?: Date;
     remarks?: string;
     deletedAt?: Date;
+    readonly periodName?: string;
 }
 interface PayrollPeriodCreationAttributes extends Optional<PayrollPeriodAttributes, 'id' | 'uuid'> {
 }
@@ -34,6 +35,7 @@ export declare class PayrollPeriod extends Model<PayrollPeriodAttributes, Payrol
     approvalDate?: Date;
     remarks?: string;
     deletedAt?: Date;
+    readonly periodName?: string;
     readonly createdAt: Date;
     readonly updatedAt: Date;
     static initModel(sequelize: Sequelize): typeof PayrollPeriod;

@@ -1,4 +1,4 @@
-import { Staff } from '../models/Staff.model';
+import { Staff } from '@models/Staff.model';
 declare const router: import("express-serve-static-core").Router;
 export declare function searchStaff(filters: {
     search?: string;

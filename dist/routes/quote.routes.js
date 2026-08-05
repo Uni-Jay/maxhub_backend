@@ -5,16 +5,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
-const idOrUuid_1 = require("../utils/idOrUuid");
+const idOrUuid_1 = require("@utils/idOrUuid");
 const uuid_1 = require("uuid");
-const Quote_model_1 = require("../models/Quote.model");
-const Client_model_1 = require("../models/Client.model");
-const Department_model_1 = require("../models/Department.model");
-const ResponseFormatter_1 = require("../utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
-const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
-const departmentScope_1 = require("../utils/departmentScope");
-const notification_email_service_1 = require("../services/email/notification-email.service");
+const Quote_model_1 = require("@models/Quote.model");
+const Client_model_1 = require("@models/Client.model");
+const Department_model_1 = require("@models/Department.model");
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const AuthMiddleware_1 = __importDefault(require("@middleware/AuthMiddleware"));
+const departmentScope_1 = require("@utils/departmentScope");
+const notification_email_service_1 = require("@services/email/notification-email.service");
 const router = (0, express_1.Router)();
 router.get('/', AuthMiddleware_1.default.requirePermission('crm.quote.read.all', 'crm.quote.read.own_department'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { page = 1, limit = 20, status, clientId, departmentId } = req.query;

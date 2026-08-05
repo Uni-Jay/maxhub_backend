@@ -6,13 +6,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const sequelize_1 = require("sequelize");
-const AuthenticationService_1 = __importDefault(require("../services/AuthenticationService"));
-const ResponseFormatter_1 = require("../utils/ResponseFormatter");
-const User_model_1 = require("../models/User.model");
-const Session_model_1 = require("../models/Session.model");
-const OTPVerification_model_1 = require("../models/OTPVerification.model");
-const OTPService_1 = __importDefault(require("../services/OTPService"));
-const CommunicationService_1 = require("../services/CommunicationService");
+const AuthenticationService_1 = __importDefault(require("@services/AuthenticationService"));
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const User_model_1 = require("@models/User.model");
+const Session_model_1 = require("@models/Session.model");
+const OTPVerification_model_1 = require("@models/OTPVerification.model");
+const OTPService_1 = __importDefault(require("@services/OTPService"));
+const CommunicationService_1 = require("@services/CommunicationService");
 class AuthController {
     static async login(req, res, next) {
         try {

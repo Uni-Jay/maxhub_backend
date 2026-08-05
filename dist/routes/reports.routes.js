@@ -3,11 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAttendanceReportData = getAttendanceReportData;
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
-const Attendance_model_1 = require("../models/Attendance.model");
-const Staff_model_1 = require("../models/Staff.model");
-const Department_model_1 = require("../models/Department.model");
-const ResponseFormatter_1 = require("../utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
+const Attendance_model_1 = require("@models/Attendance.model");
+const Staff_model_1 = require("@models/Staff.model");
+const Department_model_1 = require("@models/Department.model");
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
 const router = (0, express_1.Router)();
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 async function getAttendanceReportData(month, year) {

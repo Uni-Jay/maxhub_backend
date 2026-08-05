@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { Op, fn, col, literal } from 'sequelize';
+import multer from 'multer';
+import { Op, fn, col } from 'sequelize';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import { AuthMiddleware } from '@middleware/AuthMiddleware';
@@ -9,6 +10,31 @@ import { SalaryStructure } from '@models/SalaryStructure.model';
 import { Staff } from '@models/Staff.model';
 
 const router = Router();
+
+// Permission codes actually granted in RolesConfig.ts (HR + Finance/Accounting).
+// Routes previously gated on the literal strings 'PAYROLL_VIEW'/'PAYROLL_MANAGE',
+// which AuthMiddleware.normalise() turns into 'payroll.view'/'payroll.manage' —
+// codes that were never granted to any role. Only Super Admin/Admin/Head of Admin
+// could ever reach these routes (they bypass permission checks entirely); HR —
+// despite being explicitly granted 'hr.payroll.view.all' — was silently locked
+// out of the whole module. Fixed by checking the real granted codes below.
+const VIEW_PAYROLL = ['hr.payroll.view.all', 'hr.payroll.manage.all', 'fin.payroll.read.all', 'pay.salary.read.all'];
+const MANAGE_PAYROLL = ['hr.payroll.manage.all', 'fin.payroll.create.all', 'fin.payroll.process.all', 'acc.payroll.process.all'];
+
+const canViewPayroll = () => AuthMiddleware.requirePermission(...VIEW_PAYROLL);
+const canManagePayroll = () => AuthMiddleware.requirePermission(...MANAGE_PAYROLL);
+
+// In-memory upload for the bulk salary CSV — files are small and parsed
+// immediately, no need to touch disk.
+const csvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (_req, file, cb) => {
+    const ok = /\.csv$/i.test(file.originalname) || file.mimetype === 'text/csv' || file.mimetype === 'application/vnd.ms-excel';
+    if (ok) cb(null, true);
+    else cb(new Error('Only .csv files are accepted'));
+  },
+});
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -20,6 +46,39 @@ function buildPeriodCode(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, '0')}`;
 }
 
+/** Minimal CSV parser — handles quoted fields (with escaped "" and embedded commas/newlines). No external dependency needed for a flat, comma-separated payroll template. */
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else {
+        field += c;
+      }
+    } else if (c === '"') {
+      inQuotes = true;
+    } else if (c === ',') {
+      row.push(field); field = '';
+    } else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); field = '';
+      if (row.some(f => f.trim() !== '')) rows.push(row);
+      row = [];
+    } else {
+      field += c;
+    }
+  }
+  if (field !== '' || row.length > 0) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(f => f.trim() !== ''));
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // SALARY STRUCTURE ROUTES
 // ════════════════════════════════════════════════════════════════════════════
@@ -28,7 +87,7 @@ function buildPeriodCode(year: number, month: number): string {
 router.get(
   '/structures',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission('PAYROLL_VIEW'),
+  canViewPayroll(),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const { status, departmentId, designationId } = req.query as Record<string, string>;
 
@@ -51,7 +110,7 @@ router.get(
 router.post(
   '/structures',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission('PAYROLL_MANAGE'),
+  canManagePayroll(),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const {
       code, name, description, departmentId, designationId,
@@ -91,7 +150,7 @@ router.post(
 router.put(
   '/structures/:id',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission('PAYROLL_MANAGE'),
+  canManagePayroll(),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
@@ -123,6 +182,30 @@ router.put(
   })
 );
 
+// ─── DELETE /payroll/structures/:id ───────────────────────────────────────────
+// The frontend has always had a delete button wired to this route — it just
+// never existed on the backend, so every delete attempt 404'd.
+router.delete(
+  '/structures/:id',
+  AuthMiddleware.verifyToken,
+  canManagePayroll(),
+  ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    const structure = await SalaryStructure.findOne({
+      where: isNaN(Number(id)) ? { uuid: id } : { id },
+    });
+
+    if (!structure) {
+      return ResponseFormatter.notFound(res, 'Salary structure not found');
+    }
+
+    await structure.destroy();
+
+    return ResponseFormatter.success(res, null, 'Salary structure deleted successfully');
+  })
+);
+
 // ════════════════════════════════════════════════════════════════════════════
 // PAYROLL PERIOD ROUTES
 // ════════════════════════════════════════════════════════════════════════════
@@ -131,7 +214,7 @@ router.put(
 router.get(
   '/periods',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission('PAYROLL_VIEW'),
+  canViewPayroll(),
   AuthMiddleware.pagination,
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const { page, limit, offset } = req.pagination!;
@@ -160,17 +243,23 @@ router.get(
 router.post(
   '/periods',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission('PAYROLL_MANAGE'),
+  canManagePayroll(),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const {
       month, year, startDate, endDate,
-      salaryProcessDate, bankTransferDate, remarks,
+      bankTransferDate, remarks,
     } = req.body;
+    // The "New Pay Period" form only ever collected month/year/startDate/endDate
+    // — salaryProcessDate was a required column nothing on the frontend sent,
+    // so every single submission 400'd. Defaulting it to endDate (payroll is
+    // processed once the period closes) instead of forcing a form field for a
+    // date HR doesn't think of separately; still overridable via the API.
+    const salaryProcessDate = req.body.salaryProcessDate || endDate;
 
-    if (!month || !year || !startDate || !endDate || !salaryProcessDate) {
+    if (!month || !year || !startDate || !endDate) {
       return ResponseFormatter.error(
         res,
-        'month, year, startDate, endDate, and salaryProcessDate are required',
+        'month, year, startDate, and endDate are required',
         400
       );
     }
@@ -209,7 +298,7 @@ router.post(
 router.get(
   '/periods/:id',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission('PAYROLL_VIEW'),
+  canViewPayroll(),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
@@ -253,7 +342,7 @@ router.get(
 router.patch(
   '/periods/:id/status',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission('PAYROLL_MANAGE'),
+  canManagePayroll(),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status, remarks } = req.body;
@@ -295,7 +384,7 @@ router.patch(
 router.get(
   '/periods/:id/salaries',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission('PAYROLL_VIEW'),
+  canViewPayroll(),
   AuthMiddleware.pagination,
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
@@ -336,7 +425,7 @@ router.get(
 router.post(
   '/periods/:id/process',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission('PAYROLL_MANAGE'),
+  canManagePayroll(),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
@@ -469,6 +558,156 @@ router.post(
   })
 );
 
+// ─── POST /payroll/periods/:id/upload ─────────────────────────────────────────
+// Bulk salary upload for a pay period — this is what lets Admin/HR bring in
+// payroll figures computed elsewhere (a spreadsheet, an accountant's export)
+// instead of only relying on "Run Payroll"'s auto-match-from-salary-structure.
+// Expected CSV header row (case-insensitive, any order):
+//   employeeId, baseSalary, bonus, incomeTax, providentFund, healthInsurance,
+//   otherDeductions, advanceAmount, bankAccountNumber
+// A row matches an existing staff member by `employeeId` (Staff.employeeId)
+// or, if that column is absent/blank, by `email`. One row per employee.
+router.post(
+  '/periods/:id/upload',
+  AuthMiddleware.verifyToken,
+  canManagePayroll(),
+  csvUpload.single('file'),
+  ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    const period = await PayrollPeriod.findOne({
+      where: isNaN(Number(id)) ? { uuid: id } : { id },
+    });
+    if (!period) {
+      return ResponseFormatter.notFound(res, 'Payroll period not found');
+    }
+    if (!req.file) {
+      return ResponseFormatter.error(res, 'A .csv file is required (field name "file")', 400);
+    }
+
+    const text = req.file.buffer.toString('utf-8').replace(/^﻿/, ''); // strip BOM
+    const rows = parseCsv(text);
+
+    if (rows.length < 2) {
+      return ResponseFormatter.error(res, 'CSV must contain a header row and at least one data row', 400);
+    }
+
+    const header = rows[0].map(h => h.trim().toLowerCase());
+    const col = (name: string) => header.indexOf(name.toLowerCase());
+
+    const idxEmployeeId  = col('employeeid');
+    const idxEmail       = col('email');
+    const idxBaseSalary  = col('basesalary');
+    const idxBonus       = col('bonus');
+    const idxIncomeTax   = col('incometax');
+    const idxProvident   = col('providentfund');
+    const idxHealth      = col('healthinsurance');
+    const idxOtherDed    = col('otherdeductions');
+    const idxAdvance     = col('advanceamount');
+    const idxBankAccount = col('bankaccountnumber');
+
+    if (idxEmployeeId === -1 && idxEmail === -1) {
+      return ResponseFormatter.error(res, 'CSV header must include an "employeeId" or "email" column to identify staff', 400);
+    }
+    if (idxBaseSalary === -1) {
+      return ResponseFormatter.error(res, 'CSV header must include a "baseSalary" column', 400);
+    }
+
+    const results: {
+      created: number;
+      updated: number;
+      skipped: number;
+      errors: Array<{ row: number; reason: string }>;
+    } = { created: 0, updated: 0, skipped: 0, errors: [] };
+
+    for (let r = 1; r < rows.length; r++) {
+      const row = rows[r];
+      const rowNum = r + 1; // 1-based, header is row 1
+
+      try {
+        const employeeId = idxEmployeeId !== -1 ? row[idxEmployeeId]?.trim() : '';
+        const email      = idxEmail      !== -1 ? row[idxEmail]?.trim()      : '';
+
+        if (!employeeId && !email) {
+          results.errors.push({ row: rowNum, reason: 'Missing employeeId/email' });
+          continue;
+        }
+
+        const staff = await Staff.findOne({
+          where: employeeId ? { employeeId } : { email },
+        });
+
+        if (!staff) {
+          results.errors.push({ row: rowNum, reason: `No staff found for '${employeeId || email}'` });
+          continue;
+        }
+
+        const baseSalary      = zeroDec(row[idxBaseSalary]);
+        const bonus           = idxBonus       !== -1 ? zeroDec(row[idxBonus])       : 0;
+        const incomeTax       = idxIncomeTax   !== -1 ? zeroDec(row[idxIncomeTax])   : 0;
+        const providentFund   = idxProvident   !== -1 ? zeroDec(row[idxProvident])   : 0;
+        const healthInsurance = idxHealth      !== -1 ? zeroDec(row[idxHealth])      : 0;
+        const otherDeductions = idxOtherDed    !== -1 ? zeroDec(row[idxOtherDed])    : 0;
+        const advanceAmount   = idxAdvance     !== -1 ? zeroDec(row[idxAdvance])     : 0;
+        const bankAccountNumber = idxBankAccount !== -1 ? (row[idxBankAccount]?.trim() || undefined) : undefined;
+
+        if (!baseSalary) {
+          results.errors.push({ row: rowNum, reason: 'baseSalary is required and must be > 0' });
+          continue;
+        }
+
+        const grossSalary     = baseSalary + bonus;
+        const totalDeductions = incomeTax + providentFund + healthInsurance + otherDeductions + advanceAmount;
+        const netSalary       = grossSalary - totalDeductions;
+
+        const existing = await EmployeeSalary.findOne({
+          where: { staffId: staff.id, payrollPeriodId: period.id },
+        });
+
+        if (existing) {
+          if (existing.status === 'Paid') {
+            results.skipped++;
+            continue;
+          }
+          await existing.update({
+            baseSalary, bonus, incomeTax, providentFund, healthInsurance,
+            otherDeductions, advanceAmount, grossSalary, totalDeductions, netSalary,
+            totalEarnings: grossSalary,
+            bankAccountNumber: bankAccountNumber ?? existing.bankAccountNumber,
+          });
+          results.updated++;
+        } else {
+          await EmployeeSalary.create({
+            staffId: staff.id,
+            payrollPeriodId: period.id,
+            baseSalary, bonus, incomeTax, providentFund, healthInsurance,
+            otherDeductions, advanceAmount, grossSalary, totalDeductions, netSalary,
+            totalEarnings: grossSalary,
+            bankAccountNumber,
+            status: 'Draft',
+            processedOn: new Date(),
+          });
+          results.created++;
+        }
+      } catch (err: any) {
+        results.errors.push({ row: rowNum, reason: err?.message ?? 'Unknown error' });
+      }
+    }
+
+    // Move a Draft period into Processing once salaries have landed, so it
+    // shows up as "in progress" rather than sitting untouched.
+    if (period.status === 'Draft' && (results.created > 0 || results.updated > 0)) {
+      await period.update({ status: 'Processing' });
+    }
+
+    return ResponseFormatter.success(
+      res,
+      { periodCode: period.periodCode, summary: results },
+      `Upload complete: ${results.created} created, ${results.updated} updated, ${results.skipped} skipped, ${results.errors.length} error(s)`
+    );
+  })
+);
+
 // ════════════════════════════════════════════════════════════════════════════
 // INDIVIDUAL SALARY ROUTES
 // ════════════════════════════════════════════════════════════════════════════
@@ -477,17 +716,29 @@ router.post(
 router.get(
   '/salaries',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission('PAYROLL_VIEW'),
+  canViewPayroll(),
   AuthMiddleware.pagination,
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const { page, limit, offset } = req.pagination!;
-    const { status, staffId, periodId } = req.query as Record<string, string>;
+    const { status, staffId, periodId, search } = req.query as Record<string, string>;
 
     const where: Record<string, any> = {};
 
     if (status)   where.status          = status;
     if (staffId)  where.staffId         = staffId;
     if (periodId) where.payrollPeriodId = periodId;
+
+    // The Salary Slips page has always sent `search` for the employee-name box
+    // — the backend just never read it, so the filter silently did nothing.
+    const staffWhere: Record<string, any> = search
+      ? {
+          [Op.or]: [
+            { firstName: { [Op.iLike]: `%${search}%` } },
+            { lastName:  { [Op.iLike]: `%${search}%` } },
+            { email:     { [Op.iLike]: `%${search}%` } },
+          ],
+        }
+      : {};
 
     const { count, rows } = await EmployeeSalary.findAndCountAll({
       where,
@@ -496,12 +747,13 @@ router.get(
           model:      Staff,
           as:         'staff',
           attributes: ['id', 'employeeId', 'firstName', 'lastName', 'email'],
-          required:   false,
+          where:      search ? staffWhere : undefined,
+          required:   !!search,
         },
         {
           model:      PayrollPeriod,
           as:         'payrollPeriod',
-          attributes: ['id', 'periodCode', 'month', 'year', 'status'],
+          attributes: ['id', 'periodCode', 'periodName', 'month', 'year', 'status'],
           required:   false,
         },
       ],
@@ -518,7 +770,7 @@ router.get(
 router.get(
   '/salaries/:id',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission('PAYROLL_VIEW'),
+  canViewPayroll(),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
@@ -534,7 +786,7 @@ router.get(
         {
           model:      PayrollPeriod,
           as:         'payrollPeriod',
-          attributes: ['id', 'periodCode', 'month', 'year', 'status'],
+          attributes: ['id', 'periodCode', 'periodName', 'month', 'year', 'status'],
           required:   false,
         },
       ],
@@ -552,7 +804,7 @@ router.get(
 router.patch(
   '/salaries/:id',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission('PAYROLL_MANAGE'),
+  canManagePayroll(),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
@@ -611,7 +863,7 @@ router.patch(
 router.patch(
   '/salaries/:id/status',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission('PAYROLL_MANAGE'),
+  canManagePayroll(),
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status, remarks } = req.body;
@@ -832,7 +1084,7 @@ export async function getPayrollOverview() {
 router.get(
   '/stats/overview',
   AuthMiddleware.verifyToken,
-  AuthMiddleware.requirePermission('PAYROLL_VIEW'),
+  canViewPayroll(),
   ErrorMiddleware.asyncHandler(async (_req: Request, res: Response) => {
     const data = await getPayrollOverview();
     return ResponseFormatter.success(res, data, 'Payroll overview retrieved');

@@ -34,7 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 process.env.TZ = process.env.TZ || 'Africa/Lagos';
 async function main() {
-    const { AppBootstrapper } = await Promise.resolve().then(() => __importStar(require('./app')));
+    const { AppBootstrapper } = await Promise.resolve().then(() => __importStar(require('@/app')));
     const bootstrapper = new AppBootstrapper();
     await bootstrapper.start();
 }

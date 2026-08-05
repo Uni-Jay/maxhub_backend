@@ -4,10 +4,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StudentController = void 0;
-const StudentService_1 = __importDefault(require("../services/StudentService"));
-const ResponseFormatter_1 = require("../utils/ResponseFormatter");
-const ErrorHandler_1 = require("../utils/ErrorHandler");
-const departmentScope_1 = require("../utils/departmentScope");
+const StudentService_1 = __importDefault(require("@services/StudentService"));
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const ErrorHandler_1 = require("@utils/ErrorHandler");
+const departmentScope_1 = require("@utils/departmentScope");
 class StudentController {
     static async register(req, res, next) {
         try {

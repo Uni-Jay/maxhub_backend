@@ -2,8 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.notifyUser = notifyUser;
 exports.notifyStaff = notifyStaff;
-const Notification_model_1 = require("../models/Notification.model");
-const Staff_model_1 = require("../models/Staff.model");
+const Notification_model_1 = require("@models/Notification.model");
+const Staff_model_1 = require("@models/Staff.model");
 async function notifyUser(userId, params, io) {
     const notification = await Notification_model_1.Notification.create({
         recipientUserId: userId,

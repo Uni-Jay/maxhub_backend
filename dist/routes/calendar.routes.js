@@ -3,10 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
 const uuid_1 = require("uuid");
-const ResponseFormatter_1 = require("../utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
-const HolidayCalendar_model_1 = require("../models/HolidayCalendar.model");
-const CalendarEvent_model_1 = require("../models/CalendarEvent.model");
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const HolidayCalendar_model_1 = require("@models/HolidayCalendar.model");
+const CalendarEvent_model_1 = require("@models/CalendarEvent.model");
 const router = (0, express_1.Router)();
 const NIGERIA_HOLIDAYS_2025 = [
     { code: 'NG-2025-01', name: "New Year's Day", date: '2025-01-01', type: 'National', desc: 'New Year public holiday' },

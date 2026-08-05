@@ -1,6 +1,11 @@
 import { DataTypes, Model, Optional, Sequelize } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
 
+const MONTH_NAMES = [
+  '', 'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
 interface PayrollPeriodAttributes {
   id: bigint;
   uuid: string;
@@ -17,6 +22,7 @@ interface PayrollPeriodAttributes {
   approvalDate?: Date;
   remarks?: string;
   deletedAt?: Date;
+  readonly periodName?: string;
 }
 
 interface PayrollPeriodCreationAttributes extends Optional<PayrollPeriodAttributes, 'id' | 'uuid'> {}
@@ -38,6 +44,7 @@ export class PayrollPeriod extends Model<PayrollPeriodAttributes, PayrollPeriodC
   public approvalDate?: Date;
   public remarks?: string;
   public deletedAt?: Date;
+  public readonly periodName?: string;
 
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -124,6 +131,18 @@ export class PayrollPeriod extends Model<PayrollPeriodAttributes, PayrollPeriodC
           type: DataTypes.DATE,
           allowNull: true,
           comment: 'Soft delete timestamp',
+        },
+        // Human-readable label ("June 2026") derived from month/year — computed
+        // on read, not stored. The frontend has always displayed a `periodName`
+        // field that never existed as a real column, leaving every period name
+        // blank; this fills it in everywhere the model is serialized (list,
+        // detail, and nested inside EmployeeSalary's `payrollPeriod` include)
+        // without a migration or touching every call site.
+        periodName: {
+          type: DataTypes.VIRTUAL,
+          get(this: PayrollPeriod) {
+            return `${MONTH_NAMES[this.month] ?? ''} ${this.year}`.trim();
+          },
         },
       },
       {

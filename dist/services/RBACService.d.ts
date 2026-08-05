@@ -1,6 +1,6 @@
 import { Sequelize } from 'sequelize';
-import { PermissionCode } from '../config/PermissionCodes';
-import { RoleCode } from '../config/RolesConfig';
+import { PermissionCode } from '@config/PermissionCodes';
+import { RoleCode } from '@config/RolesConfig';
 export declare class RBACService {
     private sequelize;
     constructor(sequelize: Sequelize);

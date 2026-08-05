@@ -282,8 +282,10 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.ATT_CLOCKIN_CREATE_OWN,
     PermissionCode.ATT_CLOCKOUT_CREATE_OWN,
     PermissionCode.ATT_ATTENDANCE_READ_OWN,
-    // Payroll view
+    // Payroll — HR can view AND run/manage payroll (upload salaries, create pay
+    // periods, configure salary structures), not just view it.
     PermissionCode.HR_PAYROLL_VIEW_ALL,
+    PermissionCode.HR_PAYROLL_MANAGE_ALL,
     PermissionCode.PAY_SALARY_READ_ALL,
     PermissionCode.FIN_PAYSLIP_READ_ALL,
     PermissionCode.FIN_PAYSLIP_GENERATE_ALL,

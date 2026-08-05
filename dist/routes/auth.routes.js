@@ -37,10 +37,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const AuthController_1 = __importDefault(require("../controllers/AuthController"));
-const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
-const AuthMiddleware_1 = require("../middleware/AuthMiddleware");
-const ResponseFormatter_1 = require("../utils/ResponseFormatter");
+const AuthController_1 = __importDefault(require("@controllers/AuthController"));
+const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const AuthMiddleware_1 = require("@middleware/AuthMiddleware");
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
 const router = (0, express_1.Router)();
 router.post('/login', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AuthController_1.default.login));
 router.post('/register', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AuthController_1.default.register));
@@ -64,13 +64,13 @@ router.post('/2fa/verify-login-otp', ErrorMiddleware_1.ErrorMiddleware.asyncHand
 router.get('/sessions', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AuthController_1.default.getSessions));
 router.post('/sessions/:sessionId/revoke', AuthMiddleware_1.AuthMiddleware.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AuthController_1.default.revokeSession));
 router.post('/admin/unlock-all', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthMiddleware_1.AuthMiddleware.requireRole('superadmin'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (_req, res) => {
-    const { User } = await Promise.resolve().then(() => __importStar(require('../models/User.model')));
+    const { User } = await Promise.resolve().then(() => __importStar(require('@models/User.model')));
     const { Op } = await Promise.resolve().then(() => __importStar(require('sequelize')));
     const count = await User.update({ loginAttempts: 0, lockedUntil: null }, { where: { loginAttempts: { [Op.gt]: 0 } } });
     ResponseFormatter_1.ResponseFormatter.success(res, { unlocked: count[0] }, `${count[0]} account(s) unlocked`);
 }));
 router.post('/admin/reset-demo-passwords', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthMiddleware_1.AuthMiddleware.requireRole('superadmin'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (_req, res) => {
-    const { User } = await Promise.resolve().then(() => __importStar(require('../models/User.model')));
+    const { User } = await Promise.resolve().then(() => __importStar(require('@models/User.model')));
     const bcrypt = await Promise.resolve().then(() => __importStar(require('bcrypt')));
     const DEMO_PASSWORD = 'Demo@12345!';
     const hash = await bcrypt.hash(DEMO_PASSWORD, 12);

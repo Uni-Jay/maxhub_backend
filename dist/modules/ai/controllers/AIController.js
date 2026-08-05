@@ -4,8 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AIController = void 0;
-const ResponseFormatter_1 = require("../../../utils/ResponseFormatter");
-const RoleBucket_1 = require("../../../utils/RoleBucket");
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const RoleBucket_1 = require("@utils/RoleBucket");
 const AIAssistantService_1 = __importDefault(require("../services/AIAssistantService"));
 const ProviderFactory_1 = require("../providers/ProviderFactory");
 const ERPTools_1 = require("../tools/ERPTools");

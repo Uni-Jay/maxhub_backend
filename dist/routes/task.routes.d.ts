@@ -1,7 +1,7 @@
 import { Request } from 'express';
 declare const router: import("express-serve-static-core").Router;
 export declare function getPendingTasksSummary(req: Request): Promise<{
-    scope: import("../utils/RoleBucket").RoleBucket;
+    scope: import("@utils/RoleBucket").RoleBucket;
     total: number;
     tasks: {
         title: string;

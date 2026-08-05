@@ -5,16 +5,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
-const idOrUuid_1 = require("../utils/idOrUuid");
+const idOrUuid_1 = require("@utils/idOrUuid");
 const uuid_1 = require("uuid");
-const Invoice_model_1 = require("../models/Invoice.model");
-const Payment_model_1 = require("../models/Payment.model");
-const Client_model_1 = require("../models/Client.model");
-const Department_model_1 = require("../models/Department.model");
-const ResponseFormatter_1 = require("../utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
-const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
-const departmentScope_1 = require("../utils/departmentScope");
+const Invoice_model_1 = require("@models/Invoice.model");
+const Payment_model_1 = require("@models/Payment.model");
+const Client_model_1 = require("@models/Client.model");
+const Department_model_1 = require("@models/Department.model");
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const AuthMiddleware_1 = __importDefault(require("@middleware/AuthMiddleware"));
+const departmentScope_1 = require("@utils/departmentScope");
 const router = (0, express_1.Router)();
 router.get('/', AuthMiddleware_1.default.requirePermission('fin.invoice.read.all', 'acc.invoice.read.all', 'fin.invoice.read.own_department'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { page = 1, limit = 20, status, accountId, clientId, departmentId } = req.query;

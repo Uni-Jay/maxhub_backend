@@ -5,10 +5,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
-const VisaApplicant_model_1 = require("../models/VisaApplicant.model");
-const ResponseFormatter_1 = require("../utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
-const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
+const VisaApplicant_model_1 = require("@models/VisaApplicant.model");
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const AuthMiddleware_1 = __importDefault(require("@middleware/AuthMiddleware"));
 const router = (0, express_1.Router)();
 const VISA_TYPE_ENUM = ['Tourist', 'Business', 'Student', 'Work', 'Residence'];
 function toVisaType(serviceType) {

@@ -114,6 +114,12 @@ class EmployeeSalary extends sequelize_1.Model {
                 allowNull: true,
                 comment: 'Soft delete timestamp',
             },
+            salaryCode: {
+                type: sequelize_1.DataTypes.VIRTUAL,
+                get() {
+                    return `SAL-${String(this.id).padStart(6, '0')}`;
+                },
+            },
         }, {
             sequelize,
             tableName: 'employee_salaries',

@@ -4,16 +4,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const EmployeePromotion_model_1 = require("../models/EmployeePromotion.model");
-const Staff_model_1 = require("../models/Staff.model");
-const Designation_model_1 = require("../models/Designation.model");
-const Department_model_1 = require("../models/Department.model");
-const idOrUuid_1 = require("../utils/idOrUuid");
-const ResponseFormatter_1 = require("../utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
-const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
-const PermissionCodes_1 = require("../config/PermissionCodes");
-const CommunicationService_1 = require("../services/CommunicationService");
+const EmployeePromotion_model_1 = require("@models/EmployeePromotion.model");
+const Staff_model_1 = require("@models/Staff.model");
+const Designation_model_1 = require("@models/Designation.model");
+const Department_model_1 = require("@models/Department.model");
+const idOrUuid_1 = require("@utils/idOrUuid");
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const AuthMiddleware_1 = __importDefault(require("@middleware/AuthMiddleware"));
+const PermissionCodes_1 = require("@config/PermissionCodes");
+const CommunicationService_1 = require("@services/CommunicationService");
 const router = (0, express_1.Router)();
 function isBypassRole(req) {
     const roles = (req.user?.roles || []).map((r) => r.toLowerCase().replace(/[^a-z]/g, ''));

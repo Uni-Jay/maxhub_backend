@@ -2,8 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isSuperAdminOnly = isSuperAdminOnly;
 exports.requesterIsHrOrAdmin = requesterIsHrOrAdmin;
-const Staff_model_1 = require("../models/Staff.model");
-const User_model_1 = require("../models/User.model");
+const Staff_model_1 = require("@models/Staff.model");
+const User_model_1 = require("@models/User.model");
 const norm = (s) => s.toLowerCase().replace(/[^a-z]/g, '');
 function isSuperAdminOnly(req) {
     const roles = (req.user?.roles || []).map(norm);

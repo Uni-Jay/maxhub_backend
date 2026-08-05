@@ -21,6 +21,7 @@ interface EmployeeSalaryAttributes {
     bankAccountNumber?: string;
     remarks?: string;
     deletedAt?: Date;
+    readonly salaryCode?: string;
 }
 interface EmployeeSalaryCreationAttributes extends Optional<EmployeeSalaryAttributes, 'id' | 'uuid'> {
 }
@@ -46,6 +47,7 @@ export declare class EmployeeSalary extends Model<EmployeeSalaryAttributes, Empl
     bankAccountNumber?: string;
     remarks?: string;
     deletedAt?: Date;
+    readonly salaryCode?: string;
     readonly createdAt: Date;
     readonly updatedAt: Date;
     static initModel(sequelize: Sequelize): typeof EmployeeSalary;

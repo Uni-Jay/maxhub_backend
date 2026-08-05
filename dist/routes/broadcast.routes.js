@@ -5,17 +5,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
-const Broadcast_model_1 = require("../models/Broadcast.model");
-const Staff_model_1 = require("../models/Staff.model");
-const StaffDepartment_model_1 = require("../models/StaffDepartment.model");
-const Notification_model_1 = require("../models/Notification.model");
-const Role_model_1 = require("../models/Role.model");
-const UserRole_model_1 = require("../models/UserRole.model");
-const idOrUuid_1 = require("../utils/idOrUuid");
-const ResponseFormatter_1 = require("../utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
-const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
-const PermissionCodes_1 = require("../config/PermissionCodes");
+const Broadcast_model_1 = require("@models/Broadcast.model");
+const Staff_model_1 = require("@models/Staff.model");
+const StaffDepartment_model_1 = require("@models/StaffDepartment.model");
+const Notification_model_1 = require("@models/Notification.model");
+const Role_model_1 = require("@models/Role.model");
+const UserRole_model_1 = require("@models/UserRole.model");
+const idOrUuid_1 = require("@utils/idOrUuid");
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const AuthMiddleware_1 = __importDefault(require("@middleware/AuthMiddleware"));
+const PermissionCodes_1 = require("@config/PermissionCodes");
 const router = (0, express_1.Router)();
 function hasPermission(req, code) {
     const roles = (req.user?.roles || []).map((r) => r.toLowerCase().replace(/[^a-z]/g, ''));

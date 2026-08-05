@@ -268,9 +268,12 @@ export class AssociationManager {
     PayrollPeriod.belongsTo(User, { foreignKey: 'approvedBy', as: 'approvedByUser' });
     PayrollPeriod.hasMany(EmployeeSalary, { foreignKey: 'payrollPeriodId', as: 'employeeSalaries' });
 
-    // EmployeeSalary associations
-    EmployeeSalary.belongsTo(Staff, { foreignKey: 'staffId' });
-    EmployeeSalary.belongsTo(PayrollPeriod, { foreignKey: 'payrollPeriodId' });
+    // EmployeeSalary's belongsTo(Staff)/belongsTo(PayrollPeriod) associations are
+    // declared once, below under "PAYROLL", with explicit `as: 'staff'`/`as:
+    // 'payrollPeriod'` aliases — those are the ones payroll.routes.ts actually
+    // queries with. (A second, alias-less pair used to be declared here too;
+    // same foreignKeys, so it was a dead duplicate registration, not a distinct
+    // relationship — removed.)
 
     // ======== LEARNING MANAGEMENT ========
 

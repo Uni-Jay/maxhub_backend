@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.checkPermission = void 0;
-const UserModulePermission_model_1 = require("../models/UserModulePermission.model");
-const ResponseFormatter_1 = require("../utils/ResponseFormatter");
+const UserModulePermission_model_1 = require("@models/UserModulePermission.model");
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
 const checkPermission = (moduleCode, action) => {
     return async (req, res, next) => {
         if (!req.user) {

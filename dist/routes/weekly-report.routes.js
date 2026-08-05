@@ -5,13 +5,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const uuid_1 = require("uuid");
-const WeeklyReport_model_1 = require("../models/WeeklyReport.model");
-const Staff_model_1 = require("../models/Staff.model");
-const idOrUuid_1 = require("../utils/idOrUuid");
-const RoleBucket_1 = require("../utils/RoleBucket");
-const ResponseFormatter_1 = require("../utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
-const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
+const WeeklyReport_model_1 = require("@models/WeeklyReport.model");
+const Staff_model_1 = require("@models/Staff.model");
+const idOrUuid_1 = require("@utils/idOrUuid");
+const RoleBucket_1 = require("@utils/RoleBucket");
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const AuthMiddleware_1 = __importDefault(require("@middleware/AuthMiddleware"));
 const router = (0, express_1.Router)();
 function getThisFridayISO() {
     const now = new Date();

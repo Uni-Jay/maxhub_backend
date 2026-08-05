@@ -38,23 +38,23 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
-const idOrUuid_1 = require("../utils/idOrUuid");
+const idOrUuid_1 = require("@utils/idOrUuid");
 const uuid_1 = require("uuid");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
-const Conversation_model_1 = require("../models/Conversation.model");
-const ConversationParticipant_model_1 = require("../models/ConversationParticipant.model");
-const Message_model_1 = require("../models/Message.model");
-const MessageRead_model_1 = require("../models/MessageRead.model");
-const User_model_1 = require("../models/User.model");
-const Call_model_1 = require("../models/Call.model");
-const ResponseFormatter_1 = require("../utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
-const AuthMiddleware_1 = require("../middleware/AuthMiddleware");
+const Conversation_model_1 = require("@models/Conversation.model");
+const ConversationParticipant_model_1 = require("@models/ConversationParticipant.model");
+const Message_model_1 = require("@models/Message.model");
+const MessageRead_model_1 = require("@models/MessageRead.model");
+const User_model_1 = require("@models/User.model");
+const Call_model_1 = require("@models/Call.model");
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const AuthMiddleware_1 = require("@middleware/AuthMiddleware");
 const ChatSocket_1 = require("../socket/ChatSocket");
-const mentions_1 = require("../utils/mentions");
-const messageTypes_1 = require("../utils/messageTypes");
+const mentions_1 = require("@utils/mentions");
+const messageTypes_1 = require("@utils/messageTypes");
 const router = (0, express_1.Router)();
 function viewerTitle(conv, participants, viewerUserId) {
     if (conv.conversationType !== 'Direct')

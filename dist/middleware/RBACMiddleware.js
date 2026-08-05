@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.requireAuth = exports.RBACMiddleware = void 0;
-const RBACService_1 = require("../services/RBACService");
+const RBACService_1 = require("@services/RBACService");
 class RBACMiddleware {
     constructor(sequelize) {
         this.rbacService = new RBACService_1.RBACService(sequelize);

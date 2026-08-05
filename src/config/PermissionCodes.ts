@@ -863,6 +863,7 @@ export enum PermissionCode {
 
   HR_LEAVE_MANAGE_ALL = 'hr.leave.manage.all',
   HR_PAYROLL_VIEW_ALL = 'hr.payroll.view.all',
+  HR_PAYROLL_MANAGE_ALL = 'hr.payroll.manage.all',
   HR_DOCUMENT_MANAGE_ALL = 'hr.document.manage.all',
 
   // ==================== ACCOUNTANT ROLE ====================

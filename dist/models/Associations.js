@@ -194,8 +194,6 @@ class AssociationManager {
         PayrollPeriod_model_1.PayrollPeriod.belongsTo(User_model_1.User, { foreignKey: 'processedBy', as: 'processedByUser' });
         PayrollPeriod_model_1.PayrollPeriod.belongsTo(User_model_1.User, { foreignKey: 'approvedBy', as: 'approvedByUser' });
         PayrollPeriod_model_1.PayrollPeriod.hasMany(EmployeeSalary_model_1.EmployeeSalary, { foreignKey: 'payrollPeriodId', as: 'employeeSalaries' });
-        EmployeeSalary_model_1.EmployeeSalary.belongsTo(Staff_model_1.Staff, { foreignKey: 'staffId' });
-        EmployeeSalary_model_1.EmployeeSalary.belongsTo(PayrollPeriod_model_1.PayrollPeriod, { foreignKey: 'payrollPeriodId' });
         Course_model_1.Course.belongsTo(Staff_model_1.Staff, { foreignKey: 'instructorId', as: 'instructor' });
         Course_model_1.Course.belongsTo(Department_model_1.Department, { foreignKey: 'departmentId', as: 'department' });
         Course_model_1.Course.belongsTo(User_model_1.User, { foreignKey: 'createdById', as: 'createdBy' });

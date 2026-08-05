@@ -4,9 +4,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
-const ResponseFormatter_1 = require("../utils/ResponseFormatter");
-const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
+const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const AuthMiddleware_1 = __importDefault(require("@middleware/AuthMiddleware"));
 const router = (0, express_1.Router)();
 router.use(AuthMiddleware_1.default.requireRole('superadmin'));
 let settingsStore = {

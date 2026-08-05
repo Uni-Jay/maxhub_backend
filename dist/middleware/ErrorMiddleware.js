@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ErrorMiddleware = void 0;
-const ResponseFormatter_1 = require("../utils/ResponseFormatter");
-const ErrorHandler_1 = require("../utils/ErrorHandler");
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const ErrorHandler_1 = require("@utils/ErrorHandler");
 class ErrorMiddleware {
     static handle(err, req, res, next) {
         ErrorHandler_1.ErrorHandler.logError(err, `${req.method} ${req.path}`);

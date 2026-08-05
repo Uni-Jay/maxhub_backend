@@ -2,8 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getUserDepartmentIds = getUserDepartmentIds;
 exports.getMultiDeptScope = getMultiDeptScope;
-const Staff_model_1 = require("../models/Staff.model");
-const StaffDepartment_model_1 = require("../models/StaffDepartment.model");
+const Staff_model_1 = require("@models/Staff.model");
+const StaffDepartment_model_1 = require("@models/StaffDepartment.model");
 async function getUserDepartmentIds(userId) {
     const staff = await Staff_model_1.Staff.findOne({ where: { userId }, attributes: ['id', 'departmentId'] });
     if (!staff)

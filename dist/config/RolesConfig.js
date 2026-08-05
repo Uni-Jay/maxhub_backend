@@ -247,6 +247,7 @@ exports.ROLE_PERMISSIONS = {
         PermissionCodes_1.PermissionCode.ATT_CLOCKOUT_CREATE_OWN,
         PermissionCodes_1.PermissionCode.ATT_ATTENDANCE_READ_OWN,
         PermissionCodes_1.PermissionCode.HR_PAYROLL_VIEW_ALL,
+        PermissionCodes_1.PermissionCode.HR_PAYROLL_MANAGE_ALL,
         PermissionCodes_1.PermissionCode.PAY_SALARY_READ_ALL,
         PermissionCodes_1.PermissionCode.FIN_PAYSLIP_READ_ALL,
         PermissionCodes_1.PermissionCode.FIN_PAYSLIP_GENERATE_ALL,

@@ -4,17 +4,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const idOrUuid_1 = require("../utils/idOrUuid");
+const idOrUuid_1 = require("@utils/idOrUuid");
 const uuid_1 = require("uuid");
-const FeeReceipt_model_1 = require("../models/FeeReceipt.model");
-const Enrollment_model_1 = require("../models/Enrollment.model");
-const Course_model_1 = require("../models/Course.model");
-const Staff_model_1 = require("../models/Staff.model");
-const StudentProfile_model_1 = require("../models/StudentProfile.model");
-const User_model_1 = require("../models/User.model");
-const ResponseFormatter_1 = require("../utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
-const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
+const FeeReceipt_model_1 = require("@models/FeeReceipt.model");
+const Enrollment_model_1 = require("@models/Enrollment.model");
+const Course_model_1 = require("@models/Course.model");
+const Staff_model_1 = require("@models/Staff.model");
+const StudentProfile_model_1 = require("@models/StudentProfile.model");
+const User_model_1 = require("@models/User.model");
+const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const AuthMiddleware_1 = __importDefault(require("@middleware/AuthMiddleware"));
 const router = (0, express_1.Router)();
 function getDeptScope(req, allPermission) {
     const user = req.user;

@@ -1,8 +1,8 @@
-import { StudentProfile, StudentStatus } from '../models/StudentProfile.model';
-import { StudentEnrollment } from '../models/StudentEnrollment.model';
-import { StudentResult } from '../models/StudentResult.model';
-import { StudentAttendance, AttendanceStatus } from '../models/StudentAttendance.model';
-import { ClassSchedule } from '../models/ClassSchedule.model';
+import { StudentProfile, StudentStatus } from '@models/StudentProfile.model';
+import { StudentEnrollment } from '@models/StudentEnrollment.model';
+import { StudentResult } from '@models/StudentResult.model';
+import { StudentAttendance, AttendanceStatus } from '@models/StudentAttendance.model';
+import { ClassSchedule } from '@models/ClassSchedule.model';
 interface RegisterStudentInput {
     firstName: string;
     lastName: string;
