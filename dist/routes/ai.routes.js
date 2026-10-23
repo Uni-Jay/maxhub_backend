@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AIController_1 = require("../modules/ai/controllers/AIController");
 const AIRateLimiter_1 = require("../modules/ai/middleware/AIRateLimiter");
 const router = (0, express_1.Router)();

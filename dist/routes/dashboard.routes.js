@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const DashboardController_1 = require("@controllers/DashboardController");
+const DashboardController_1 = require("../controllers/DashboardController");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
 const router = (0, express_1.Router)();
 router.get('/super-admin/stats', AuthMiddleware_1.default.verifyToken, DashboardController_1.DashboardController.getSuperAdminStats);

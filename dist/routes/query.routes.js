@@ -8,8 +8,8 @@ const sequelize_1 = require("sequelize");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
 const StaffQuery_model_1 = require("../models/StaffQuery.model");
 const StaffQueryReply_model_1 = require("../models/StaffQueryReply.model");
-const ResponseFormatter_1 = require("@utils/ResponseFormatter");
-const ErrorMiddleware_1 = require("@middleware/ErrorMiddleware");
+const ResponseFormatter_1 = require("../utils/ResponseFormatter");
+const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const router = (0, express_1.Router)();
 router.get('/', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { status, priority, type, assignedStaffId, departmentId, search, page = '1', limit = '20' } = req.query;

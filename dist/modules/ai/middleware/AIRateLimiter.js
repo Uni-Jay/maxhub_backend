@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.aiRateLimit = aiRateLimit;
-const ResponseFormatter_1 = require("@utils/ResponseFormatter");
+const ResponseFormatter_1 = require("../../../utils/ResponseFormatter");
 const store = new Map();
 const LIMITS = {
     chat: { max: 30, windowMs: 60 * 60 * 1000 },
