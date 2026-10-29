@@ -34,8 +34,14 @@ class AIController {
         }
         const user = getUser(req);
         const roleName = (0, RoleBucket_1.getRoleBucket)(req);
-        const result = await AIAssistantService_1.default.chat({ messages, model: model, conversationId }, user.id, roleName, user.name, user.businessUnit, { tools: ERPTools_1.ERP_TOOL_DECLARATIONS, executeTool: (0, ERPTools_1.createToolExecutor)(req) });
-        ResponseFormatter_1.ResponseFormatter.success(res, result, 'AI response generated');
+        try {
+            const result = await AIAssistantService_1.default.chat({ messages, model: model, conversationId }, user.id, roleName, user.name, user.businessUnit, { tools: ERPTools_1.ERP_TOOL_DECLARATIONS, executeTool: (0, ERPTools_1.createToolExecutor)(req) });
+            ResponseFormatter_1.ResponseFormatter.success(res, result, 'AI response generated');
+        }
+        catch (err) {
+            console.error('[AI] chat failed:', err?.message);
+            ResponseFormatter_1.ResponseFormatter.error(res, err?.status ? err.message : `The AI assistant could not answer: ${err?.message || 'unknown error'}`, err?.status || 502);
+        }
     }
     static async generateReport(req, res) {
         const { type, data, period, staffId, departmentId, model } = req.body;

@@ -32,4 +32,11 @@ router.get('/conversations/:uuid',            ErrorMiddleware.asyncHandler(AICon
 router.get('/meeting-summaries',              ErrorMiddleware.asyncHandler(AIController.listMeetingSummaries));
 router.get('/reminders',                      ErrorMiddleware.asyncHandler(AIController.listReminders));
 
+// Clear messages when the AI service itself fails (quota, retired model, missing key).
+router.use((err: any, _req: any, res: any, next: any) => {
+  if (!err) return next();
+  console.error('[AI]', err?.message);
+  return res.status(err?.status || 502).json({ success: false, message: err?.status ? err.message : `The AI assistant could not answer: ${err?.message || 'unknown error'}` });
+});
+
 export default router;

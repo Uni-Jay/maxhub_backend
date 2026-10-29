@@ -442,6 +442,59 @@ export function defineErpModels(sequelize: Sequelize): Record<string, ModelStati
     createdByName: { type: DataTypes.STRING(200), allowNull: true },
   }, { ...OPTS, tableName: 'erp_stock_movements', indexes: [{ fields: ['productTable', 'productId'] }] });
 
+  /** Company-wide and brand targets (e.g. ₦5m from VisaMax this month). */
+  ErpModels.Target = sequelize.define('ErpTarget', {
+    id: ID(),
+    title: { type: DataTypes.STRING(160), allowNull: false },
+    brand: { type: DataTypes.STRING(4), allowNull: true },            // null = whole company; VM | KS | BM | MF
+    metric: { type: DataTypes.STRING(30), allowNull: false },         // revenue | profit | newCustomers | orders | students | visasApproved | projectsDelivered | manual
+    period: { type: DataTypes.STRING(10), allowNull: false, defaultValue: 'month' }, // month | quarter | year
+    year: { type: DataTypes.INTEGER, allowNull: false },
+    month: { type: DataTypes.INTEGER, allowNull: true },              // 1-12 for month targets
+    quarter: { type: DataTypes.INTEGER, allowNull: true },            // 1-4 for quarter targets
+    targetValue: { type: DataTypes.DECIMAL(15, 2), allowNull: false },
+    manualValue: { type: DataTypes.DECIMAL(15, 2), allowNull: true }, // progress typed in for "manual" targets
+    ownerUserId: FK(),
+    notes: { type: DataTypes.TEXT, allowNull: true },
+    createdById: FK(),
+  }, { ...OPTS, tableName: 'erp_targets' });
+
+  /** Onboarding checklist items for new staff. */
+  ErpModels.OnboardingItem = sequelize.define('ErpOnboardingItem', {
+    id: ID(),
+    staffId: { type: DataTypes.BIGINT, allowNull: false },
+    section: { type: DataTypes.STRING(60), allowNull: false, defaultValue: 'General' },
+    title: { type: DataTypes.STRING(200), allowNull: false },
+    owner: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'HR' }, // HR | Manager | Staff | IT | Accounts
+    dueDate: { type: DataTypes.DATEONLY, allowNull: true },
+    doneAt: { type: DataTypes.DATE, allowNull: true },
+    doneById: FK(),
+    doneByName: { type: DataTypes.STRING(200), allowNull: true },
+    note: { type: DataTypes.TEXT, allowNull: true },
+    sortOrder: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+  }, { ...OPTS, tableName: 'erp_onboarding_items', indexes: [{ fields: ['staffId'] }] });
+
+  /** Performance reviews built from the person's real work record. */
+  ErpModels.Review = sequelize.define('ErpReview', {
+    id: ID(),
+    staffId: { type: DataTypes.BIGINT, allowNull: false },
+    reviewerUserId: FK(),
+    periodLabel: { type: DataTypes.STRING(60), allowNull: false },  // e.g. "Q4 2026" or "October 2026"
+    periodStart: { type: DataTypes.DATEONLY, allowNull: false },
+    periodEnd: { type: DataTypes.DATEONLY, allowNull: false },
+    status: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'Draft' }, // Draft | Self review | Manager review | Completed
+    evidence: { type: DataTypes.JSONB, allowNull: true },            // snapshot of tasks, reports, attendance…
+    selfScores: { type: DataTypes.JSONB, allowNull: true },          // { criterion: 1-5 }
+    managerScores: { type: DataTypes.JSONB, allowNull: true },
+    selfComment: { type: DataTypes.TEXT, allowNull: true },
+    managerComment: { type: DataTypes.TEXT, allowNull: true },
+    goals: { type: DataTypes.JSONB, allowNull: true },               // [{ goal, due }]
+    overallScore: { type: DataTypes.DECIMAL(4, 2), allowNull: true },
+    rating: { type: DataTypes.STRING(40), allowNull: true },
+    completedAt: { type: DataTypes.DATE, allowNull: true },
+    createdById: FK(),
+  }, { ...OPTS, tableName: 'erp_reviews', indexes: [{ fields: ['staffId'] }] });
+
   /** Pay is set per staff member (MaxHub does not use salary structures). */
   ErpModels.StaffPay = sequelize.define('ErpStaffPay', {
     staffId: { type: DataTypes.BIGINT, primaryKey: true },

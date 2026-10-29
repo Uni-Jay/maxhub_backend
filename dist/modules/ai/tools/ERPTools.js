@@ -29,7 +29,39 @@ function hasPermission(req, permissionCode) {
     return userPerms.has(normalized);
 }
 const NOT_AUTHORIZED = "You're not authorized to view this information. Ask an administrator if you believe you should have access.";
+const VIEW_TOOLS = [
+    { name: 'getProfitAndLoss', description: 'Money in, money out and profit for each brand (VisaMax, Kurios SAT, BeadMax, Maxfood Farm) and the whole company for a month, with line items and brand highlights. Use for profit, revenue, expenses, margins or "how did we do this month".', params: { year: { type: 'number' }, month: { type: 'number', description: '1-12' } }, path: (a) => `/erp/profit?year=${a.year || ''}&month=${a.month || ''}` },
+    { name: 'getBrandComingUp', description: 'What is coming up or overdue for a brand in the next days: VisaMax appointments, flights, passport expiry; Kurios SAT renewals and project deadlines; BeadMax order due dates and low stock; Maxfood best-before dates and export orders.', params: { brand: { type: 'string', description: 'VM, KS, BM or MF' }, days: { type: 'number' } }, path: (a) => `/erp/agenda?brand=${encodeURIComponent(String(a.brand || 'VM'))}&days=${a.days || 14}` },
+    { name: 'getTracking', description: 'Tasks, projects and brand jobs assigned to people, with status, progress, overdue and blocked items. Set mine=true for only the asking user.', params: { mine: { type: 'boolean' } }, path: (a) => `/erp/tracking${a.mine ? '?mine=1' : ''}` },
+    { name: 'searchVisaMaxCustomers', description: 'Search VisaMax customer cases (visa applications, stage, destination, appointment dates).', params: { search: { type: 'string' }, stage: { type: 'string' } }, path: (a) => `/erp/travel/cases?limit=20&search=${encodeURIComponent(String(a.search || ''))}${a.stage ? `&stage=${encodeURIComponent(String(a.stage))}` : ''}` },
+    { name: 'searchKuriosProjects', description: 'Search Kurios SAT ICT projects (clients, stage, deadlines, value).', params: { search: { type: 'string' } }, path: (a) => `/erp/kurios/projects?limit=20&search=${encodeURIComponent(String(a.search || ''))}` },
+    { name: 'searchSupportTickets', description: 'Search customer support tickets for any brand.', params: { search: { type: 'string' }, status: { type: 'string' } }, path: (a) => `/erp/support/tickets?limit=20&search=${encodeURIComponent(String(a.search || ''))}${a.status ? `&status=${encodeURIComponent(String(a.status))}` : ''}` },
+    { name: 'searchBeadMaxShopOrders', description: 'BeadMax online shop / Instagram / walk-in orders with payment status and stage.', params: { search: { type: 'string' }, stage: { type: 'string' } }, path: (a) => `/erp/beadmax/shop-orders?limit=20&search=${encodeURIComponent(String(a.search || ''))}${a.stage ? `&stage=${encodeURIComponent(String(a.stage))}` : ''}` },
+    { name: 'searchBeadMaxCustomOrders', description: 'BeadMax custom (bespoke) orders with due dates.', params: { search: { type: 'string' } }, path: (a) => `/erp/beadmax/custom-orders?limit=20&search=${encodeURIComponent(String(a.search || ''))}` },
+    { name: 'searchMaxfoodExportOrders', description: 'Maxfood Farm export orders (destination, shipping, stage, totals).', params: { search: { type: 'string' } }, path: (a) => `/erp/maxfood/orders?limit=20&search=${encodeURIComponent(String(a.search || ''))}` },
+    { name: 'getInventory', description: 'Stock summary for BeadMax or Maxfood Farm: number of products, stock value, low and out of stock items.', params: { brand: { type: 'string', description: 'beadmax or maxfood' } }, path: (a) => `/erp/${String(a.brand || '').toLowerCase().includes('food') || String(a.brand).toUpperCase() === 'MF' ? 'maxfood' : 'beadmax'}/inventory-summary` },
+    { name: 'searchProducts', description: 'Search BeadMax products or Maxfood food products with price and stock.', params: { brand: { type: 'string', description: 'beadmax or maxfood' }, search: { type: 'string' } }, path: (a) => `/erp/${String(a.brand || '').toLowerCase().includes('food') || String(a.brand).toUpperCase() === 'MF' ? 'maxfood' : 'beadmax'}/products?limit=25&search=${encodeURIComponent(String(a.search || ''))}` },
+    { name: 'searchPayments', description: 'Payments and receipts issued (customer, brand, amount, currency, date). Use for "who paid", "receipts this week".', params: { search: { type: 'string' } }, path: (a) => `/erp/payments?limit=25&search=${encodeURIComponent(String(a.search || ''))}` },
+    { name: 'getSchoolFeesOwed', description: 'Students who still owe school fees at the Kurios SAT ICT Training Center (KS) or BeadMax Vocational School (BM).', params: { school: { type: 'string', description: 'KS or BM' } }, path: (a) => `/erp/school/balances?school=${String(a.school || 'KS').toUpperCase() === 'BM' ? 'BM' : 'KS'}` },
+    { name: 'getExchangeRates', description: 'Exchange rates (naira per unit) and money held in each foreign currency.', path: () => '/erp/fx' },
+    { name: 'getCompanyTargets', description: 'Company-wide and brand targets for this month/quarter/year with progress so far.', path: () => '/erp/targets' },
+    { name: 'getBirthdays', description: 'Staff birthdays today and in the coming weeks.', path: () => '/erp/birthdays' },
+    { name: 'getHolidaysAndCelebrations', description: 'Nigerian public holidays and international celebrations for a year.', params: { year: { type: 'number' } }, path: (a) => `/calendar/observances?year=${a.year || new Date().getFullYear()}` },
+];
+async function openView(req, path) {
+    const port = process.env.PORT || 3000;
+    const token = String(req.headers.authorization || '');
+    const res = await fetch(`http://127.0.0.1:${port}/api${path}`, { headers: { Authorization: token } });
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 403)
+        return NOT_AUTHORIZED;
+    if (!res.ok || body?.success === false)
+        return `Could not open this information: ${body?.message || res.status}`;
+    const text = JSON.stringify(body.data ?? body);
+    return text.length > 14000 ? `${text.slice(0, 14000)}… (truncated)` : text;
+}
 exports.ERP_TOOL_DECLARATIONS = [
+    ...VIEW_TOOLS.map((t) => ({ name: t.name, description: t.description, parameters: { type: 'object', properties: t.params || {} } })),
     {
         name: 'getAttendanceInsights',
         description: 'Get attendance statistics (present/absent/late counts per staff member, monthly trend, department rates) for a given month and year. Use this for questions like "who was absent this week" or "what is our attendance rate".',
@@ -165,7 +197,10 @@ function createToolExecutor(req) {
                 case 'getLeaveSummary': return await handleGetLeaveSummary(req);
                 case 'getDashboardInsights': return await handleGetDashboardInsights(req);
                 case 'getMyTasks': return await handleGetMyTasks(req);
-                default: return `Unknown tool: ${name}`;
+                default: {
+                    const view = VIEW_TOOLS.find((t) => t.name === name);
+                    return view ? await openView(req, view.path(args || {})) : `Unknown tool: ${name}`;
+                }
             }
         }
         catch (err) {

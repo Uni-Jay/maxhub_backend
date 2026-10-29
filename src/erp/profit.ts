@@ -23,7 +23,7 @@ const safeQ = (sql: string, replacements: any = {}) => q(sql, replacements).catc
 const canSee = (req: any) => isManagement(req) || roleOf(req) === 'accountant';
 
 /** department id → brand department id (top level). */
-async function brandMap(): Promise<{ map: Map<number, number>; brands: Array<{ id: number; code: string; name: string; logoUrl: string | null; color: string | null }> }> {
+export async function brandMap(): Promise<{ map: Map<number, number>; brands: Array<{ id: number; code: string; name: string; logoUrl: string | null; color: string | null }> }> {
   const depts = await q(`SELECT id, "parentDepartmentId" AS p FROM departments WHERE "deletedAt" IS NULL`);
   const parent = new Map(depts.map((d) => [Number(d.id), d.p ? Number(d.p) : null]));
   const map = new Map<number, number>();

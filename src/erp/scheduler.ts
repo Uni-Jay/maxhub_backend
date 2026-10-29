@@ -112,6 +112,9 @@ export function startErpScheduler(): void {
     }
   }), opts);
 
+  // Every day 07:00 — birthday wishes (staff and clients).
+  cron.schedule('0 7 * * *', () => safe('birthdays', async () => { await require('./birthdays').runBirthdays(); }), opts);
+
   // Every day 06:00 — refresh exchange rates and fill in naira values.
   cron.schedule('0 6 * * *', () => safe('fx-refresh', async () => {
     const fx = require('./fx');

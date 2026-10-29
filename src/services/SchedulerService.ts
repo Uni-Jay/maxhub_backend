@@ -158,7 +158,7 @@ function scheduleBirthdayMessages(): void {
     console.log(`[Scheduler] Birthday job done — ${totalBirthdays} wish(es) sent`);
   }, { timezone: 'Africa/Lagos' });
 
-  console.log('[Scheduler] Birthday job scheduled (daily at 7:00 AM)');
+
 }
 
 /**
@@ -180,7 +180,8 @@ function scheduleJobSyncRetry(): void {
 
 export function startScheduler(): void {
   scheduleWeeklyMessages();
-  scheduleBirthdayMessages();
+  // Birthdays now run from erp/birthdays (Lagos time, once per person per day).
+  void scheduleBirthdayMessages;
   scheduleJobSyncRetry();
   console.log('[Scheduler] All jobs started');
 }

@@ -47,6 +47,9 @@ function mountErpProtected(apiRouter) {
     erp.use((0, tracking_1.trackingRouter)());
     erp.use((0, inventory_1.inventoryRouter)());
     erp.use((0, fx_1.fxRouter)());
+    erp.use(require('./birthdays').birthdaysRouter());
+    erp.use(require('./targets').targetsRouter());
+    erp.use(require('./development').developmentRouter());
     erp.use((0, profit_1.profitRouter)());
     erp.use((0, agenda_1.agendaRouter)());
     erp.use((err, _req, res, _next) => {

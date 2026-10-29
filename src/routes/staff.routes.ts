@@ -321,6 +321,7 @@ router.post(
         effectiveFrom: joiningDate || null,
       }).catch((e: any) => console.error('[Staff] pay save failed:', e.message));
     }
+    require('../erp/development').startOnboarding(Number(staff.id), req).catch((e: any) => console.error('[Staff] onboarding checklist failed:', e.message));
     people.sendStaffWelcome(Number(staff.id), { temporaryPassword })
       .catch((err: any) => console.error('[Staff] Welcome email failed:', err));
     void dept; void sendWelcomeEmail;

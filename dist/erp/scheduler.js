@@ -108,6 +108,7 @@ function startErpScheduler() {
             });
         }
     }), opts);
+    node_cron_1.default.schedule('0 7 * * *', () => safe('birthdays', async () => { await require('./birthdays').runBirthdays(); }), opts);
     node_cron_1.default.schedule('0 6 * * *', () => safe('fx-refresh', async () => {
         const fx = require('./fx');
         await fx.refreshMarketRates();

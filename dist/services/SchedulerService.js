@@ -131,7 +131,6 @@ function scheduleBirthdayMessages() {
         }
         console.log(`[Scheduler] Birthday job done — ${totalBirthdays} wish(es) sent`);
     }, { timezone: 'Africa/Lagos' });
-    console.log('[Scheduler] Birthday job scheduled (daily at 7:00 AM)');
 }
 function scheduleJobSyncRetry() {
     node_cron_1.default.schedule('*/15 * * * *', async () => {
@@ -148,7 +147,7 @@ function scheduleJobSyncRetry() {
 }
 function startScheduler() {
     scheduleWeeklyMessages();
-    scheduleBirthdayMessages();
+    void scheduleBirthdayMessages;
     scheduleJobSyncRetry();
     console.log('[Scheduler] All jobs started');
 }

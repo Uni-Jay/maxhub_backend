@@ -16,5 +16,11 @@ router.get('/conversations', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AICo
 router.get('/conversations/:uuid', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AIController_1.AIController.getConversation));
 router.get('/meeting-summaries', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AIController_1.AIController.listMeetingSummaries));
 router.get('/reminders', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(AIController_1.AIController.listReminders));
+router.use((err, _req, res, next) => {
+    if (!err)
+        return next();
+    console.error('[AI]', err?.message);
+    return res.status(err?.status || 502).json({ success: false, message: err?.status ? err.message : `The AI assistant could not answer: ${err?.message || 'unknown error'}` });
+});
 exports.default = router;
 //# sourceMappingURL=ai.routes.js.map

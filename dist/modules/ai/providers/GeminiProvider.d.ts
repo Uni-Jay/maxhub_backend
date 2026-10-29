@@ -1,5 +1,9 @@
 import type { AIMessage } from '../interfaces/AIInterfaces';
 import type { AIProvider, ChatToolDeclaration } from './AIProvider.interface';
+export declare class AIUnavailableError extends Error {
+    status: number;
+    constructor(message: string, status?: number);
+}
 export declare class GeminiProvider implements AIProvider {
     private client;
     private getClient;

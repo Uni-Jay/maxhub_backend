@@ -50,16 +50,20 @@ export class AIController {
     const user = getUser(req);
     const roleName = getRoleBucket(req);
 
-    const result = await AIAssistantService.chat(
-      { messages, model: model as GeminiModel, conversationId },
-      user.id,
-      roleName,
-      user.name,
-      user.businessUnit,
-      { tools: ERP_TOOL_DECLARATIONS, executeTool: createToolExecutor(req) },
-    );
-
-    ResponseFormatter.success(res, result, 'AI response generated');
+    try {
+      const result = await AIAssistantService.chat(
+        { messages, model: model as GeminiModel, conversationId },
+        user.id,
+        roleName,
+        user.name,
+        user.businessUnit,
+        { tools: ERP_TOOL_DECLARATIONS, executeTool: createToolExecutor(req) },
+      );
+      ResponseFormatter.success(res, result, 'AI response generated');
+    } catch (err: any) {
+      console.error('[AI] chat failed:', err?.message);
+      ResponseFormatter.error(res, err?.status ? err.message : `The AI assistant could not answer: ${err?.message || 'unknown error'}`, err?.status || 502);
+    }
   }
 
   // POST /api/ai/report

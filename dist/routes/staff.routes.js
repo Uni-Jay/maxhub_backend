@@ -245,6 +245,7 @@ router.post('/', AuthMiddleware_1.default.requirePermission('org.staff.create.al
             effectiveFrom: joiningDate || null,
         }).catch((e) => console.error('[Staff] pay save failed:', e.message));
     }
+    require('../erp/development').startOnboarding(Number(staff.id), req).catch((e) => console.error('[Staff] onboarding checklist failed:', e.message));
     people.sendStaffWelcome(Number(staff.id), { temporaryPassword })
         .catch((err) => console.error('[Staff] Welcome email failed:', err));
     void dept;
