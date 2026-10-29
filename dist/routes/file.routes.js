@@ -24,6 +24,11 @@ function withUrl(file) {
     return { ...json, url };
 }
 const NAMED_FOLDERS = [
+    { name: 'Pictures', icon: '🖼️' },
+    { name: 'VisaMax', icon: '✈️' },
+    { name: 'Kurios SAT', icon: '💻' },
+    { name: 'BeadMax', icon: '📿' },
+    { name: 'Maxfood Farm', icon: '🌾' },
     { name: 'Projects', icon: '📁' },
     { name: 'Certificates', icon: '🎓' },
     { name: 'Shared', icon: '📁' },
@@ -50,13 +55,13 @@ function canSeeNamedFolder(req, folder) {
 async function ensureFolders(req) {
     const user = req.user;
     const [general] = await FileRecord_model_1.FileRecord.findOrCreate({
-        where: { isFolder: true, folderType: 'General' },
+        where: { isFolder: true, folderType: 'General', folderId: null },
         defaults: {
             uuid: (0, uuid_1.v4)(), name: 'General Folder', isFolder: true, folderType: 'General', icon: '📁', size: 0,
         },
     });
     const [mine] = await FileRecord_model_1.FileRecord.findOrCreate({
-        where: { isFolder: true, folderType: 'Personal', uploadedById: user?.id },
+        where: { isFolder: true, folderType: 'Personal', uploadedById: user?.id, folderId: null },
         defaults: {
             uuid: (0, uuid_1.v4)(), name: 'My Folder', isFolder: true, folderType: 'Personal', icon: '🔒', size: 0,
             uploadedById: user?.id,
@@ -66,7 +71,7 @@ async function ensureFolders(req) {
     const named = [];
     for (const def of NAMED_FOLDERS) {
         const [folder] = await FileRecord_model_1.FileRecord.findOrCreate({
-            where: { isFolder: true, name: def.name },
+            where: { isFolder: true, name: def.name, folderId: null },
             defaults: {
                 uuid: (0, uuid_1.v4)(), name: def.name, isFolder: true, icon: def.icon, size: 0,
                 restrictedToRoles: def.restrictedToRoles ? JSON.stringify(def.restrictedToRoles) : undefined,
@@ -89,27 +94,66 @@ async function isFolderAccessible(req, folderUuid, user) {
     return true;
 }
 router.get('/folders', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const user = req.user;
     const { general, mine, named } = await ensureFolders(req);
+    if (req.query.parentId) {
+        const parentId = String(req.query.parentId);
+        if (!(await isFolderAccessible(req, parentId, user))) {
+            return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You do not have access to this folder', req.path);
+        }
+        const children = await FileRecord_model_1.FileRecord.findAll({ where: { isFolder: true, folderId: parentId }, order: [['name', 'ASC']] });
+        const visible = [];
+        for (const c of children)
+            if (await isFolderAccessible(req, c.uuid, user))
+                visible.push(c);
+        return ResponseFormatter_1.ResponseFormatter.success(res, visible);
+    }
     ResponseFormatter_1.ResponseFormatter.success(res, [mine, general, ...named]);
 }));
+const SYSTEM_FOLDER_NAMES = new Set(NAMED_FOLDERS.map((f) => f.name));
+function isSystemFolder(folder) {
+    return !folder.folderId && (folder.folderType === 'General' || folder.folderType === 'Personal' || SYSTEM_FOLDER_NAMES.has(folder.name));
+}
+function canChangeFolder(req, folder) {
+    if (isBypassRole(req))
+        return true;
+    return String(folder.uploadedById) === String(req.user?.id);
+}
 router.post('/folders', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
     const roles = (user?.roles || []).map((r) => r.toLowerCase().replace(/[^a-z]/g, ''));
-    if (!roles.includes('superadmin')) {
-        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only Super Admin can create additional folders', req.path);
-    }
     const { name, parentId } = req.body;
-    if (!name)
+    const clean = String(name || '').trim().slice(0, 120);
+    if (!clean)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'Folder name is required', 400);
+    let folderType = null;
+    let restrictedToRoles = null;
+    if (parentId) {
+        const parent = await FileRecord_model_1.FileRecord.findOne({ where: { uuid: parentId, isFolder: true } });
+        if (!parent)
+            return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Parent folder not found');
+        if (!(await isFolderAccessible(req, parentId, user)))
+            return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You do not have access to this folder', req.path);
+        folderType = parent.folderType || null;
+        restrictedToRoles = parent.restrictedToRoles || null;
+        if (folderType === 'Personal' && String(parent.uploadedById) !== String(user?.id)) {
+            return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You cannot add folders to someone else\'s private folder', req.path);
+        }
+    }
+    else if (!roles.includes('superadmin')) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only Super Admin can create top-level folders — open My Folder (private) or General Folder (public) and create it there', req.path);
+    }
     const folder = await FileRecord_model_1.FileRecord.create({
         uuid: (0, uuid_1.v4)(),
-        name,
+        name: clean,
         folderId: parentId || null,
         isFolder: true,
-        icon: '📁',
+        folderType,
+        restrictedToRoles,
+        icon: folderType === 'Personal' ? '🔒' : '📁',
         size: 0,
         uploadedById: user?.id,
-        uploadedByName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
+        uploadedByName: user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
     });
     ResponseFormatter_1.ResponseFormatter.success(res, folder, 'Folder created', 201);
 }));
@@ -120,13 +164,24 @@ router.patch('/folders/:id/rename', ErrorMiddleware_1.ErrorMiddleware.asyncHandl
     const folder = await FileRecord_model_1.FileRecord.findOne({ where: { uuid: req.params.id, isFolder: true } });
     if (!folder)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Folder not found');
-    await folder.update({ name });
+    if (isSystemFolder(folder))
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'This folder cannot be renamed', req.path);
+    if (!canChangeFolder(req, folder))
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only the folder owner or an Admin can rename it', req.path);
+    await folder.update({ name: String(name).trim().slice(0, 120) });
     ResponseFormatter_1.ResponseFormatter.success(res, folder, 'Folder renamed');
 }));
 router.delete('/folders/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const folder = await FileRecord_model_1.FileRecord.findOne({ where: { uuid: req.params.id, isFolder: true } });
     if (!folder)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Folder not found');
+    if (isSystemFolder(folder))
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'This folder cannot be deleted', req.path);
+    if (!canChangeFolder(req, folder))
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only the folder owner or an Admin can delete it', req.path);
+    const inside = await FileRecord_model_1.FileRecord.count({ where: { folderId: folder.uuid } });
+    if (inside > 0)
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'Empty the folder before deleting it', 400);
     await folder.destroy();
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Folder deleted');
 }));
@@ -242,6 +297,9 @@ router.delete('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req,
     if (!file.isFolder && !(await isFolderAccessible(req, file.folderId, user))) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You do not have access to this file', req.path);
     }
+    if (file.isFolder ? (isSystemFolder(file) || !canChangeFolder(req, file)) : !canChangeFolder(req, file)) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only the person who uploaded this (or an Admin) can delete it', req.path);
+    }
     if (!file.isFolder && file.path) {
         const localPath = path_1.default.join(process.cwd(), file.path.replace(/^\//, ''));
         if (fs_1.default.existsSync(localPath))
@@ -260,6 +318,9 @@ router.patch('/:id/rename', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'File not found');
     if (!file.isFolder && !(await isFolderAccessible(req, file.folderId, user))) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You do not have access to this file', req.path);
+    }
+    if (file.isFolder ? (isSystemFolder(file) || !canChangeFolder(req, file)) : !canChangeFolder(req, file)) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only the owner (or an Admin) can rename this', req.path);
     }
     await file.update({ name });
     ResponseFormatter_1.ResponseFormatter.success(res, withUrl(file), 'File renamed');

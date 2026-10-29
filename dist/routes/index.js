@@ -26,8 +26,10 @@ function setupRoutes(app) {
     const apiRouter = (0, express_1.Router)();
     apiRouter.use(AuthMiddleware_1.default.pagination);
     apiRouter.use(AuthMiddleware_1.default.sorting);
+    require('../erp').mountErpPublic(apiRouter);
     apiRouter.use('/auth', require('./auth.routes').default);
     apiRouter.use(AuthMiddleware_1.default.verifyToken);
+    require('../erp').mountErpProtected(apiRouter);
     apiRouter.use('/dashboards', require('./dashboard.routes').default);
     apiRouter.use('/branches', require('./branch.routes').default);
     apiRouter.use('/units', require('./unit.routes').default);

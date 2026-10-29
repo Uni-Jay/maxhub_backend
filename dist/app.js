@@ -175,6 +175,7 @@ const AIMessage_model_1 = require("./modules/ai/models/AIMessage.model");
 const AIMeetingSummary_model_1 = require("./modules/ai/models/AIMeetingSummary.model");
 const AIReminder_model_1 = require("./modules/ai/models/AIReminder.model");
 const SchedulerService_1 = require("./services/SchedulerService");
+const erp_1 = require("./erp");
 dotenv.config();
 class AppBootstrapper {
     constructor() {
@@ -183,6 +184,7 @@ class AppBootstrapper {
     }
     initMiddleware() {
         this.app.use((0, helmet_1.default)());
+        this.app.set('trust proxy', 1);
         const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174,http://localhost:3000').split(',');
         const corsOptions = {
             origin: (origin, callback) => {
@@ -197,8 +199,10 @@ class AppBootstrapper {
             methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
             allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
         };
-        this.app.options('*', (0, cors_1.default)(corsOptions));
-        this.app.use((0, cors_1.default)(corsOptions));
+        const corsMw = (0, cors_1.default)(corsOptions);
+        const skipPublic = (req, res, next) => req.path.startsWith('/api/public') ? next() : corsMw(req, res, next);
+        this.app.options('*', skipPublic);
+        this.app.use(skipPublic);
         this.app.use(express_1.default.json({ limit: '10mb' }));
         this.app.use(express_1.default.urlencoded({ limit: '10mb', extended: true }));
         this.app.use('/uploads', express_1.default.static(path_1.default.join(process.cwd(), 'uploads')));
@@ -358,6 +362,9 @@ class AppBootstrapper {
             this.initAssociations();
             this.app.set('sequelize', this.sequelize);
             this.initRoutes();
+            if (process.env.NODE_ENV === 'production' && (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32)) {
+                console.error('⚠️  SECURITY: JWT_SECRET is missing or shorter than 32 characters — set a long random value in Render.');
+            }
             console.log('📡 Connecting to database...');
             await this.sequelize.authenticate();
             console.log('✅ Database connected');
@@ -380,11 +387,14 @@ class AppBootstrapper {
             else {
                 console.log('ℹ️  Database sync skipped (DB_SYNC=none)');
             }
+            await (0, erp_1.runErpMigrations)(this.sequelize);
             (0, SchedulerService_1.startScheduler)();
+            (0, erp_1.startErpScheduler)();
             const port = process.env.PORT || 3000;
             const server = http_1.default.createServer({ maxHeaderSize: 524288 }, this.app);
             const io = (0, ChatSocket_1.initChatSocket)(server);
             this.app.set('io', io);
+            global.__maxhubIO = io;
             console.log('✅ Socket.IO chat server initialized');
             server.listen(port, () => {
                 console.log(`

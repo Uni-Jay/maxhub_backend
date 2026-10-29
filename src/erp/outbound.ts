@@ -47,7 +47,9 @@ export function waLink(phone: string, text: string): string {
 
 export function brandEmailHtml(brand: BrandInfo, title: string, bodyHtml: string, cta?: { url: string; label: string }): string {
   const color = brand.primaryColor || '#4f46e5';
-  const logo = brand.logoUrl && /^https?:/.test(brand.logoUrl) ? `<img src="${brand.logoUrl}" alt="${brand.displayName}" style="max-height:56px;margin-bottom:8px"/>` : '';
+  const site = (process.env.FRONTEND_URL || 'https://www.maxhubng.company').replace(/\/$/, '');
+  const logoSrc = brand.logoUrl ? (/^https?:/.test(brand.logoUrl) ? brand.logoUrl : `${site}${brand.logoUrl.startsWith('/') ? '' : '/'}${brand.logoUrl}`) : '';
+  const logo = logoSrc ? `<div style="background:#fff;display:inline-block;padding:6px 10px;border-radius:8px;margin-bottom:8px"><img src="${logoSrc}" alt="${brand.displayName}" style="max-height:48px;display:block"/></div>` : '';
   return `<!DOCTYPE html><html><body style="margin:0;background:#f4f5f7;font-family:Segoe UI,Arial,sans-serif">
 <table width="100%" cellpadding="0" cellspacing="0" style="padding:28px 0"><tr><td align="center">
 <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:14px;overflow:hidden;border:1px solid #e5e7eb">

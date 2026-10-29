@@ -37,11 +37,11 @@ function initChatSocket(httpServer) {
     const io = new socket_io_1.Server(httpServer, {
         cors: {
             origin: (origin, cb) => {
-                if (!origin || allowedOrigins.includes(origin) || origin.includes('onrender.com') || origin.includes('vercel.app') || origin.includes('netlify.app')) {
+                if (!origin || allowedOrigins.includes(origin) || /^https:\/\/([a-z0-9-]+\.)*maxhubng\.company$/i.test(origin) || origin.includes('onrender.com') || origin.includes('vercel.app') || origin.includes('netlify.app') || /^http:\/\/localhost(:\d+)?$/.test(origin)) {
                     cb(null, true);
                 }
                 else {
-                    cb(null, true);
+                    cb(new Error('Origin not allowed'), false);
                 }
             },
             credentials: true,
@@ -56,7 +56,7 @@ function initChatSocket(httpServer) {
                 socket.handshake.headers?.authorization?.replace('Bearer ', '');
             if (!token)
                 return next(new Error('Authentication required'));
-            const secret = process.env.JWT_SECRET || 'fallback_secret';
+            const secret = process.env.JWT_SECRET || 'access-secret-key';
             const payload = jsonwebtoken_1.default.verify(token, secret);
             socket.userId = Number(payload.id || payload.userId);
             socket.userEmail = payload.email;
@@ -73,6 +73,12 @@ function initChatSocket(httpServer) {
         onlineUsers.get(userId).add(socket.id);
         socketUserMap.set(socket.id, userId);
         broadcastPresence(io, userId, true);
+        try {
+            await require('../erp/channels').syncUserChannels(userId);
+        }
+        catch (err) {
+            console.error('[ChatSocket] channel sync failed:', err.message);
+        }
         try {
             const participations = await ConversationParticipant_model_1.ConversationParticipant.findAll({
                 where: { userId },
@@ -261,6 +267,7 @@ function initChatSocket(httpServer) {
             catch {
             }
         });
+        require('../erp/calls').registerCallHandlers(io, socket, userId, { emitToUser, getUserSockets });
         socket.on('disconnect', () => {
             const sockets = onlineUsers.get(userId);
             if (sockets) {

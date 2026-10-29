@@ -101,7 +101,7 @@ export const BRANDS: BrandProfileSeed[] = [
     phone: '+2348170020431',
     whatsapp: '+2348170020431',
     address: HQ_ADDRESS,
-    logoPath: '',
+    logoPath: '/brands/maxfood.svg',
     primaryColor: '#2f7d32',
     secondaryColor: '#f2a900',
     receiptPrefix: 'MFF',

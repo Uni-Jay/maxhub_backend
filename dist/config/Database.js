@@ -37,10 +37,12 @@ exports.DatabaseConfig = void 0;
 const sequelize_1 = require("sequelize");
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
-const SSL_OPTIONS = {
-    require: true,
-    rejectUnauthorized: false,
-};
+const SSL_OPTIONS = process.env.DB_SSL === 'false'
+    ? false
+    : {
+        require: true,
+        rejectUnauthorized: false,
+    };
 const logging = process.env.NODE_ENV === 'production'
     ? false
     : process.env.LOG_SQL === 'true'

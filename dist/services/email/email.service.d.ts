@@ -12,6 +12,7 @@ export interface SendEmailOptions {
         content: Buffer | string;
         contentType?: string;
     }[];
+    replyTo?: string;
 }
 export declare function resolveMailboxCredentials(emailVar: string, passwordVar: string): {
     user: string;

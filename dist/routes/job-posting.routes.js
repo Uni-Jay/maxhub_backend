@@ -16,7 +16,7 @@ const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
 const JobSyncService_1 = __importDefault(require("../services/JobSyncService"));
 const isSuperAdmin_1 = require("../utils/isSuperAdmin");
-const BUSINESS_UNITS = ['KS', 'VM', 'BM'];
+const BUSINESS_UNITS = ['KS', 'VM', 'BM', 'MF'];
 const router = (0, express_1.Router)();
 router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { page = 1, limit = 12, status, departmentId, jobType, search } = req.query;

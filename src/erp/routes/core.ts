@@ -57,6 +57,18 @@ export function coreRouter(): Router {
     return ok(res, row, 'Brand updated');
   }));
 
+  // Staff directory for "assigned to" pickers (active staff users, no students).
+  r.get('/people', wrap(async (_req, res) => {
+    const rows: any[] = await db.query(
+      `SELECT u.id, TRIM(COALESCE(u."firstName",'') || ' ' || COALESCE(u."lastName",'')) AS name, u.email, s.position, s."departmentId"
+       FROM users u LEFT JOIN staff s ON s."userId" = u.id AND s."deletedAt" IS NULL
+       WHERE u."deletedAt" IS NULL
+         AND NOT EXISTS (SELECT 1 FROM user_roles ur JOIN roles ro ON ro.id = ur."roleId" WHERE ur."userId" = u.id AND ur."deletedAt" IS NULL AND LOWER(ro.code) = 'student')
+       ORDER BY name`, { type: QueryTypes.SELECT },
+    );
+    return ok(res, rows.map((p) => ({ ...p, id: Number(p.id), name: p.name || p.email })));
+  }));
+
   // ── Payments & receipts ───────────────────────────────────────────────────
   r.get('/payments', wrap(async (req, res) => {
     const where: any = {}; const and: any[] = [];

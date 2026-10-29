@@ -14,11 +14,12 @@ const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
 const router = (0, express_1.Router)();
 function getThisFridayISO() {
-    const now = new Date();
-    const diff = (5 - now.getDay() + 7) % 7;
+    const now = new Date(new Date().toLocaleString('en-US', { timeZone: process.env.ERP_TIMEZONE || 'Africa/Lagos' }));
+    const back = (now.getDay() - 5 + 7) % 7;
     const friday = new Date(now);
-    friday.setDate(now.getDate() + diff);
-    return friday.toISOString().slice(0, 10);
+    friday.setDate(now.getDate() - back);
+    const p = (n) => String(n).padStart(2, '0');
+    return `${friday.getFullYear()}-${p(friday.getMonth() + 1)}-${p(friday.getDate())}`;
 }
 async function getStaffId(req) {
     const staff = await Staff_model_1.Staff.findOne({ where: { userId: req.user.id }, attributes: ['id'] });

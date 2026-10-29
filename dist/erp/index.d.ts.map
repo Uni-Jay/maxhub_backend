@@ -1,0 +1,1 @@
+{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../src/erp/index.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,MAAM,EAAqB,MAAM,SAAS,CAAC;AAQpD,OAAO,EAAE,gBAAgB,EAAE,MAAM,WAAW,CAAC;AAC7C,OAAO,EAAE,iBAAiB,EAAE,MAAM,aAAa,CAAC;AAGhD,wBAAgB,cAAc,CAAC,SAAS,EAAE,MAAM,GAAG,IAAI,CAQtD;AAGD,wBAAgB,iBAAiB,CAAC,SAAS,EAAE,MAAM,GAAG,IAAI,CAmBzD"}

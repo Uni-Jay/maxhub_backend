@@ -30,7 +30,7 @@ function getOrCreateTransporter(user, pass) {
     return transporter;
 }
 async function sendViaTransporter(transporter, from, options) {
-    const { to, subject, html, attachments } = options;
+    const { to, subject, html, attachments, replyTo } = options;
     if (!process.env.SMTP_HOST) {
         console.log(`[Email] (no SMTP_HOST configured) To: ${to} | From: ${from.name} <${from.address}> | Subject: ${subject}`);
         return true;
@@ -42,6 +42,7 @@ async function sendViaTransporter(transporter, from, options) {
             subject,
             html,
             attachments,
+            ...(replyTo ? { replyTo } : {}),
         });
         return true;
     }
