@@ -2,7 +2,7 @@ import { Op } from 'sequelize';
 import { JobPosting } from '../models/JobPosting.model';
 import { JobSyncLog } from '../models/JobSyncLog.model';
 
-type BusinessUnitCode = 'KS' | 'VM' | 'BM';
+type BusinessUnitCode = 'KS' | 'VM' | 'BM' | 'MF';
 
 interface BusinessUnitConfig {
   name: string;
@@ -20,7 +20,11 @@ interface BusinessUnitConfig {
  * Everything outbound is isolated in pushToPortal() below — once the real
  * contract is confirmed per site, that's the only place that needs to change.
  */
-const BUSINESS_UNIT_CONFIG: Record<BusinessUnitCode, BusinessUnitConfig> = {
+// Note: every open posting is also published on the public careers feed
+// (/api/public/jobs + widget.js), which the brand sites can embed directly —
+// that works without any receiving API on the site. MF has no website yet,
+// so it relies on the feed only.
+const BUSINESS_UNIT_CONFIG: Partial<Record<BusinessUnitCode, BusinessUnitConfig>> = {
   KS: { name: 'Kurios SAT', baseUrl: 'https://www.kurios-sat.tech', apiKeyEnv: 'JOB_SYNC_KS_API_KEY' },
   VM: { name: 'VisaMax Travels', baseUrl: 'https://www.visamaxtravels.net', apiKeyEnv: 'JOB_SYNC_VM_API_KEY' },
   BM: { name: 'BeadMax', baseUrl: 'https://www.beadmax.net', apiKeyEnv: 'JOB_SYNC_BM_API_KEY' },
@@ -113,6 +117,7 @@ class JobSyncService {
   async syncCreate(posting: JobPosting): Promise<void> {
     if (!posting.businessUnit) return;
     const config = BUSINESS_UNIT_CONFIG[posting.businessUnit];
+    if (!config) return; // brand has no website receiving API — public feed only
     const result = await this.pushToPortal(config, 'POST', '/api/jobs', buildPayload(posting));
     let externalId: string | undefined;
     if (result.ok && result.body) {
@@ -124,6 +129,7 @@ class JobSyncService {
   async syncUpdate(posting: JobPosting): Promise<void> {
     if (!posting.businessUnit || !posting.externalJobId) return;
     const config = BUSINESS_UNIT_CONFIG[posting.businessUnit];
+    if (!config) return; // brand has no website receiving API — public feed only
     const result = await this.pushToPortal(config, 'PUT', `/api/jobs/${posting.externalJobId}`, buildPayload(posting));
     await this.applyResult(posting, 'Update', result);
   }
@@ -131,6 +137,7 @@ class JobSyncService {
   async syncDelete(posting: JobPosting): Promise<void> {
     if (!posting.businessUnit || !posting.externalJobId) return;
     const config = BUSINESS_UNIT_CONFIG[posting.businessUnit];
+    if (!config) return; // brand has no website receiving API — public feed only
     const result = await this.pushToPortal(config, 'DELETE', `/api/jobs/${posting.externalJobId}`);
     await this.applyResult(posting, 'Delete', result);
   }

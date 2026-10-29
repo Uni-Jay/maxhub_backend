@@ -10,13 +10,18 @@ import AuthMiddleware from '@middleware/AuthMiddleware';
 
 const router = Router();
 
-/** This week's Friday (matches the frontend's getThisFriday(): today if already Friday, else the upcoming one). */
+/**
+ * Reporting week's Friday. Weekly reports are submitted on Monday morning for
+ * the week that just ended, so this is the most recent Friday on or before
+ * today (today if it's Friday). Must match getThisFriday() in the frontend.
+ */
 function getThisFridayISO(): string {
-  const now = new Date();
-  const diff = (5 - now.getDay() + 7) % 7;
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: process.env.ERP_TIMEZONE || 'Africa/Lagos' }));
+  const back = (now.getDay() - 5 + 7) % 7;
   const friday = new Date(now);
-  friday.setDate(now.getDate() + diff);
-  return friday.toISOString().slice(0, 10);
+  friday.setDate(now.getDate() - back);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${friday.getFullYear()}-${p(friday.getMonth() + 1)}-${p(friday.getDate())}`;
 }
 
 async function getStaffId(req: Request): Promise<bigint | null> {

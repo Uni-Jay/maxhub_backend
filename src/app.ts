@@ -170,6 +170,7 @@ import { AIReminder } from './modules/ai/models/AIReminder.model';
 
 // Import scheduler
 import { startScheduler } from './services/SchedulerService';
+import { runErpMigrations, startErpScheduler } from './erp';
 
 // Load environment variables
 dotenv.config();
@@ -190,6 +191,9 @@ class AppBootstrapper {
     // Security headers
     this.app.use(helmet());
 
+    // Behind Render's proxy — needed for correct client IPs (rate limiting) and https URLs.
+    this.app.set('trust proxy', 1);
+
     // CORS
     const allowedOrigins = (
       process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174,http://localhost:3000'
@@ -206,8 +210,12 @@ class AppBootstrapper {
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     };
-    this.app.options('*', cors(corsOptions));
-    this.app.use(cors(corsOptions));
+    // /api/public/* (careers widget, document signing, tracking) sets its own open CORS headers.
+    const corsMw = cors(corsOptions);
+    const skipPublic = (req: Request, res: Response, next: NextFunction) =>
+      req.path.startsWith('/api/public') ? next() : corsMw(req, res, next);
+    this.app.options('*', skipPublic);
+    this.app.use(skipPublic);
 
     // Request body parsing
     this.app.use(express.json({ limit: '10mb' }));
@@ -454,6 +462,10 @@ class AppBootstrapper {
       // Setup routes and error handling
       this.initRoutes();
 
+      if (process.env.NODE_ENV === 'production' && (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32)) {
+        console.error('⚠️  SECURITY: JWT_SECRET is missing or shorter than 32 characters — set a long random value in Render.');
+      }
+
       // Database connection
       console.log('📡 Connecting to database...');
       await this.sequelize.authenticate();
@@ -481,8 +493,12 @@ class AppBootstrapper {
         console.log('ℹ️  Database sync skipped (DB_SYNC=none)');
       }
 
+      // ERP v2: create new tables / brand departments / channels (idempotent, never touches users)
+      await runErpMigrations(this.sequelize);
+
       // Start scheduler (cron jobs)
       startScheduler();
+      startErpScheduler();
 
       // Start server — use http.createServer with increased maxHeaderSize
       // to handle large JWT tokens containing roles/permissions arrays
@@ -492,6 +508,7 @@ class AppBootstrapper {
       // Initialize Socket.IO chat server
       const io = initChatSocket(server);
       this.app.set('io', io);
+      (global as any).__maxhubIO = io;
       console.log('✅ Socket.IO chat server initialized');
 
       server.listen(port, () => {

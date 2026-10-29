@@ -10,6 +10,8 @@ export interface SendEmailOptions {
   subject: string;
   html: string;
   attachments?: { filename: string; content: Buffer | string; contentType?: string }[];
+  /** Optional Reply-To (e.g. a brand mailbox when sending from the shared account). */
+  replyTo?: string;
 }
 
 /**
@@ -60,7 +62,7 @@ export async function sendViaTransporter(
   from: MailSender,
   options: SendEmailOptions
 ): Promise<boolean> {
-  const { to, subject, html, attachments } = options;
+  const { to, subject, html, attachments, replyTo } = options;
 
   if (!process.env.SMTP_HOST) {
     console.log(`[Email] (no SMTP_HOST configured) To: ${to} | From: ${from.name} <${from.address}> | Subject: ${subject}`);
@@ -74,6 +76,7 @@ export async function sendViaTransporter(
       subject,
       html,
       attachments,
+      ...(replyTo ? { replyTo } : {}),
     });
     return true;
   } catch (err) {

@@ -3,10 +3,15 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-const SSL_OPTIONS = {
-  require: true,
-  rejectUnauthorized: false,
-};
+// DB_SSL=false only for a local, non-SSL Postgres (dev/testing). Production
+// (Supabase) always keeps SSL on.
+const SSL_OPTIONS: any =
+  process.env.DB_SSL === 'false'
+    ? false
+    : {
+        require: true,
+        rejectUnauthorized: false,
+      };
 
 const logging =
   process.env.NODE_ENV === 'production'

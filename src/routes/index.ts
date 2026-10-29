@@ -33,11 +33,17 @@ function setupRoutes(app: any): void {
   apiRouter.use(AuthMiddleware.pagination);
   apiRouter.use(AuthMiddleware.sorting);
 
+  // ERP v2 public endpoints (careers feed, document signing, tracking) + auth rate limits
+  require('../erp').mountErpPublic(apiRouter);
+
   // Authentication routes (public)
   apiRouter.use('/auth', require('./auth.routes').default);
 
   // Protected routes - require authentication
   apiRouter.use(AuthMiddleware.verifyToken);
+
+  // ERP v2: self-approval guard (runs before module routes) + brand modules under /api/erp
+  require('../erp').mountErpProtected(apiRouter);
 
   // Dashboard routes
   apiRouter.use('/dashboards', require('./dashboard.routes').default);

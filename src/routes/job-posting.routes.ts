@@ -12,7 +12,7 @@ import AuthMiddleware from '@middleware/AuthMiddleware';
 import JobSyncService from '@services/JobSyncService';
 import { isSuperAdmin } from '@utils/isSuperAdmin';
 
-const BUSINESS_UNITS = ['KS', 'VM', 'BM'];
+const BUSINESS_UNITS = ['KS', 'VM', 'BM', 'MF'];
 
 const router = Router();
 

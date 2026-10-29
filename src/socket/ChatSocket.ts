@@ -48,10 +48,10 @@ export function initChatSocket(httpServer: HttpServer): SocketServer {
   const io = new SocketServer(httpServer, {
     cors: {
       origin: (origin, cb) => {
-        if (!origin || allowedOrigins.includes(origin) || origin.includes('onrender.com') || origin.includes('vercel.app') || origin.includes('netlify.app')) {
+        if (!origin || allowedOrigins.includes(origin) || /^https:\/\/([a-z0-9-]+\.)*maxhubng\.company$/i.test(origin) || origin.includes('onrender.com') || origin.includes('vercel.app') || origin.includes('netlify.app') || /^http:\/\/localhost(:\d+)?$/.test(origin)) {
           cb(null, true);
         } else {
-          cb(null, true); // permissive for ERP — tighten per environment
+          cb(new Error('Origin not allowed'), false);
         }
       },
       credentials: true,
@@ -69,7 +69,7 @@ export function initChatSocket(httpServer: HttpServer): SocketServer {
         socket.handshake.headers?.authorization?.replace('Bearer ', '');
       if (!token) return next(new Error('Authentication required'));
 
-      const secret = process.env.JWT_SECRET || 'fallback_secret';
+      const secret = process.env.JWT_SECRET || 'access-secret-key'; // must match AuthMiddleware
       const payload = jwt.verify(token, secret) as any;
       (socket as any).userId = Number(payload.id || payload.userId);
       (socket as any).userEmail = payload.email;
@@ -87,6 +87,13 @@ export function initChatSocket(httpServer: HttpServer): SocketServer {
     onlineUsers.get(userId)!.add(socket.id);
     socketUserMap.set(socket.id, userId);
     broadcastPresence(io, userId, true);
+
+    // Make sure company / department / branch channels include this user.
+    try {
+      await require('../erp/channels').syncUserChannels(userId);
+    } catch (err) {
+      console.error('[ChatSocket] channel sync failed:', (err as Error).message);
+    }
 
     // Join all conversation rooms this user participates in
     try {
@@ -327,6 +334,9 @@ export function initChatSocket(httpServer: HttpServer): SocketServer {
         // non-fatal — worst case the client doesn't get live updates for this room
       }
     });
+
+    // ── Voice / video calls (WebRTC signaling) ────────────────────────────
+    require('../erp/calls').registerCallHandlers(io, socket, userId, { emitToUser, getUserSockets });
 
     // ── Disconnect ─────────────────────────────────────────────────────────
     socket.on('disconnect', () => {
