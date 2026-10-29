@@ -520,6 +520,7 @@ router.post('/conversations/:id/messages', ErrorMiddleware.asyncHandler(async (r
   const io = (req as any).app?.get('io');
   if (io) {
     io.to(`conv:${(conversation as any).id}`).emit('chat:message', full?.toJSON());
+    require('../erp/chatNotify').notifyChatMessage(io, full?.toJSON(), Number((conversation as any).id), Number(user.id));
   }
 
   // req.user comes from the JWT, which only carries id/email/roles/

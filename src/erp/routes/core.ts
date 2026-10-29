@@ -26,6 +26,21 @@ async function canEditBrandContent(req: any, departmentId: number | null): Promi
 export function coreRouter(): Router {
   const r = Router();
 
+  // ── Desktop / phone pop-up notifications (Web Push) ──────────────────────
+  r.get('/push/key', wrap(async (_req, res) => ok(res, { publicKey: await require('../push').initPush() })));
+  r.post('/push/subscribe', wrap(async (req, res) => {
+    await require('../push').saveSubscription(userId(req), req.body?.subscription, req.get('user-agent'));
+    return ok(res, null, 'Notifications enabled');
+  }));
+  r.post('/push/unsubscribe', wrap(async (req, res) => {
+    if (req.body?.endpoint) await require('../push').removeSubscription(String(req.body.endpoint));
+    return ok(res, null, 'Removed');
+  }));
+  r.post('/push/test', wrap(async (req, res) => {
+    await require('../push').pushToUsers([userId(req)], { title: 'MaxHub notifications are on', body: 'You will see alerts here even when MaxHub is in the background.', url: '/notifications', tag: 'push-test' });
+    return ok(res, null, 'Test sent');
+  }));
+
   // ── Brands & structure ────────────────────────────────────────────────────
   r.get('/brands', wrap(async (_req, res) => {
     const profiles: any[] = await (ErpModels.BrandProfile as any).findAll({ order: [['id', 'ASC']], raw: true });

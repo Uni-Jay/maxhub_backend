@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const sequelize_1 = require("sequelize");
 const idOrUuid_1 = require("../utils/idOrUuid");
 const uuid_1 = require("uuid");
 const FeeReceipt_model_1 = require("../models/FeeReceipt.model");
@@ -12,6 +13,7 @@ const Course_model_1 = require("../models/Course.model");
 const Staff_model_1 = require("../models/Staff.model");
 const StudentProfile_model_1 = require("../models/StudentProfile.model");
 const User_model_1 = require("../models/User.model");
+const Department_model_1 = require("../models/Department.model");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = __importDefault(require("../middleware/AuthMiddleware"));
@@ -40,11 +42,16 @@ router.get('/', AuthMiddleware_1.default.requirePermission('LMS.FEE_RECEIPT.READ
             return ResponseFormatter_1.ResponseFormatter.success(res, []);
         courseWhere.departmentId = scope.departmentId;
     }
+    const schoolIds = await require('../utils/school').schoolDepartmentIds(req.query.school);
+    if (schoolIds) {
+        const ids = courseWhere.departmentId ? schoolIds.filter((i) => String(i) === String(courseWhere.departmentId)) : schoolIds;
+        courseWhere.departmentId = { [sequelize_1.Op.in]: ids.length ? ids : [-1] };
+    }
     const receipts = await FeeReceipt_model_1.FeeReceipt.findAll({
         include: [{
                 model: Enrollment_model_1.Enrollment, as: 'enrollment', required: true,
                 include: [
-                    { model: Course_model_1.Course, as: 'course', where: courseWhere, attributes: ['id', 'title', 'courseCode'] },
+                    { model: Course_model_1.Course, as: 'course', where: courseWhere, attributes: ['id', 'title', 'courseCode', 'departmentId'], include: [{ model: Department_model_1.Department, as: 'department', attributes: ['id', 'code', 'name'] }] },
                     { model: Staff_model_1.Staff, as: 'staff', include: [{ model: User_model_1.User, attributes: ['firstName', 'lastName', 'email'] }] },
                     { model: StudentProfile_model_1.StudentProfile, as: 'student', include: [{ model: User_model_1.User, as: 'user', attributes: ['firstName', 'lastName', 'email'] }] },
                 ],

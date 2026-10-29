@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const sequelize_1 = require("sequelize");
 const idOrUuid_1 = require("../utils/idOrUuid");
 const uuid_1 = require("uuid");
 const Enrollment_model_1 = require("../models/Enrollment.model");
@@ -42,10 +43,11 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
         where.staffId = staffId;
     if (studentId)
         where.studentId = studentId;
+    const schoolIds = await require('../utils/school').schoolDepartmentIds(req.query.school);
     const { count, rows } = await Enrollment_model_1.Enrollment.findAndCountAll({
         where,
         include: [
-            { model: Course_model_1.Course, as: 'course', attributes: ['id', 'uuid', 'title', 'courseCode', 'status'] },
+            { model: Course_model_1.Course, as: 'course', attributes: ['id', 'uuid', 'title', 'courseCode', 'status', 'departmentId'], ...(schoolIds ? { where: { departmentId: { [sequelize_1.Op.in]: schoolIds.length ? schoolIds : [-1] } }, required: true } : {}) },
             { model: Staff_model_1.Staff, as: 'staff', include: [{ model: User_model_1.User, attributes: ['firstName', 'lastName', 'email', 'avatar'] }] },
             { model: StudentProfile_model_1.StudentProfile, as: 'student', include: [{ model: User_model_1.User, as: 'user', attributes: ['firstName', 'lastName', 'email', 'avatar'] }] },
         ],
@@ -67,6 +69,14 @@ router.post('/', AuthMiddleware_1.default.requirePermission('LMS.ENROLLMENT.CREA
     const scope = getDeptScope(req, 'lms.enrollment.create.all');
     if (scope.scoped && String(course.departmentId) !== String(scope.departmentId)) {
         return ResponseFormatter_1.ResponseFormatter.error(res, 'You can only enroll students into courses in your own department', 403);
+    }
+    if (studentId) {
+        const { schoolOfDepartment } = require('../utils/school');
+        const student = await StudentProfile_model_1.StudentProfile.findByPk(studentId, { attributes: ['id', 'departmentId'] });
+        const [courseSchool, studentSchool] = await Promise.all([schoolOfDepartment(course.departmentId), schoolOfDepartment(student?.departmentId)]);
+        if (courseSchool && studentSchool && courseSchool !== studentSchool) {
+            return ResponseFormatter_1.ResponseFormatter.error(res, 'This student belongs to a different school than the course', 400);
+        }
     }
     const matchWhere = studentId ? { courseId, studentId } : { courseId, staffId };
     const existing = await Enrollment_model_1.Enrollment.findOne({ where: matchWhere });

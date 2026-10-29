@@ -26,6 +26,8 @@ function getUserSockets(userId) {
 }
 function emitToUser(io, userId, event, payload) {
     for (const sockId of getUserSockets(userId)) {
+        if (event === 'chat:join' && payload?.conversationId)
+            io.in(sockId).socketsJoin(`conv:${payload.conversationId}`);
         io.to(sockId).emit(event, payload);
     }
 }
@@ -140,6 +142,7 @@ function initChatSocket(httpServer) {
                 });
                 const payload = { ...(full?.toJSON() ?? message.toJSON()), tempId: data.tempId };
                 io.to(`conv:${data.conversationId}`).emit('chat:message', payload);
+                require('../erp/chatNotify').notifyChatMessage(io, payload, data.conversationId, userId);
                 const senderInfo = full?.sender;
                 const senderName = senderInfo ? `${senderInfo.firstName || ''} ${senderInfo.lastName || ''}`.trim() : 'Someone';
                 (0, mentions_1.detectAndNotifyMentions)({

@@ -3,6 +3,14 @@ import StudentService from '@services/StudentService';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ForbiddenError } from '@utils/ErrorHandler';
 import { getMultiDeptScope } from '@utils/departmentScope';
+import { schoolDepartmentIds, schoolDefaultDepartmentId, normaliseSchool } from '@utils/school';
+import { Company } from '@models/Company.model';
+
+/** Company row for a school (Kurios SAT = KURIOS_SAT, Beadmax Vocational School = BEADMAX_SCHOOL). */
+async function companyIdForSchool(school: 'KS' | 'BM'): Promise<bigint | undefined> {
+  const c: any = await Company.findOne({ where: { code: school === 'KS' ? 'KURIOS_SAT' : 'BEADMAX_SCHOOL' }, attributes: ['id'] });
+  return c ? BigInt(c.id) : undefined;
+}
 
 export class StudentController {
   // ─── ADMIN: Student Registration ──────────────────────────────
@@ -17,9 +25,17 @@ export class StudentController {
         }
       }
 
+      // Registering inside a school page (?school=KS|BM) files the student under that school.
+      const school = normaliseSchool(req.body.school);
+      let companyId = BigInt(req.body.companyId || 1);
+      if (school) {
+        if (!departmentId) departmentId = BigInt((await schoolDefaultDepartmentId(school)) || 0) || undefined;
+        companyId = (await companyIdForSchool(school)) ?? companyId;
+      }
+
       const student = await StudentService.registerStudent({
         ...req.body,
-        companyId: BigInt(req.body.companyId || 1),
+        companyId,
         departmentId,
         registeredById: BigInt(req.user!.id),
       });
@@ -35,6 +51,13 @@ export class StudentController {
       let departmentFilter: bigint | bigint[] | undefined = departmentId ? BigInt(departmentId) : undefined;
       if (scope.scoped) {
         departmentFilter = scope.departmentIds.map(id => BigInt(id));
+      }
+      // Kurios SAT and BeadMax are separate schools — ?school=KS|BM keeps them apart.
+      const schoolIds = await schoolDepartmentIds((req.query as any).school);
+      if (schoolIds) {
+        const allowed = Array.isArray(departmentFilter) ? departmentFilter.map(Number) : departmentFilter ? [Number(departmentFilter)] : null;
+        const ids = allowed ? schoolIds.filter((i) => allowed.includes(i)) : schoolIds;
+        departmentFilter = (ids.length ? ids : [-1]).map((i) => BigInt(i));
       }
 
       const result = await StudentService.getStudents({
@@ -71,7 +94,16 @@ export class StudentController {
         throw new ForbiddenError('You can only manage students in your own departments');
       }
 
-      const student = await StudentService.updateStudent(BigInt(req.params.id), req.body);
+      // Moving a student between schools (Admin/Super Admin, or anyone holding stm.student.update.all).
+      const body = { ...req.body };
+      delete body.school;
+      const school = normaliseSchool(req.body.school);
+      if (school && !scope.scoped) {
+        body.departmentId = await schoolDefaultDepartmentId(school);
+        const cid = await companyIdForSchool(school);
+        if (cid) body.companyId = cid;
+      }
+      const student = await StudentService.updateStudent(BigInt(req.params.id), body);
       ResponseFormatter.success(res, student, 'Student updated');
     } catch (e) { next(e); }
   }

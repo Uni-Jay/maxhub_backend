@@ -434,6 +434,7 @@ router.post('/conversations/:id/messages', ErrorMiddleware_1.ErrorMiddleware.asy
     const io = req.app?.get('io');
     if (io) {
         io.to(`conv:${conversation.id}`).emit('chat:message', full?.toJSON());
+        require('../erp/chatNotify').notifyChatMessage(io, full?.toJSON(), Number(conversation.id), Number(user.id));
     }
     const senderInfo = full?.sender;
     const senderName = senderInfo ? `${senderInfo.firstName || ''} ${senderInfo.lastName || ''}`.trim() : user.email;

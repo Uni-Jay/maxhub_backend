@@ -38,6 +38,13 @@ export async function notifyUser(userId: bigint | number | string, params: Notif
     priority: params.priority || 'Medium',
   } as any);
 
+  // Desktop/phone pop-up (the service worker only shows it if MaxHub isn't in front of them).
+  try {
+    require('../erp/push').pushToUsers([Number(userId)], {
+      title: params.title, body: params.message, url: params.actionUrl || '/notifications', tag: `notif-${(notification as any).id}`,
+    });
+  } catch { /* optional */ }
+
   if (io) {
     try {
       const { emitToUser } = require('../socket/ChatSocket');

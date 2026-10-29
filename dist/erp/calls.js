@@ -132,7 +132,7 @@ function registerCallHandlers(io, socket, userId, h) {
             if (sid !== socket.id)
                 io.to(sid).emit('call:answered_elsewhere', { callId });
         toCall(c, 'call:participant_joined', { callId, userId, name: await nameOf(userId) }, userId);
-        const peers = await Promise.all(existing.map(async (u) => ({ userId: u, name: await nameOf(u) })));
+        const peers = await Promise.all(existing.map(async (u) => ({ userId: u, name: await nameOf(u), media: c.media?.[u] || null })));
         ack?.({ ok: true, callType: c.callType, peers });
     });
     socket.on('call:decline', async ({ callId }) => {
@@ -156,10 +156,15 @@ function registerCallHandlers(io, socket, userId, h) {
         if (sid)
             io.to(sid).emit('call:signal', { callId, fromUserId: userId, data });
     });
-    socket.on('call:media_state', ({ callId, audio, video }) => {
+    const mediaState = new Map();
+    socket.on('call:media_state', ({ callId, audio, video, screenStreamId }) => {
         const c = calls.get(callId);
-        if (c && c.joined.has(userId))
-            toCall(c, 'call:media_state', { callId, userId, audio, video }, userId);
+        if (!c || !c.joined.has(userId))
+            return;
+        const state = { callId, userId, audio, video, screenStreamId: screenStreamId || null };
+        mediaState.set(callId, state);
+        c.media = { ...(c.media || {}), [userId]: state };
+        toCall(c, 'call:media_state', state, userId);
     });
     socket.on('call:invite', async ({ callId, userIds }) => {
         const c = calls.get(callId);

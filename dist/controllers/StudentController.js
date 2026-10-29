@@ -8,6 +8,12 @@ const StudentService_1 = __importDefault(require("../services/StudentService"));
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorHandler_1 = require("../utils/ErrorHandler");
 const departmentScope_1 = require("../utils/departmentScope");
+const school_1 = require("../utils/school");
+const Company_model_1 = require("../models/Company.model");
+async function companyIdForSchool(school) {
+    const c = await Company_model_1.Company.findOne({ where: { code: school === 'KS' ? 'KURIOS_SAT' : 'BEADMAX_SCHOOL' }, attributes: ['id'] });
+    return c ? BigInt(c.id) : undefined;
+}
 class StudentController {
     static async register(req, res, next) {
         try {
@@ -20,9 +26,16 @@ class StudentController {
                     departmentId = BigInt(scope.departmentIds[0]);
                 }
             }
+            const school = (0, school_1.normaliseSchool)(req.body.school);
+            let companyId = BigInt(req.body.companyId || 1);
+            if (school) {
+                if (!departmentId)
+                    departmentId = BigInt((await (0, school_1.schoolDefaultDepartmentId)(school)) || 0) || undefined;
+                companyId = (await companyIdForSchool(school)) ?? companyId;
+            }
             const student = await StudentService_1.default.registerStudent({
                 ...req.body,
-                companyId: BigInt(req.body.companyId || 1),
+                companyId,
                 departmentId,
                 registeredById: BigInt(req.user.id),
             });
@@ -39,6 +52,12 @@ class StudentController {
             let departmentFilter = departmentId ? BigInt(departmentId) : undefined;
             if (scope.scoped) {
                 departmentFilter = scope.departmentIds.map(id => BigInt(id));
+            }
+            const schoolIds = await (0, school_1.schoolDepartmentIds)(req.query.school);
+            if (schoolIds) {
+                const allowed = Array.isArray(departmentFilter) ? departmentFilter.map(Number) : departmentFilter ? [Number(departmentFilter)] : null;
+                const ids = allowed ? schoolIds.filter((i) => allowed.includes(i)) : schoolIds;
+                departmentFilter = (ids.length ? ids : [-1]).map((i) => BigInt(i));
             }
             const result = await StudentService_1.default.getStudents({
                 companyId: companyId ? BigInt(companyId) : undefined,
@@ -75,7 +94,16 @@ class StudentController {
             if (scope.scoped && (!existing.departmentId || !scope.departmentIds.includes(Number(existing.departmentId)))) {
                 throw new ErrorHandler_1.ForbiddenError('You can only manage students in your own departments');
             }
-            const student = await StudentService_1.default.updateStudent(BigInt(req.params.id), req.body);
+            const body = { ...req.body };
+            delete body.school;
+            const school = (0, school_1.normaliseSchool)(req.body.school);
+            if (school && !scope.scoped) {
+                body.departmentId = await (0, school_1.schoolDefaultDepartmentId)(school);
+                const cid = await companyIdForSchool(school);
+                if (cid)
+                    body.companyId = cid;
+            }
+            const student = await StudentService_1.default.updateStudent(BigInt(req.params.id), body);
             ResponseFormatter_1.ResponseFormatter.success(res, student, 'Student updated');
         }
         catch (e) {

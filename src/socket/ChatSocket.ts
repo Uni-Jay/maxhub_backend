@@ -32,6 +32,10 @@ function getUserSockets(userId: number): Set<string> {
  */
 export function emitToUser(io: SocketServer, userId: number, event: string, payload: any) {
   for (const sockId of getUserSockets(userId)) {
+    // 'chat:join' asks the client to join a new conversation room; join it
+    // server-side too, so messages arrive even if the client isn't on the
+    // Messages page (previously only that page handled the event).
+    if (event === 'chat:join' && payload?.conversationId) io.in(sockId).socketsJoin(`conv:${payload.conversationId}`);
     io.to(sockId).emit(event, payload);
   }
 }
@@ -184,6 +188,7 @@ export function initChatSocket(httpServer: HttpServer): SocketServer {
 
         // Broadcast to all in conversation room
         io.to(`conv:${data.conversationId}`).emit('chat:message', payload);
+        require('../erp/chatNotify').notifyChatMessage(io, payload, data.conversationId, userId);
 
         const senderInfo = (full as any)?.sender;
         const senderName = senderInfo ? `${senderInfo.firstName || ''} ${senderInfo.lastName || ''}`.trim() : 'Someone';

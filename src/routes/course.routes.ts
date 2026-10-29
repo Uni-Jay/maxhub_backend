@@ -49,6 +49,8 @@ router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response)
   if (status) where.status = status;
   if (departmentId) where.departmentId = departmentId;
   if (instructorId) where.instructorId = instructorId;
+  const schoolIds = await require('@utils/school').schoolDepartmentIds(req.query.school);
+  if (schoolIds) where.departmentId = { [Op.in]: schoolIds.length ? schoolIds : [-1] };
 
   const { count, rows } = await Course.findAndCountAll({
     where,
@@ -91,6 +93,8 @@ router.post('/', AuthMiddleware.requirePermission('LMS.COURSE.CREATE.ALL', 'LMS.
 
   const scope = getDeptScope(req, 'lms.course.create.all');
   let { departmentId } = req.body;
+  // Created from a school page (?school=KS|BM): file the course under that school.
+  if (!departmentId && req.body.school) departmentId = await require('@utils/school').schoolDefaultDepartmentId(req.body.school);
   if (scope.scoped) {
     if (!scope.departmentId) return ResponseFormatter.error(res, 'No department assigned to your account', 403);
     departmentId = scope.departmentId; // ignore any client-supplied departmentId — always her own
@@ -629,12 +633,14 @@ router.get('/:courseId/exams/:examId/results', ErrorMiddleware.asyncHandler(asyn
 
 // GET /api/courses/stats/overview
 router.get('/stats/overview', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const schoolIds = await require('@utils/school').schoolDepartmentIds(req.query.school);
+  const dw: any = schoolIds ? { departmentId: { [Op.in]: schoolIds.length ? schoolIds : [-1] } } : {};
   const [total, published, ongoing, completed, totalEnrollments] = await Promise.all([
-    Course.count(),
-    Course.count({ where: { status: 'Published' } }),
-    Course.count({ where: { status: 'Ongoing' } }),
-    Course.count({ where: { status: 'Completed' } }),
-    Enrollment.count(),
+    Course.count({ where: dw }),
+    Course.count({ where: { ...dw, status: 'Published' } }),
+    Course.count({ where: { ...dw, status: 'Ongoing' } }),
+    Course.count({ where: { ...dw, status: 'Completed' } }),
+    schoolIds ? Enrollment.count({ include: [{ model: Course, as: 'course', where: dw, required: true }] }) : Enrollment.count(),
   ]);
   ResponseFormatter.success(res, { total, published, ongoing, completed, totalEnrollments });
 }));

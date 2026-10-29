@@ -147,7 +147,7 @@ export function registerCallHandlers(
     for (const sid of h.getUserSockets(userId)) if (sid !== socket.id) io.to(sid).emit('call:answered_elsewhere', { callId });
     toCall(c, 'call:participant_joined', { callId, userId, name: await nameOf(userId) }, userId);
     // The newcomer sends offers to everyone already in the call.
-    const peers = await Promise.all(existing.map(async (u) => ({ userId: u, name: await nameOf(u) })));
+    const peers = await Promise.all(existing.map(async (u) => ({ userId: u, name: await nameOf(u), media: (c as any).media?.[u] || null })));
     ack?.({ ok: true, callType: c.callType, peers });
   });
 
@@ -169,9 +169,15 @@ export function registerCallHandlers(
     if (sid) io.to(sid).emit('call:signal', { callId, fromUserId: userId, data });
   });
 
-  socket.on('call:media_state', ({ callId, audio, video }: { callId: string; audio: boolean; video: boolean }) => {
+  // Mic / camera / screen-share state (screenStreamId tells others which incoming stream is the shared screen).
+  const mediaState = new Map<string, any>();
+  socket.on('call:media_state', ({ callId, audio, video, screenStreamId }: { callId: string; audio: boolean; video: boolean; screenStreamId?: string | null }) => {
     const c = calls.get(callId);
-    if (c && c.joined.has(userId)) toCall(c, 'call:media_state', { callId, userId, audio, video }, userId);
+    if (!c || !c.joined.has(userId)) return;
+    const state = { callId, userId, audio, video, screenStreamId: screenStreamId || null };
+    mediaState.set(callId, state);
+    (c as any).media = { ...((c as any).media || {}), [userId]: state };
+    toCall(c, 'call:media_state', state, userId);
   });
 
   socket.on('call:invite', async ({ callId, userIds }: { callId: string; userIds: number[] }) => {

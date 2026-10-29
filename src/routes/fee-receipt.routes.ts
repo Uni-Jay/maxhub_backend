@@ -8,6 +8,7 @@ import { Course } from '@models/Course.model';
 import { Staff } from '@models/Staff.model';
 import { StudentProfile } from '@models/StudentProfile.model';
 import { User } from '@models/User.model';
+import { Department } from '@models/Department.model';
 import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import AuthMiddleware from '@middleware/AuthMiddleware';
@@ -43,12 +44,17 @@ router.get('/', AuthMiddleware.requirePermission('LMS.FEE_RECEIPT.READ.ALL', 'LM
     if (!scope.departmentId) return ResponseFormatter.success(res, []);
     courseWhere.departmentId = scope.departmentId;
   }
+  const schoolIds = await require('@utils/school').schoolDepartmentIds(req.query.school);
+  if (schoolIds) {
+    const ids = courseWhere.departmentId ? schoolIds.filter((i: number) => String(i) === String(courseWhere.departmentId)) : schoolIds;
+    courseWhere.departmentId = { [Op.in]: ids.length ? ids : [-1] };
+  }
 
   const receipts = await FeeReceipt.findAll({
     include: [{
       model: Enrollment, as: 'enrollment', required: true,
       include: [
-        { model: Course, as: 'course', where: courseWhere, attributes: ['id', 'title', 'courseCode'] },
+        { model: Course, as: 'course', where: courseWhere, attributes: ['id', 'title', 'courseCode', 'departmentId'], include: [{ model: Department, as: 'department', attributes: ['id', 'code', 'name'] }] },
         { model: Staff, as: 'staff', include: [{ model: User, attributes: ['firstName', 'lastName', 'email'] }] },
         { model: StudentProfile, as: 'student', include: [{ model: User, as: 'user', attributes: ['firstName', 'lastName', 'email'] }] },
       ],

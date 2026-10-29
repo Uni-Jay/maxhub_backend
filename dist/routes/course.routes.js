@@ -47,6 +47,9 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
         where.departmentId = departmentId;
     if (instructorId)
         where.instructorId = instructorId;
+    const schoolIds = await require('../utils/school').schoolDepartmentIds(req.query.school);
+    if (schoolIds)
+        where.departmentId = { [sequelize_1.Op.in]: schoolIds.length ? schoolIds : [-1] };
     const { count, rows } = await Course_model_1.Course.findAndCountAll({
         where,
         include: [
@@ -81,6 +84,8 @@ router.post('/', AuthMiddleware_1.default.requirePermission('LMS.COURSE.CREATE.A
     }
     const scope = getDeptScope(req, 'lms.course.create.all');
     let { departmentId } = req.body;
+    if (!departmentId && req.body.school)
+        departmentId = await require('../utils/school').schoolDefaultDepartmentId(req.body.school);
     if (scope.scoped) {
         if (!scope.departmentId)
             return ResponseFormatter_1.ResponseFormatter.error(res, 'No department assigned to your account', 403);
@@ -544,12 +549,14 @@ router.get('/:courseId/exams/:examId/results', ErrorMiddleware_1.ErrorMiddleware
     ResponseFormatter_1.ResponseFormatter.success(res, results);
 }));
 router.get('/stats/overview', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const schoolIds = await require('../utils/school').schoolDepartmentIds(req.query.school);
+    const dw = schoolIds ? { departmentId: { [sequelize_1.Op.in]: schoolIds.length ? schoolIds : [-1] } } : {};
     const [total, published, ongoing, completed, totalEnrollments] = await Promise.all([
-        Course_model_1.Course.count(),
-        Course_model_1.Course.count({ where: { status: 'Published' } }),
-        Course_model_1.Course.count({ where: { status: 'Ongoing' } }),
-        Course_model_1.Course.count({ where: { status: 'Completed' } }),
-        Enrollment_model_1.Enrollment.count(),
+        Course_model_1.Course.count({ where: dw }),
+        Course_model_1.Course.count({ where: { ...dw, status: 'Published' } }),
+        Course_model_1.Course.count({ where: { ...dw, status: 'Ongoing' } }),
+        Course_model_1.Course.count({ where: { ...dw, status: 'Completed' } }),
+        schoolIds ? Enrollment_model_1.Enrollment.count({ include: [{ model: Course_model_1.Course, as: 'course', where: dw, required: true }] }) : Enrollment_model_1.Enrollment.count(),
     ]);
     ResponseFormatter_1.ResponseFormatter.success(res, { total, published, ongoing, completed, totalEnrollments });
 }));

@@ -24,6 +24,20 @@ async function canEditBrandContent(req, departmentId) {
 }
 function coreRouter() {
     const r = (0, express_1.Router)();
+    r.get('/push/key', (0, recordRouter_1.wrap)(async (_req, res) => (0, recordRouter_1.ok)(res, { publicKey: await require('../push').initPush() })));
+    r.post('/push/subscribe', (0, recordRouter_1.wrap)(async (req, res) => {
+        await require('../push').saveSubscription((0, helpers_1.userId)(req), req.body?.subscription, req.get('user-agent'));
+        return (0, recordRouter_1.ok)(res, null, 'Notifications enabled');
+    }));
+    r.post('/push/unsubscribe', (0, recordRouter_1.wrap)(async (req, res) => {
+        if (req.body?.endpoint)
+            await require('../push').removeSubscription(String(req.body.endpoint));
+        return (0, recordRouter_1.ok)(res, null, 'Removed');
+    }));
+    r.post('/push/test', (0, recordRouter_1.wrap)(async (req, res) => {
+        await require('../push').pushToUsers([(0, helpers_1.userId)(req)], { title: 'MaxHub notifications are on', body: 'You will see alerts here even when MaxHub is in the background.', url: '/notifications', tag: 'push-test' });
+        return (0, recordRouter_1.ok)(res, null, 'Test sent');
+    }));
     r.get('/brands', (0, recordRouter_1.wrap)(async (_req, res) => {
         const profiles = await models_1.ErpModels.BrandProfile.findAll({ order: [['id', 'ASC']], raw: true });
         const depts = await helpers_1.db.query(`SELECT d.id, d.code, d.name, d.description, d."parentDepartmentId", d."headUserId", d.status,

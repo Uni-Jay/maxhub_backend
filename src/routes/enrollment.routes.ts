@@ -42,10 +42,11 @@ router.get('/', ErrorMiddleware.asyncHandler(async (req: Request, res: Response)
   if (staffId) where.staffId = staffId;
   if (studentId) where.studentId = studentId;
 
+  const schoolIds = await require('@utils/school').schoolDepartmentIds(req.query.school);
   const { count, rows } = await Enrollment.findAndCountAll({
     where,
     include: [
-      { model: Course, as: 'course', attributes: ['id', 'uuid', 'title', 'courseCode', 'status'] },
+      { model: Course, as: 'course', attributes: ['id', 'uuid', 'title', 'courseCode', 'status', 'departmentId'], ...(schoolIds ? { where: { departmentId: { [Op.in]: schoolIds.length ? schoolIds : [-1] } }, required: true } : {}) },
       { model: Staff, as: 'staff', include: [{ model: User, attributes: ['firstName', 'lastName', 'email', 'avatar'] }] },
       { model: StudentProfile, as: 'student', include: [{ model: User, as: 'user', attributes: ['firstName', 'lastName', 'email', 'avatar'] }] },
     ],
@@ -68,6 +69,16 @@ router.post('/', AuthMiddleware.requirePermission('LMS.ENROLLMENT.CREATE.ALL', '
   const scope = getDeptScope(req, 'lms.enrollment.create.all');
   if (scope.scoped && String(course.departmentId) !== String(scope.departmentId)) {
     return ResponseFormatter.error(res, 'You can only enroll students into courses in your own department', 403);
+  }
+
+  // A Kurios SAT student can't be enrolled in a BeadMax course (and vice versa).
+  if (studentId) {
+    const { schoolOfDepartment } = require('@utils/school');
+    const student = await StudentProfile.findByPk(studentId, { attributes: ['id', 'departmentId'] });
+    const [courseSchool, studentSchool] = await Promise.all([schoolOfDepartment(course.departmentId), schoolOfDepartment((student as any)?.departmentId)]);
+    if (courseSchool && studentSchool && courseSchool !== studentSchool) {
+      return ResponseFormatter.error(res, 'This student belongs to a different school than the course', 400);
+    }
   }
 
   const matchWhere = studentId ? { courseId, studentId } : { courseId, staffId };

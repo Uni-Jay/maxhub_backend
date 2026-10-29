@@ -16,6 +16,12 @@ async function notifyUser(userId, params, io) {
         deliveryChannel: 'InApp',
         priority: params.priority || 'Medium',
     });
+    try {
+        require('../erp/push').pushToUsers([Number(userId)], {
+            title: params.title, body: params.message, url: params.actionUrl || '/notifications', tag: `notif-${notification.id}`,
+        });
+    }
+    catch { }
     if (io) {
         try {
             const { emitToUser } = require('../socket/ChatSocket');
