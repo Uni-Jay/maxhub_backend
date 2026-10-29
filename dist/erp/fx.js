@@ -56,14 +56,14 @@ async function refreshMarketRates() {
     await models_1.ErpModels.Setting.upsert({ key: KEY, value: next });
     return next;
 }
-async function backfillPaymentNgn() {
-    const rows = await helpers_1.db.query(`SELECT id, amount, currency FROM erp_payments WHERE "amountNgn" IS NULL`, { type: sequelize_1.QueryTypes.SELECT }).catch(() => []);
+async function backfillPaymentNgn(table = 'erp_payments') {
+    const rows = await helpers_1.db.query(`SELECT id, amount, currency FROM ${table} WHERE "amountNgn" IS NULL`, { type: sequelize_1.QueryTypes.SELECT }).catch(() => []);
     let n = 0;
     for (const r of rows) {
         const { amountNgn, fxRate } = await toNgn(r.amount, r.currency);
         if (amountNgn === null)
             continue;
-        await helpers_1.db.query(`UPDATE erp_payments SET "amountNgn" = :a, "fxRate" = :r WHERE id = :id`, { replacements: { a: amountNgn, r: fxRate, id: r.id } });
+        await helpers_1.db.query(`UPDATE ${table} SET "amountNgn" = :a, "fxRate" = :r WHERE id = :id`, { replacements: { a: amountNgn, r: fxRate, id: r.id } });
         n++;
     }
     return n;

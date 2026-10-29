@@ -15,6 +15,6 @@ export declare function toNgn(amount: any, currency?: string | null): Promise<{
     fxRate: number | null;
 }>;
 export declare function refreshMarketRates(): Promise<FxState>;
-export declare function backfillPaymentNgn(): Promise<number>;
+export declare function backfillPaymentNgn(table?: 'erp_payments' | 'erp_expenses'): Promise<number>;
 export declare function fxRouter(): Router;
 //# sourceMappingURL=fx.d.ts.map

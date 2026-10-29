@@ -164,6 +164,9 @@ function profitRouter() {
     }));
     r.get('/expense-categories', (0, recordRouter_1.wrap)(async (_req, res) => (0, recordRouter_1.ok)(res, exports.EXPENSE_CATEGORIES)));
     r.get('/profit', (0, recordRouter_1.wrap)(async (req, res) => {
+        const fx = require('./fx');
+        await fx.backfillPaymentNgn('erp_payments').catch(() => 0);
+        await fx.backfillPaymentNgn('erp_expenses').catch(() => 0);
         if (!canSee(req))
             return (0, recordRouter_1.fail)(res, 403, 'Only management and Accounts can see profit & loss');
         const now = new Date();

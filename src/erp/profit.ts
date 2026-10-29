@@ -186,6 +186,10 @@ export function profitRouter(): Router {
 
   /** GET /erp/profit?year=2026&month=10&share=1 */
   r.get('/profit', wrap(async (req, res) => {
+    // Foreign money recorded before a rate was known gets its naira value now.
+    const fx = require('./fx');
+    await fx.backfillPaymentNgn('erp_payments').catch(() => 0);
+    await fx.backfillPaymentNgn('erp_expenses').catch(() => 0);
     if (!canSee(req)) return fail(res, 403, 'Only management and Accounts can see profit & loss');
     const now = new Date();
     const year = Number(req.query.year) || now.getFullYear();

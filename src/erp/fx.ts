@@ -65,15 +65,15 @@ export async function refreshMarketRates(): Promise<FxState> {
 }
 
 /** Fills in the naira value of any foreign payment that does not have one yet. */
-export async function backfillPaymentNgn(): Promise<number> {
+export async function backfillPaymentNgn(table: 'erp_payments' | 'erp_expenses' = 'erp_payments'): Promise<number> {
   const rows: any[] = await db.query(
-    `SELECT id, amount, currency FROM erp_payments WHERE "amountNgn" IS NULL`, { type: QueryTypes.SELECT },
+    `SELECT id, amount, currency FROM ${table} WHERE "amountNgn" IS NULL`, { type: QueryTypes.SELECT },
   ).catch(() => []);
   let n = 0;
   for (const r of rows) {
     const { amountNgn, fxRate } = await toNgn(r.amount, r.currency);
     if (amountNgn === null) continue;
-    await db.query(`UPDATE erp_payments SET "amountNgn" = :a, "fxRate" = :r WHERE id = :id`, { replacements: { a: amountNgn, r: fxRate, id: r.id } });
+    await db.query(`UPDATE ${table} SET "amountNgn" = :a, "fxRate" = :r WHERE id = :id`, { replacements: { a: amountNgn, r: fxRate, id: r.id } });
     n++;
   }
   return n;
