@@ -211,6 +211,8 @@ router.delete(
 // PAYROLL PERIOD ROUTES
 // ════════════════════════════════════════════════════════════════════════════
 
+const PERIOD_STATUSES = ['Draft', 'Processing', 'Processed', 'Approved', 'Transferred', 'Paid', 'Closed', 'Cancelled'];
+
 // ─── GET /payroll/periods ─────────────────────────────────────────────────────
 router.get(
   '/periods',
@@ -223,7 +225,13 @@ router.get(
 
     const where: Record<string, any> = {};
 
-    if (status) where.status = status;
+    if (status) {
+      // Unknown statuses used to crash the query (Postgres enum); just return none.
+      if (!PERIOD_STATUSES.includes(status)) {
+        return ResponseFormatter.paginated(res, [], 0, page, limit, 'Payroll periods retrieved');
+      }
+      where.status = status;
+    }
     if (year)   where.year   = parseInt(year);
 
     const { count, rows } = await PayrollPeriod.findAndCountAll({
@@ -348,12 +356,10 @@ router.patch(
     const { id } = req.params;
     const { status, remarks } = req.body;
 
-    const validStatuses = ['Draft', 'Processing', 'Processed', 'Approved', 'Transferred', 'Closed'];
-
-    if (!status || !validStatuses.includes(status)) {
+    if (!status || !PERIOD_STATUSES.includes(status)) {
       return ResponseFormatter.error(
         res,
-        `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
+        `Invalid status. Must be one of: ${PERIOD_STATUSES.join(', ')}`,
         400
       );
     }
@@ -376,6 +382,14 @@ router.patch(
     if (remarks) updatePayload.remarks = remarks;
 
     await period.update(updatePayload);
+
+    // Marking the period paid marks everyone's payslip for it paid (except those on hold).
+    if (status === 'Paid') {
+      await EmployeeSalary.update(
+        { status: 'Paid', paidOn: new Date() } as any,
+        { where: { payrollPeriodId: period.id, status: { [Op.notIn]: ['Paid', 'OnHold'] } } as any },
+      );
+    }
 
     return ResponseFormatter.success(res, period, `Payroll period status updated to '${status}'`);
   })

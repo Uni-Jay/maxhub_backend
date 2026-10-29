@@ -9,7 +9,7 @@ interface PayrollPeriodAttributes {
     endDate: Date;
     salaryProcessDate: Date;
     bankTransferDate?: Date;
-    status: 'Draft' | 'Processing' | 'Processed' | 'Approved' | 'Transferred' | 'Closed';
+    status: 'Draft' | 'Processing' | 'Processed' | 'Approved' | 'Transferred' | 'Paid' | 'Closed' | 'Cancelled';
     processedBy?: bigint;
     approvedBy?: bigint;
     approvalDate?: Date;
@@ -29,7 +29,7 @@ export declare class PayrollPeriod extends Model<PayrollPeriodAttributes, Payrol
     endDate: Date;
     salaryProcessDate: Date;
     bankTransferDate?: Date;
-    status: 'Draft' | 'Processing' | 'Processed' | 'Approved' | 'Transferred' | 'Closed';
+    status: 'Draft' | 'Processing' | 'Processed' | 'Approved' | 'Transferred' | 'Paid' | 'Closed' | 'Cancelled';
     processedBy?: bigint;
     approvedBy?: bigint;
     approvalDate?: Date;

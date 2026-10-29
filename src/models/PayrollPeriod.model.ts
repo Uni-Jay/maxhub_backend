@@ -16,7 +16,7 @@ interface PayrollPeriodAttributes {
   endDate: Date;
   salaryProcessDate: Date;
   bankTransferDate?: Date;
-  status: 'Draft' | 'Processing' | 'Processed' | 'Approved' | 'Transferred' | 'Closed';
+  status: 'Draft' | 'Processing' | 'Processed' | 'Approved' | 'Transferred' | 'Paid' | 'Closed' | 'Cancelled';
   processedBy?: bigint;
   approvedBy?: bigint;
   approvalDate?: Date;
@@ -38,7 +38,7 @@ export class PayrollPeriod extends Model<PayrollPeriodAttributes, PayrollPeriodC
   public endDate!: Date;
   public salaryProcessDate!: Date;
   public bankTransferDate?: Date;
-  public status!: 'Draft' | 'Processing' | 'Processed' | 'Approved' | 'Transferred' | 'Closed';
+  public status!: 'Draft' | 'Processing' | 'Processed' | 'Approved' | 'Transferred' | 'Paid' | 'Closed' | 'Cancelled';
   public processedBy?: bigint;
   public approvedBy?: bigint;
   public approvalDate?: Date;
@@ -102,7 +102,7 @@ export class PayrollPeriod extends Model<PayrollPeriodAttributes, PayrollPeriodC
           comment: 'Date of bank transfer',
         },
         status: {
-          type: DataTypes.ENUM('Draft', 'Processing', 'Processed', 'Approved', 'Transferred', 'Closed'),
+          type: DataTypes.ENUM('Draft', 'Processing', 'Processed', 'Approved', 'Transferred', 'Paid', 'Closed', 'Cancelled'),
           defaultValue: 'Draft',
           allowNull: false,
           comment: 'Payroll status',

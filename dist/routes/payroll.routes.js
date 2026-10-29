@@ -152,12 +152,17 @@ router.delete('/structures/:id', AuthMiddleware_1.AuthMiddleware.verifyToken, ca
     await structure.destroy();
     return ResponseFormatter_1.ResponseFormatter.success(res, null, 'Salary structure deleted successfully');
 }));
+const PERIOD_STATUSES = ['Draft', 'Processing', 'Processed', 'Approved', 'Transferred', 'Paid', 'Closed', 'Cancelled'];
 router.get('/periods', AuthMiddleware_1.AuthMiddleware.verifyToken, canViewPayroll(), AuthMiddleware_1.AuthMiddleware.pagination, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { page, limit, offset } = req.pagination;
     const { status, year } = req.query;
     const where = {};
-    if (status)
+    if (status) {
+        if (!PERIOD_STATUSES.includes(status)) {
+            return ResponseFormatter_1.ResponseFormatter.paginated(res, [], 0, page, limit, 'Payroll periods retrieved');
+        }
         where.status = status;
+    }
     if (year)
         where.year = parseInt(year);
     const { count, rows } = await PayrollPeriod_model_1.PayrollPeriod.findAndCountAll({
@@ -227,9 +232,8 @@ router.get('/periods/:id', AuthMiddleware_1.AuthMiddleware.verifyToken, canViewP
 router.patch('/periods/:id/status', AuthMiddleware_1.AuthMiddleware.verifyToken, canManagePayroll(), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { status, remarks } = req.body;
-    const validStatuses = ['Draft', 'Processing', 'Processed', 'Approved', 'Transferred', 'Closed'];
-    if (!status || !validStatuses.includes(status)) {
-        return ResponseFormatter_1.ResponseFormatter.error(res, `Invalid status. Must be one of: ${validStatuses.join(', ')}`, 400);
+    if (!status || !PERIOD_STATUSES.includes(status)) {
+        return ResponseFormatter_1.ResponseFormatter.error(res, `Invalid status. Must be one of: ${PERIOD_STATUSES.join(', ')}`, 400);
     }
     const period = await PayrollPeriod_model_1.PayrollPeriod.findOne({
         where: isNaN(Number(id)) ? { uuid: id } : { id },
@@ -245,6 +249,9 @@ router.patch('/periods/:id/status', AuthMiddleware_1.AuthMiddleware.verifyToken,
     if (remarks)
         updatePayload.remarks = remarks;
     await period.update(updatePayload);
+    if (status === 'Paid') {
+        await EmployeeSalary_model_1.EmployeeSalary.update({ status: 'Paid', paidOn: new Date() }, { where: { payrollPeriodId: period.id, status: { [sequelize_1.Op.notIn]: ['Paid', 'OnHold'] } } });
+    }
     return ResponseFormatter_1.ResponseFormatter.success(res, period, `Payroll period status updated to '${status}'`);
 }));
 router.get('/periods/:id/salaries', AuthMiddleware_1.AuthMiddleware.verifyToken, canViewPayroll(), AuthMiddleware_1.AuthMiddleware.pagination, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {

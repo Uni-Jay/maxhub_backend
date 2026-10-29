@@ -60,7 +60,7 @@ class PayrollPeriod extends sequelize_1.Model {
                 comment: 'Date of bank transfer',
             },
             status: {
-                type: sequelize_1.DataTypes.ENUM('Draft', 'Processing', 'Processed', 'Approved', 'Transferred', 'Closed'),
+                type: sequelize_1.DataTypes.ENUM('Draft', 'Processing', 'Processed', 'Approved', 'Transferred', 'Paid', 'Closed', 'Cancelled'),
                 defaultValue: 'Draft',
                 allowNull: false,
                 comment: 'Payroll status',

@@ -238,6 +238,15 @@ export async function runErpMigrations(sequelize: Sequelize): Promise<void> {
     }
   });
 
+  // 13. Pay periods: the Pay Periods screen uses "Paid" and "Cancelled", which the
+  // original status list did not include (filtering by them crashed the page).
+  await step('012-payroll-period-paid-cancelled', async () => {
+    const t = await q(`SELECT 1 FROM pg_type WHERE typname = 'enum_payroll_periods_status'`);
+    if (!t.length) return;
+    await exec(`ALTER TYPE "enum_payroll_periods_status" ADD VALUE IF NOT EXISTS 'Paid'`);
+    await exec(`ALTER TYPE "enum_payroll_periods_status" ADD VALUE IF NOT EXISTS 'Cancelled'`);
+  });
+
   // 8. Indexes that help the new screens.
   await step('006-indexes', async () => {
     await exec(`CREATE INDEX IF NOT EXISTS erp_payments_dept_idx ON erp_payments ("departmentId", "paidAt")`);

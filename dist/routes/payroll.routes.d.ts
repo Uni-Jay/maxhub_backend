@@ -3,7 +3,7 @@ export declare function getPayrollOverview(): Promise<{
     currentPeriod: {
         id: bigint;
         periodCode: string;
-        status: "Approved" | "Draft" | "Closed" | "Processing" | "Processed" | "Transferred";
+        status: "Approved" | "Paid" | "Draft" | "Cancelled" | "Closed" | "Processing" | "Processed" | "Transferred";
     } | null;
     currentMonth: {
         headcount: number;
