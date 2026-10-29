@@ -247,6 +247,12 @@ export async function runErpMigrations(sequelize: Sequelize): Promise<void> {
     await exec(`ALTER TYPE "enum_payroll_periods_status" ADD VALUE IF NOT EXISTS 'Cancelled'`);
   });
 
+  // 14. Recruitment: applications can end as "Hired".
+  await step('013-job-application-hired', async () => {
+    const t = await q(`SELECT 1 FROM pg_type WHERE typname = 'enum_job_applications_status'`);
+    if (t.length) await exec(`ALTER TYPE "enum_job_applications_status" ADD VALUE IF NOT EXISTS 'Hired'`);
+  });
+
   // 8. Indexes that help the new screens.
   await step('006-indexes', async () => {
     await exec(`CREATE INDEX IF NOT EXISTS erp_payments_dept_idx ON erp_payments ("departmentId", "paidAt")`);

@@ -87,7 +87,7 @@ function publicRouter() {
         await helpers_1.db.query(`INSERT INTO job_applications (uuid, "jobPostingId", "contactId", "applicantName", "applicantEmail", "applicantPhone", "resumeUrl", "applicationDate", status, source, notes, "createdAt", "updatedAt")
        VALUES (:uuid, :j, :c, :n, :e, :p, :r, NOW(), 'Applied', :src, :notes, NOW(), NOW())`, { replacements: { uuid: (0, uuid_1.v4)(), j: j.id, c: contact[0].id, n: name, e: email, p: phone, r: resumeUrl, src: `Website (${req.get('origin') || 'careers'})`.slice(0, 100), notes: String(req.body.coverLetter || '').slice(0, 5000) || null } });
         const hr = await (0, helpers_1.userIdsWithRoles)(['hr', 'admin', 'superadmin']);
-        await (0, helpers_1.notifyUsers)(req, hr, { title: 'New job application', message: `${name} applied for ${j.title} (${j.jobCode}) via the website.`, type: 'Alert', actionUrl: '/hr/jobs' });
+        await (0, helpers_1.notifyUsers)(req, hr, { title: 'New job application', message: `${name} applied for ${j.title} (${j.jobCode}) via the website.`, type: 'Alert', actionUrl: '/hr/recruitment' });
         (0, helpers_1.emitChange)(req, 'job_application', 'created');
         return (0, recordRouter_1.ok)(res, null, 'Thank you! Your application has been received.', 201);
     }));

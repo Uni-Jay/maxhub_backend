@@ -1,0 +1,1 @@
+{"version":3,"file":"compliance.d.ts","sourceRoot":"","sources":["../../src/erp/compliance.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,MAAM,EAAW,MAAM,SAAS,CAAC;AAc1C,eAAO,MAAM,iBAAiB,UAAwJ,CAAC;AACvL,eAAO,MAAM,cAAc,UAAiE,CAAC;AA2C7F,wBAAsB,uBAAuB,IAAI,OAAO,CAAC,MAAM,CAAC,CAgB/D;AAGD,wBAAsB,eAAe,IAAI,OAAO,CAAC,MAAM,CAAC,CAWvD;AAED,wBAAgB,gBAAgB,IAAI,MAAM,CAqPzC"}

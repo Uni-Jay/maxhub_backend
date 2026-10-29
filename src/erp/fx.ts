@@ -10,7 +10,7 @@ import { audit, db, isManagement, roleOf, toNum, userName } from './helpers';
  * set their own rate for any currency, which then wins.
  */
 
-export const CURRENCIES = ['NGN', 'USD', 'GBP', 'EUR', 'CAD', 'AED', 'GHS', 'ZAR', 'CNY', 'KES'];
+export const CURRENCIES = ['NGN', 'USD', 'GBP', 'EUR', 'CAD', 'AED', 'QAR', 'SAR', 'GHS', 'ZAR', 'CNY', 'KES'];
 const KEY = 'fxRates';
 
 export interface FxState {
@@ -87,7 +87,9 @@ export function fxRouter(): Router {
 
   r.get('/fx', wrap(async (req, res) => {
     let s = await fxState();
-    if (!s.updatedAt || Date.now() - new Date(s.updatedAt).getTime() > 24 * 3600_000) {
+    const missing = CURRENCIES.some((c) => c !== 'NGN' && !s.market?.[c]);
+    const age = s.updatedAt ? Date.now() - new Date(s.updatedAt).getTime() : Infinity;
+    if (age > 24 * 3600_000 || (missing && age > 3600_000)) {
       s = await refreshMarketRates().catch(() => s);
     }
     const rates = CURRENCIES.filter((c) => c !== 'NGN').map((c) => ({

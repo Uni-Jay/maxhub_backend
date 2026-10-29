@@ -109,6 +109,8 @@ function startErpScheduler() {
         }
     }), opts);
     node_cron_1.default.schedule('0 7 * * *', () => safe('birthdays', async () => { await require('./birthdays').runBirthdays(); }), opts);
+    node_cron_1.default.schedule('0 8 * * *', () => safe('training-expiry', async () => { await require('./compliance').trainingExpiryReminders(); }), opts);
+    node_cron_1.default.schedule('0 9 * * 1', () => safe('policy-reminders', async () => { await require('./compliance').policyReminders(); }), opts);
     node_cron_1.default.schedule('0 6 * * *', () => safe('fx-refresh', async () => {
         const fx = require('./fx');
         await fx.refreshMarketRates();

@@ -516,5 +516,103 @@ export function defineErpModels(sequelize: Sequelize): Record<string, ModelStati
     deductions: { type: DataTypes.JSONB, allowNull: true }, // [{name, amount}]
   }, { ...OPTS, tableName: 'erp_salary_breakdowns' });
 
+  /** Purchase requests: staff ask to buy → head of department → management → Accounts buys. */
+  ErpModels.PurchaseRequest = sequelize.define('ErpPurchaseRequest', {
+    id: ID(),
+    code: { type: DataTypes.STRING(40), allowNull: false, unique: true },
+    title: { type: DataTypes.STRING(200), allowNull: false },
+    items: { type: DataTypes.JSONB, allowNull: true },                 // [{ name, qty, unitPrice }]
+    category: { type: DataTypes.STRING(60), allowNull: false, defaultValue: 'Other' },
+    vendor: { type: DataTypes.STRING(160), allowNull: true },
+    total: MONEY(),
+    currency: { type: DataTypes.STRING(3), allowNull: false, defaultValue: 'NGN' },
+    amountNgn: { type: DataTypes.DECIMAL(15, 2), allowNull: true },
+    reason: { type: DataTypes.TEXT, allowNull: true },
+    neededBy: { type: DataTypes.DATEONLY, allowNull: true },
+    urgency: { type: DataTypes.STRING(10), allowNull: false, defaultValue: 'Normal' }, // Normal | Urgent
+    quoteUrl: { type: DataTypes.TEXT, allowNull: true },
+    status: { type: DataTypes.STRING(30), allowNull: false, defaultValue: 'Waiting for head of department' },
+    // Waiting for head of department | Waiting for management | Approved | Bought | Rejected | Cancelled
+    requestedById: FK(),
+    requestedByName: { type: DataTypes.STRING(200), allowNull: true },
+    history: { type: DataTypes.JSONB, allowNull: true },               // [{ at, by, action, note }]
+    boughtAt: { type: DataTypes.DATEONLY, allowNull: true },
+    actualAmount: { type: DataTypes.DECIMAL(15, 2), allowNull: true },
+    receiptUrl: { type: DataTypes.TEXT, allowNull: true },
+    expenseId: FK(),
+    departmentId: FK(),
+  }, { ...OPTS, tableName: 'erp_purchase_requests', indexes: [{ fields: ['status'] }, { fields: ['departmentId'] }, { fields: ['requestedById'] }] });
+
+  /** Monthly spending budget per brand (carried forward until changed). */
+  ErpModels.Budget = sequelize.define('ErpBudget', {
+    id: ID(),
+    departmentId: { type: DataTypes.BIGINT, allowNull: false },       // brand (top-level department)
+    year: { type: DataTypes.INTEGER, allowNull: false },
+    month: { type: DataTypes.INTEGER, allowNull: false },
+    amount: MONEY(),                                                   // naira
+    categories: { type: DataTypes.JSONB, allowNull: true },            // { 'Marketing & adverts': 200000 }
+    notes: { type: DataTypes.TEXT, allowNull: true },
+    updatedById: FK(),
+  }, { ...OPTS, tableName: 'erp_budgets', indexes: [{ unique: true, fields: ['departmentId', 'year', 'month'] }] });
+
+  /** Recruitment pipeline details for a job application. */
+  ErpModels.Candidate = sequelize.define('ErpCandidate', {
+    applicationId: { type: DataTypes.BIGINT, primaryKey: true },
+    stage: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'New' }, // New | Shortlisted | Interview | Offer | Hired | Rejected | Withdrawn
+    rating: { type: DataTypes.INTEGER, allowNull: true },             // 1-5
+    interview: { type: DataTypes.JSONB, allowNull: true },            // { at, mode, place, interviewerIds, feedback: [{by, rating, note, at}] }
+    offer: { type: DataTypes.JSONB, allowNull: true },                // { position, departmentId, salary, currency, startDate, employmentStatus, sentAt, response }
+    timeline: { type: DataTypes.JSONB, allowNull: true },             // [{ at, by, action, note }]
+    hiredStaffId: FK(),
+    rejectReason: { type: DataTypes.TEXT, allowNull: true },
+  }, { ...OPTS, tableName: 'erp_candidates' });
+
+  /** Company policies staff must read and accept. */
+  ErpModels.Policy = sequelize.define('ErpPolicy', {
+    id: ID(),
+    title: { type: DataTypes.STRING(200), allowNull: false },
+    category: { type: DataTypes.STRING(60), allowNull: false, defaultValue: 'General' },
+    summary: { type: DataTypes.TEXT, allowNull: true },
+    body: { type: DataTypes.TEXT, allowNull: true },
+    fileUrl: { type: DataTypes.TEXT, allowNull: true },
+    version: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
+    departmentId: FK(),                                                // null = everyone; else one brand
+    status: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'Draft' }, // Draft | Published | Archived
+    publishedAt: { type: DataTypes.DATE, allowNull: true },
+    acceptBy: { type: DataTypes.DATEONLY, allowNull: true },
+    createdById: FK(),
+  }, { ...OPTS, tableName: 'erp_policies' });
+
+  ErpModels.PolicyAck = sequelize.define('ErpPolicyAck', {
+    id: ID(),
+    policyId: { type: DataTypes.BIGINT, allowNull: false },
+    version: { type: DataTypes.INTEGER, allowNull: false },
+    userId: { type: DataTypes.BIGINT, allowNull: false },
+    name: { type: DataTypes.STRING(200), allowNull: true },
+    ip: { type: DataTypes.STRING(64), allowNull: true },
+  }, { ...OPTS, tableName: 'erp_policy_acks', indexes: [{ unique: true, fields: ['policyId', 'version', 'userId'] }] });
+
+  /** Courses, certificates and licences each staff member holds. */
+  ErpModels.TrainingRecord = sequelize.define('ErpTrainingRecord', {
+    id: ID(),
+    staffId: { type: DataTypes.BIGINT, allowNull: false },
+    title: { type: DataTypes.STRING(200), allowNull: false },
+    kind: { type: DataTypes.STRING(30), allowNull: false, defaultValue: 'Course' }, // Course | Certificate | Licence | Workshop | On-the-job
+    provider: { type: DataTypes.STRING(160), allowNull: true },
+    startDate: { type: DataTypes.DATEONLY, allowNull: true },
+    completedOn: { type: DataTypes.DATEONLY, allowNull: true },
+    expiresOn: { type: DataTypes.DATEONLY, allowNull: true },
+    status: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'Completed' }, // Planned | In progress | Completed
+    certificateUrl: { type: DataTypes.TEXT, allowNull: true },
+    cost: { type: DataTypes.DECIMAL(15, 2), allowNull: true },
+    currency: { type: DataTypes.STRING(3), allowNull: false, defaultValue: 'NGN' },
+    paidByCompany: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    verified: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    verifiedByName: { type: DataTypes.STRING(200), allowNull: true },
+    notes: { type: DataTypes.TEXT, allowNull: true },
+    remindedFor: { type: DataTypes.STRING(20), allowNull: true },     // '30d' | 'expired' — so reminders go once
+    createdById: FK(),
+  }, { ...OPTS, tableName: 'erp_training_records', indexes: [{ fields: ['staffId'] }, { fields: ['expiresOn'] }] });
+
   return ErpModels;
 }

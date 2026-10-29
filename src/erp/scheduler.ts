@@ -115,6 +115,12 @@ export function startErpScheduler(): void {
   // Every day 07:00 — birthday wishes (staff and clients).
   cron.schedule('0 7 * * *', () => safe('birthdays', async () => { await require('./birthdays').runBirthdays(); }), opts);
 
+  // Every day 08:00 — certificates expiring within 30 days or expired.
+  cron.schedule('0 8 * * *', () => safe('training-expiry', async () => { await require('./compliance').trainingExpiryReminders(); }), opts);
+
+  // Mondays 09:00 — policies people have not accepted yet.
+  cron.schedule('0 9 * * 1', () => safe('policy-reminders', async () => { await require('./compliance').policyReminders(); }), opts);
+
   // Every day 06:00 — refresh exchange rates and fill in naira values.
   cron.schedule('0 6 * * *', () => safe('fx-refresh', async () => {
     const fx = require('./fx');

@@ -12,7 +12,7 @@ const sequelize_1 = require("sequelize");
 const models_1 = require("./models");
 const recordRouter_1 = require("./recordRouter");
 const helpers_1 = require("./helpers");
-exports.CURRENCIES = ['NGN', 'USD', 'GBP', 'EUR', 'CAD', 'AED', 'GHS', 'ZAR', 'CNY', 'KES'];
+exports.CURRENCIES = ['NGN', 'USD', 'GBP', 'EUR', 'CAD', 'AED', 'QAR', 'SAR', 'GHS', 'ZAR', 'CNY', 'KES'];
 const KEY = 'fxRates';
 const EMPTY = { market: {}, manual: {}, updatedAt: null, source: 'none' };
 async function fxState() {
@@ -74,7 +74,9 @@ function fxRouter() {
     const r = (0, express_1.Router)();
     r.get('/fx', (0, recordRouter_1.wrap)(async (req, res) => {
         let s = await fxState();
-        if (!s.updatedAt || Date.now() - new Date(s.updatedAt).getTime() > 24 * 3600000) {
+        const missing = exports.CURRENCIES.some((c) => c !== 'NGN' && !s.market?.[c]);
+        const age = s.updatedAt ? Date.now() - new Date(s.updatedAt).getTime() : Infinity;
+        if (age > 24 * 3600000 || (missing && age > 3600000)) {
             s = await refreshMarketRates().catch(() => s);
         }
         const rates = exports.CURRENCIES.filter((c) => c !== 'NGN').map((c) => ({

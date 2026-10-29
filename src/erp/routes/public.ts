@@ -101,7 +101,7 @@ export function publicRouter(): Router {
       { replacements: { uuid: uuidv4(), j: j.id, c: contact[0].id, n: name, e: email, p: phone, r: resumeUrl, src: `Website (${req.get('origin') || 'careers'})`.slice(0, 100), notes: String(req.body.coverLetter || '').slice(0, 5000) || null } },
     );
     const hr = await userIdsWithRoles(['hr', 'admin', 'superadmin']);
-    await notifyUsers(req, hr, { title: 'New job application', message: `${name} applied for ${j.title} (${j.jobCode}) via the website.`, type: 'Alert', actionUrl: '/hr/jobs' });
+    await notifyUsers(req, hr, { title: 'New job application', message: `${name} applied for ${j.title} (${j.jobCode}) via the website.`, type: 'Alert', actionUrl: '/hr/recruitment' });
     emitChange(req, 'job_application', 'created');
     return ok(res, null, 'Thank you! Your application has been received.', 201);
   }));

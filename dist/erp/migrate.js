@@ -193,6 +193,11 @@ async function runErpMigrations(sequelize) {
         await exec(`ALTER TYPE "enum_payroll_periods_status" ADD VALUE IF NOT EXISTS 'Paid'`);
         await exec(`ALTER TYPE "enum_payroll_periods_status" ADD VALUE IF NOT EXISTS 'Cancelled'`);
     });
+    await step('013-job-application-hired', async () => {
+        const t = await q(`SELECT 1 FROM pg_type WHERE typname = 'enum_job_applications_status'`);
+        if (t.length)
+            await exec(`ALTER TYPE "enum_job_applications_status" ADD VALUE IF NOT EXISTS 'Hired'`);
+    });
     await step('006-indexes', async () => {
         await exec(`CREATE INDEX IF NOT EXISTS erp_payments_dept_idx ON erp_payments ("departmentId", "paidAt")`);
         await exec(`CREATE INDEX IF NOT EXISTS erp_travel_cases_stage_idx ON erp_travel_cases (stage)`);

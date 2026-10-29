@@ -142,10 +142,13 @@ async function notifyUsers(req, userIds, n, opts = {}) {
     const { notifyUser } = require('../utils/notify');
     const io = req?.app?.get?.('io') || global.__maxhubIO;
     const unique = [...new Set(userIds.filter((u) => u && u !== opts.excludeSelf))];
+    const VALID = ['Message', 'Mention', 'Assignment', 'Leave', 'Payroll', 'System', 'Alert', 'Other'];
+    const MAP = { Approval: 'Assignment', Task: 'Assignment', Reminder: 'Alert', Announcement: 'Alert', Meeting: 'Alert', Birthday: 'Other' };
+    const type = VALID.includes(String(n.type)) ? n.type : MAP[String(n.type)] || 'System';
     for (const uid of unique) {
         try {
             await notifyUser(uid, {
-                type: n.type || 'System', title: n.title, message: n.message, actionUrl: n.actionUrl,
+                type: type, title: n.title, message: n.message, actionUrl: n.actionUrl,
                 priority: n.priority || 'Medium', relatedEntityType: n.entityType, relatedEntityId: n.entityId,
             }, io);
         }
