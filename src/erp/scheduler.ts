@@ -89,6 +89,29 @@ export function startErpScheduler(): void {
   if (process.env.ERP_SCHEDULER === 'off') return;
   const opts: any = { timezone: TZ };
 
+  // Every day 07:15 — what needs attention today in each brand + customer reminders.
+  cron.schedule('15 7 * * *', () => safe('morning-reminders', async () => {
+    await require('./agenda').runMorningReminders();
+  }), opts);
+
+  // 1st of the month 06:30 — repeat monthly expenses (rent, internet…) for the new month.
+  cron.schedule('30 6 1 * *', () => safe('recurring-expenses', async () => {
+    const rows = await q(`SELECT * FROM erp_expenses e WHERE e.recurring = 'Monthly' AND e.status <> 'Cancelled'
+      AND e."paidAt" >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month' AND e."paidAt" < date_trunc('month', CURRENT_DATE)
+      AND NOT EXISTS (SELECT 1 FROM erp_expenses x WHERE x.meta->>'repeatOf' = e.id::text AND x."paidAt" >= date_trunc('month', CURRENT_DATE))`);
+    const { nextCode } = require('./helpers');
+    const { brandPrefix } = require('./recordRouter');
+    const { ErpModels } = require('./models');
+    for (const e of rows) {
+      await ErpModels.Expense.create({
+        code: await nextCode(`${await brandPrefix(e.departmentId)}-EXP`), title: e.title, category: e.category, vendor: e.vendor,
+        amount: e.amount, currency: e.currency, fxRate: e.fxRate, amountNgn: e.amountNgn, method: e.method, recurring: 'Monthly',
+        paidAt: new Date().toISOString().slice(0, 8) + String(Math.min(28, new Date(e.paidAt).getDate())).padStart(2, '0'),
+        notes: e.notes, departmentId: e.departmentId, createdById: e.createdById, meta: { repeatOf: String(e.id) },
+      });
+    }
+  }), opts);
+
   // Every day 06:00 — refresh exchange rates and fill in naira values.
   cron.schedule('0 6 * * *', () => safe('fx-refresh', async () => {
     const fx = require('./fx');

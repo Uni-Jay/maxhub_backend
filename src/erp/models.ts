@@ -405,6 +405,27 @@ export function defineErpModels(sequelize: Sequelize): Record<string, ModelStati
     ...SCOPE(),
   }, { ...OPTS, tableName: 'erp_shop_orders' });
 
+  /** Business expenses for profit & loss (rent, stock, shipping, adverts…). No brand = Head Office. */
+  ErpModels.Expense = sequelize.define('ErpExpense', {
+    id: ID(),
+    code: { type: DataTypes.STRING(40), allowNull: false, unique: true },
+    title: { type: DataTypes.STRING(200), allowNull: false },
+    category: { type: DataTypes.STRING(60), allowNull: false, defaultValue: 'Other' },
+    vendor: { type: DataTypes.STRING(160), allowNull: true },
+    amount: MONEY(),
+    currency: { type: DataTypes.STRING(3), allowNull: false, defaultValue: 'NGN' },
+    fxRate: { type: DataTypes.DECIMAL(14, 4), allowNull: true },
+    amountNgn: { type: DataTypes.DECIMAL(15, 2), allowNull: true },
+    paidAt: { type: DataTypes.DATEONLY, allowNull: false, defaultValue: DataTypes.NOW },
+    method: { type: DataTypes.STRING(30), allowNull: false, defaultValue: 'Transfer' },
+    reference: { type: DataTypes.STRING(120), allowNull: true },
+    receiptUrl: { type: DataTypes.TEXT, allowNull: true },
+    recurring: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'No' }, // No | Monthly
+    status: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'Paid' },  // Paid | Cancelled
+    notes: { type: DataTypes.TEXT, allowNull: true },
+    ...SCOPE(),
+  }, { ...OPTS, tableName: 'erp_expenses', indexes: [{ fields: ['paidAt'] }, { fields: ['departmentId'] }] });
+
   /** Every stock change for BeadMax and Maxfood products. */
   ErpModels.StockMovement = sequelize.define('ErpStockMovement', {
     id: ID(),

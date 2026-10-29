@@ -369,6 +369,25 @@ function defineErpModels(sequelize) {
         notes: { type: sequelize_1.DataTypes.TEXT, allowNull: true },
         ...SCOPE(),
     }, { ...OPTS, tableName: 'erp_shop_orders' });
+    exports.ErpModels.Expense = sequelize.define('ErpExpense', {
+        id: ID(),
+        code: { type: sequelize_1.DataTypes.STRING(40), allowNull: false, unique: true },
+        title: { type: sequelize_1.DataTypes.STRING(200), allowNull: false },
+        category: { type: sequelize_1.DataTypes.STRING(60), allowNull: false, defaultValue: 'Other' },
+        vendor: { type: sequelize_1.DataTypes.STRING(160), allowNull: true },
+        amount: MONEY(),
+        currency: { type: sequelize_1.DataTypes.STRING(3), allowNull: false, defaultValue: 'NGN' },
+        fxRate: { type: sequelize_1.DataTypes.DECIMAL(14, 4), allowNull: true },
+        amountNgn: { type: sequelize_1.DataTypes.DECIMAL(15, 2), allowNull: true },
+        paidAt: { type: sequelize_1.DataTypes.DATEONLY, allowNull: false, defaultValue: sequelize_1.DataTypes.NOW },
+        method: { type: sequelize_1.DataTypes.STRING(30), allowNull: false, defaultValue: 'Transfer' },
+        reference: { type: sequelize_1.DataTypes.STRING(120), allowNull: true },
+        receiptUrl: { type: sequelize_1.DataTypes.TEXT, allowNull: true },
+        recurring: { type: sequelize_1.DataTypes.STRING(20), allowNull: false, defaultValue: 'No' },
+        status: { type: sequelize_1.DataTypes.STRING(20), allowNull: false, defaultValue: 'Paid' },
+        notes: { type: sequelize_1.DataTypes.TEXT, allowNull: true },
+        ...SCOPE(),
+    }, { ...OPTS, tableName: 'erp_expenses', indexes: [{ fields: ['paidAt'] }, { fields: ['departmentId'] }] });
     exports.ErpModels.StockMovement = sequelize.define('ErpStockMovement', {
         id: ID(),
         brand: { type: sequelize_1.DataTypes.STRING(4), allowNull: false },

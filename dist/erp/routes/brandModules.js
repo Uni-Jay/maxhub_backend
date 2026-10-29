@@ -141,6 +141,17 @@ function brandModulesRouter() {
         model: 'CustomOrder', entity: 'custom_order', label: 'Custom order', codeSuffix: 'ORD', defaultBrand: 'BM-DSN',
         searchFields: ['customerName', 'title', 'customerPhone'], filterFields: ['stage', 'itemType'], stages: exports.STAGES.customOrder,
         actionUrl: (row) => `/beadmax/custom-orders?open=${row.id}`,
+        afterStage: async (row, _from, to) => {
+            if (to !== 'Ready' || !row.customerEmail || row.meta?.readyEmailed)
+                return;
+            const { brandForDepartment, brandEmailHtml, sendBrandEmail, escapeHtml } = require('../outbound');
+            const brand = await brandForDepartment(row.departmentId);
+            const r = await sendBrandEmail(brand, row.customerEmail, `Your order ${row.code} is ready`, brandEmailHtml(brand, 'Your order is ready', `
+        <p>Dear ${escapeHtml(row.customerName)},</p><p>Good news — <b>${escapeHtml(row.title || 'your order')}</b> is ready${row.deliveryMethod === 'Pickup' || row.deliveryMethod === 'Pick-up' ? ' for pick-up at our studio' : ' and will be sent out shortly'}.</p>
+        <p>Your order number is <b>${escapeHtml(row.code)}</b>. Reply to this email or WhatsApp us to arrange ${row.deliveryMethod && /pick/i.test(row.deliveryMethod) ? 'a pick-up time' : 'delivery'}.</p>`));
+            if (r.ok)
+                await row.update({ meta: { ...(row.meta || {}), readyEmailed: true } });
+        },
         beforeSave: (data, existing) => {
             const qty = (0, helpers_1.toNum)(data.quantity ?? existing?.quantity, 1);
             const unit = (0, helpers_1.toNum)(data.unitPrice ?? existing?.unitPrice, 0);

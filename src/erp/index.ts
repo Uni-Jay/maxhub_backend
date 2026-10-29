@@ -5,6 +5,8 @@ import { peopleRouter } from './people';
 import { trackingRouter } from './tracking';
 import { inventoryRouter } from './inventory';
 import { fxRouter } from './fx';
+import { profitRouter } from './profit';
+import { agendaRouter } from './agenda';
 import { publicRouter } from './routes/public';
 import { approvalGuardRouter } from './approvalGuard';
 import { rateLimit } from './rateLimit';
@@ -44,6 +46,8 @@ export function mountErpProtected(apiRouter: Router): void {
   erp.use(trackingRouter());
   erp.use(inventoryRouter());
   erp.use(fxRouter());
+  erp.use(profitRouter());
+  erp.use(agendaRouter());
   erp.use((err: any, _req: Request, res: Response, _next: any) => {
     console.error('[ERP]', err?.message || err);
     const msg = err?.name === 'SequelizeValidationError' || err?.name === 'SequelizeDatabaseError' ? `Invalid data: ${err?.errors?.[0]?.message || err.message}` : 'Something went wrong. Please try again.';

@@ -10,6 +10,8 @@ const people_1 = require("./people");
 const tracking_1 = require("./tracking");
 const inventory_1 = require("./inventory");
 const fx_1 = require("./fx");
+const profit_1 = require("./profit");
+const agenda_1 = require("./agenda");
 const public_1 = require("./routes/public");
 const approvalGuard_1 = require("./approvalGuard");
 const rateLimit_1 = require("./rateLimit");
@@ -45,6 +47,8 @@ function mountErpProtected(apiRouter) {
     erp.use((0, tracking_1.trackingRouter)());
     erp.use((0, inventory_1.inventoryRouter)());
     erp.use((0, fx_1.fxRouter)());
+    erp.use((0, profit_1.profitRouter)());
+    erp.use((0, agenda_1.agendaRouter)());
     erp.use((err, _req, res, _next) => {
         console.error('[ERP]', err?.message || err);
         const msg = err?.name === 'SequelizeValidationError' || err?.name === 'SequelizeDatabaseError' ? `Invalid data: ${err?.errors?.[0]?.message || err.message}` : 'Something went wrong. Please try again.';
