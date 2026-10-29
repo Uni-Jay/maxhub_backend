@@ -81,6 +81,8 @@ class JobSyncService {
         const config = BUSINESS_UNIT_CONFIG[posting.businessUnit];
         if (!config)
             return;
+        if (!process.env[config.apiKeyEnv])
+            return;
         const result = await this.pushToPortal(config, 'POST', '/api/jobs', buildPayload(posting));
         let externalId;
         if (result.ok && result.body) {
@@ -97,6 +99,8 @@ class JobSyncService {
         const config = BUSINESS_UNIT_CONFIG[posting.businessUnit];
         if (!config)
             return;
+        if (!process.env[config.apiKeyEnv])
+            return;
         const result = await this.pushToPortal(config, 'PUT', `/api/jobs/${posting.externalJobId}`, buildPayload(posting));
         await this.applyResult(posting, 'Update', result);
     }
@@ -105,6 +109,8 @@ class JobSyncService {
             return;
         const config = BUSINESS_UNIT_CONFIG[posting.businessUnit];
         if (!config)
+            return;
+        if (!process.env[config.apiKeyEnv])
             return;
         const result = await this.pushToPortal(config, 'DELETE', `/api/jobs/${posting.externalJobId}`);
         await this.applyResult(posting, 'Delete', result);

@@ -66,8 +66,13 @@ async function sendSMS(phone, message) {
     return true;
 }
 async function sendWhatsApp(phone, message) {
-    console.log(`[WhatsApp] To: ${phone} | Message: ${message.substring(0, 80)}...`);
-    return true;
+    const { sendWhatsAppText } = require('../../erp/outbound');
+    const r = await sendWhatsAppText(phone, message);
+    if (r.mode === 'link') {
+        console.log(`[WhatsApp] Not sent (WhatsApp API not configured) — ${phone}`);
+        return false;
+    }
+    return r.ok;
 }
 async function sendPasswordChangedEmail(params) {
     const { to, firstName, newPassword } = params;

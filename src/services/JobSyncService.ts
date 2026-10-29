@@ -118,6 +118,9 @@ class JobSyncService {
     if (!posting.businessUnit) return;
     const config = BUSINESS_UNIT_CONFIG[posting.businessUnit];
     if (!config) return; // brand has no website receiving API — public feed only
+    // No receiving API configured for this site yet: the public careers feed /
+    // widget.js already shows the job, so don't spam failing requests and logs.
+    if (!process.env[config.apiKeyEnv]) return;
     const result = await this.pushToPortal(config, 'POST', '/api/jobs', buildPayload(posting));
     let externalId: string | undefined;
     if (result.ok && result.body) {
@@ -130,6 +133,9 @@ class JobSyncService {
     if (!posting.businessUnit || !posting.externalJobId) return;
     const config = BUSINESS_UNIT_CONFIG[posting.businessUnit];
     if (!config) return; // brand has no website receiving API — public feed only
+    // No receiving API configured for this site yet: the public careers feed /
+    // widget.js already shows the job, so don't spam failing requests and logs.
+    if (!process.env[config.apiKeyEnv]) return;
     const result = await this.pushToPortal(config, 'PUT', `/api/jobs/${posting.externalJobId}`, buildPayload(posting));
     await this.applyResult(posting, 'Update', result);
   }
@@ -138,6 +144,9 @@ class JobSyncService {
     if (!posting.businessUnit || !posting.externalJobId) return;
     const config = BUSINESS_UNIT_CONFIG[posting.businessUnit];
     if (!config) return; // brand has no website receiving API — public feed only
+    // No receiving API configured for this site yet: the public careers feed /
+    // widget.js already shows the job, so don't spam failing requests and logs.
+    if (!process.env[config.apiKeyEnv]) return;
     const result = await this.pushToPortal(config, 'DELETE', `/api/jobs/${posting.externalJobId}`);
     await this.applyResult(posting, 'Delete', result);
   }

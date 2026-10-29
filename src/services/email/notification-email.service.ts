@@ -82,8 +82,17 @@ async function sendSMS(phone: string, message: string): Promise<boolean> {
 }
 
 async function sendWhatsApp(phone: string, message: string): Promise<boolean> {
-  console.log(`[WhatsApp] To: ${phone} | Message: ${message.substring(0, 80)}...`);
-  return true;
+  // Same sender as the brand modules: WhatsApp Business Cloud API when
+  // WHATSAPP_TOKEN / WHATSAPP_PHONE_NUMBER_ID are set. Without them, bulk
+  // sends can't be delivered automatically, so report it as not sent instead
+  // of pretending it went out.
+  const { sendWhatsAppText } = require('../../erp/outbound');
+  const r = await sendWhatsAppText(phone, message);
+  if (r.mode === 'link') {
+    console.log(`[WhatsApp] Not sent (WhatsApp API not configured) — ${phone}`);
+    return false;
+  }
+  return r.ok;
 }
 
 /**

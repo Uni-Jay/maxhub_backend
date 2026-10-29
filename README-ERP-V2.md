@@ -11,6 +11,8 @@ Everything new lives in `src/erp/` and is mounted from `src/routes/index.ts` and
 5. Starter terms, policies and agreements per brand (edit them in Documents & Agreements; have them legally reviewed).
 6. Chat channels: 📢 MaxHub General, 🏢 one per department, 📍 one per branch — membership re-synced on login.
 
+7. Old VisaMax applications (`visa_applicant`) are copied once into Customers & Applications (old table untouched).
+
 Set `ERP_MIGRATIONS=off` to skip, `ERP_SCHEDULER=off` to disable the ERP cron jobs.
 
 ## Roles
@@ -56,3 +58,11 @@ Socket.IO events: `notification:new` (bell), `erp:changed` (screens refresh), `c
 
 ## Local testing
 `DB_SSL=false` lets the app use a local non-SSL Postgres. `src/seeders/local-test-sync.ts` builds a blank local schema + test users and refuses to run against a non-local database.
+
+## Merged features
+- Weekly Reports = staff weekly reports + business summary tab (`/hr/weekly-report?tab=summary`; `/reports/weekly` redirects).
+- VisaMax: old VisaMax hub and CRM Business Hub redirect to Customers & Applications / Brands.
+- Meetings & Calls: scheduled Google Meet meetings + instant in-app calls from Messages.
+- Finance menu: Payments & Receipts, Invoices, Student Fee Receipts.
+- Customer Reports can be created from any brand record (pre-filled draft, same approval flow).
+- Bulk messaging (Communication → Send Message) uses the real WhatsApp sender; job sync only pushes to sites that have an API key configured.
