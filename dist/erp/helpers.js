@@ -112,13 +112,15 @@ function emitChange(req, entity, action, data) {
     catch { }
 }
 async function audit(req, module, action, entity, entityId, description, changes) {
+    if (req)
+        req.__audited = true;
     try {
         await exports.db.query(`INSERT INTO audit_logs (uuid, module, action, entity, "entityId", description, changes, "userId", "ipAddress", "userAgent", status, "createdAt")
        VALUES (gen_random_uuid(), :module, :action, :entity, :entityId, :description, :changes, :userId, :ip, :ua, 'Success', NOW())`, {
             replacements: {
                 module, action, entity, entityId: Number(entityId) || 0, description,
                 changes: changes ? JSON.stringify(changes).slice(0, 20000) : null,
-                userId: userId(req) || 0, ip: (req.ip || '').slice(0, 45), ua: req.get('user-agent') || null,
+                userId: userId(req) || 0, ip: require('./auditTrail').clientIp(req), ua: req.get('user-agent') || null,
             },
         });
     }

@@ -106,6 +106,116 @@ export function publicRouter(): Router {
     return ok(res, null, 'Thank you! Your application has been received.', 201);
   }));
 
+  // ── BeadMax online shop (beadmax.net) ─────────────────────────────────────
+  const publicProduct = (p: any) => ({
+    id: Number(p.id), code: p.code, slug: p.slug, name: p.name, category: p.category, description: p.description,
+    material: p.material, colour: p.colour, size: p.size, unit: p.unit,
+    price: Number(p.price), compareAtPrice: p.compareAtPrice ? Number(p.compareAtPrice) : null, currency: p.currency,
+    images: Array.isArray(p.images) ? p.images : [], inStock: Number(p.stockQty) > 0 || !!p.madeToOrder,
+    stock: Math.max(0, Math.floor(Number(p.stockQty))), madeToOrder: !!p.madeToOrder, leadTimeDays: p.leadTimeDays,
+    featured: !!p.isFeatured, weightGrams: p.weightGrams,
+  });
+
+  r.get('/shop/beadmax/products', wrap(async (req, res) => {
+    const where: string[] = [`"isPublished" = true`, `"isActive" = true`, `kind = 'Finished product'`];
+    const rep: any = {};
+    if (req.query.category) { where.push('category = :cat'); rep.cat = String(req.query.category); }
+    if (req.query.q) { where.push('(name ILIKE :q OR description ILIKE :q OR material ILIKE :q OR colour ILIKE :q)'); rep.q = `%${String(req.query.q).slice(0, 80)}%`; }
+    if (req.query.featured === '1') where.push(`"isFeatured" = true`);
+    const rows: any[] = await db.query(`SELECT * FROM erp_shop_products WHERE ${where.join(' AND ')} ORDER BY "isFeatured" DESC, "updatedAt" DESC LIMIT 300`, { replacements: rep, type: QueryTypes.SELECT });
+    const cats: any[] = await db.query(`SELECT category, COUNT(*)::int n FROM erp_shop_products WHERE "isPublished" = true AND "isActive" = true AND kind = 'Finished product' GROUP BY category ORDER BY category`, { type: QueryTypes.SELECT });
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    return res.json({ success: true, data: rows.map(publicProduct), categories: cats.map((c) => ({ name: c.category, count: c.n })) });
+  }));
+
+  r.get('/shop/beadmax/products/:slug', wrap(async (req, res) => {
+    const rows: any[] = await db.query(
+      `SELECT * FROM erp_shop_products WHERE (slug = :s OR code = :s) AND "isPublished" = true AND "isActive" = true LIMIT 1`,
+      { replacements: { s: req.params.slug }, type: QueryTypes.SELECT },
+    );
+    if (!rows[0]) return fail(res, 404, 'This item is no longer available');
+    return ok(res, publicProduct(rows[0]));
+  }));
+
+  r.get('/shop/beadmax/settings', wrap(async (_req, res) => {
+    const s: any = await (ErpModels.Setting as any).findByPk('beadmaxShop', { raw: true }).catch(() => null);
+    const v = s?.value || {};
+    const brand = await brandForDepartment(await resolveDepartmentId('BM'));
+    return ok(res, {
+      currency: 'NGN',
+      deliveryFees: v.deliveryFees || { Lagos: 3000, 'Other states': 6000, Pickup: 0 },
+      bank: v.bank || null,
+      whatsapp: brand.whatsapp || brand.phone || null, email: brand.email || null,
+      paymentMethods: v.paymentMethods || ['Bank transfer', 'Pay on delivery (Lagos only)'],
+    });
+  }));
+
+  /** Places an order. Prices and stock are checked here, never trusted from the browser. */
+  r.post('/shop/beadmax/orders', rateLimit('shop-order', 10, 60 * 60_000), wrap(async (req, res) => {
+    const b = req.body || {};
+    const name = String(b.name || '').trim().slice(0, 150);
+    const email = String(b.email || '').trim().toLowerCase().slice(0, 200);
+    const phone = String(b.phone || '').trim().slice(0, 30);
+    if (!name || phone.length < 7 || (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))) return fail(res, 400, 'Please give your name, phone number and a valid email');
+    const wanted = (Array.isArray(b.items) ? b.items : []).slice(0, 50).map((i: any) => ({ id: Number(i.productId || i.id), qty: Math.max(1, Math.min(100, Math.floor(Number(i.qty) || 1))) })).filter((i: any) => i.id);
+    if (!wanted.length) return fail(res, 400, 'Your basket is empty');
+    const products: any[] = await db.query(`SELECT * FROM erp_shop_products WHERE id IN (:ids) AND "isPublished" = true AND "isActive" = true`, { replacements: { ids: wanted.map((w: any) => w.id) }, type: QueryTypes.SELECT });
+    const items: any[] = [];
+    for (const w of wanted) {
+      const p = products.find((x) => Number(x.id) === w.id);
+      if (!p) return fail(res, 409, 'An item in your basket is no longer available. Please refresh the page.');
+      if (!p.madeToOrder && Number(p.stockQty) < w.qty) return fail(res, 409, `Only ${Math.max(0, Math.floor(Number(p.stockQty)))} of “${p.name}” left`);
+      items.push({ productId: Number(p.id), code: p.code, name: p.name, qty: w.qty, price: Number(p.price), image: Array.isArray(p.images) ? p.images[0] : null });
+    }
+    const delivery = String(b.deliveryMethod || 'Delivery') === 'Pick-up' ? 'Pick-up' : 'Delivery';
+    const settings: any = (await (ErpModels.Setting as any).findByPk('beadmaxShop', { raw: true }).catch(() => null))?.value || {};
+    const fees = settings.deliveryFees || { Lagos: 3000, 'Other states': 6000, Pickup: 0 };
+    const state = String(b.state || '').trim().slice(0, 100);
+    const deliveryFee = delivery === 'Pick-up' ? 0 : Number(/lagos/i.test(state) ? fees.Lagos : fees['Other states']) || 0;
+    const dept = await resolveDepartmentId('BM-DSN') || await resolveDepartmentId('BM');
+    const { nextCode } = require('../helpers');
+    const { shopTotals } = require('../inventory');
+    const data: any = {
+      customerName: name, customerEmail: email || null, customerPhone: phone, customerWhatsapp: String(b.whatsapp || phone).slice(0, 40),
+      customerCountry: String(b.country || 'Nigeria').slice(0, 100),
+      deliveryAddress: String(b.address || '').slice(0, 1000) || null, city: String(b.city || '').slice(0, 100) || null, state: state || null,
+      deliveryMethod: delivery, items, deliveryFee, discount: 0, currency: 'NGN',
+      paymentMethod: /delivery/i.test(String(b.paymentMethod || '')) ? 'Pay on delivery' : 'Bank transfer',
+      stage: 'New', source: 'Website', customerNote: String(b.note || '').slice(0, 2000) || null, departmentId: dept,
+      meta: { origin: req.get('origin') || null, ip: (req.headers['x-forwarded-for'] as string || req.ip || '').split(',')[0] },
+    };
+    shopTotals(data);
+    data.code = await nextCode('BMX-WEB');
+    const order: any = await (ErpModels.ShopOrder as any).create(data);
+    await (ErpModels.Activity as any).create({ entityType: 'shop_order', entityId: order.id, departmentId: dept, kind: 'System', content: `Order placed on the website (${items.length} item${items.length > 1 ? 's' : ''}, ₦${Number(order.total).toLocaleString()})`, createdByName: name });
+    const { departmentHeadUserIds } = require('../helpers');
+    const staff = [...(await departmentHeadUserIds(dept)), ...(await userIdsWithRoles(['superadmin', 'admin']))];
+    await notifyUsers(req, staff, { title: `New BeadMax order ${order.code}`, message: `${name} ordered ${items.map((i) => `${i.qty}× ${i.name}`).join(', ')} — ₦${Number(order.total).toLocaleString()}`, type: 'Alert', priority: 'High', actionUrl: `/beadmax/shop?open=${order.id}` });
+    emitChange(req, 'shop_order', 'created', order);
+    if (email) {
+      const brand = await brandForDepartment(dept);
+      const rows = items.map((i) => `<tr><td style="padding:6px 0">${i.qty} × ${escapeHtml(i.name)}</td><td style="text-align:right">₦${(i.qty * i.price).toLocaleString()}</td></tr>`).join('');
+      const bank = settings.bank ? `<p><b>Pay by transfer to:</b><br>${escapeHtml(settings.bank.bankName || '')}<br>${escapeHtml(settings.bank.accountName || '')}<br>${escapeHtml(settings.bank.accountNumber || '')}<br>Use <b>${order.code}</b> as the reference.</p>` : '';
+      sendBrandEmail(brand, email, `We received your order ${order.code}`, brandEmailHtml(brand, 'Thank you for your order', `
+        <p>Hello ${escapeHtml(name)},</p><p>We have received your order <b>${order.code}</b>. We will call or WhatsApp you shortly to confirm.</p>
+        <table width="100%" style="border-collapse:collapse;font-size:14px">${rows}
+        <tr><td style="padding:6px 0">Delivery</td><td style="text-align:right">₦${Number(order.deliveryFee).toLocaleString()}</td></tr>
+        <tr><td style="padding:8px 0;border-top:1px solid #e5e7eb"><b>Total</b></td><td style="text-align:right;border-top:1px solid #e5e7eb"><b>₦${Number(order.total).toLocaleString()}</b></td></tr></table>
+        ${order.paymentMethod === 'Bank transfer' ? bank : '<p>You will pay when your order is delivered.</p>'}`)).catch(() => undefined);
+    }
+    return ok(res, { code: order.code, total: Number(order.total), deliveryFee: Number(order.deliveryFee), paymentMethod: order.paymentMethod, bank: order.paymentMethod === 'Bank transfer' ? settings.bank || null : null }, 'Order received', 201);
+  }));
+
+  r.get('/shop/beadmax/orders/:code', rateLimit('shop-track', 30, 10 * 60_000), wrap(async (req, res) => {
+    const rows: any[] = await db.query(`SELECT code, stage, "paymentStatus", "trackingNo", total, items, "createdAt", "customerPhone", "customerEmail" FROM erp_shop_orders WHERE code = :c LIMIT 1`, { replacements: { c: String(req.params.code).toUpperCase() }, type: QueryTypes.SELECT });
+    const o = rows[0];
+    const who = String(req.query.contact || '').trim().toLowerCase();
+    if (!o || !who || (who !== String(o.customerEmail || '').toLowerCase() && who.replace(/\D/g, '').slice(-10) !== String(o.customerPhone || '').replace(/\D/g, '').slice(-10))) {
+      return fail(res, 404, 'We could not find an order with those details');
+    }
+    return ok(res, { code: o.code, stage: o.stage, paymentStatus: o.paymentStatus, trackingNo: o.trackingNo, total: Number(o.total), items: (o.items || []).map((i: any) => ({ name: i.name, qty: i.qty })), placedAt: o.createdAt, stages: ['New', 'Confirmed', 'Packed', 'Shipped', 'Delivered'] });
+  }));
+
   // ── Public policies (refund/returns/shipping) for the websites ────────────
   r.get('/policies', wrap(async (req, res) => {
     const where: any = { isActive: true, isPublic: true };

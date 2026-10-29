@@ -297,7 +297,7 @@ router.post(
     // departmentId stays her primary, additionalDepartmentIds are secondary.
     if (departmentId) {
       const secondaryIds: number[] = Array.isArray(additionalDepartmentIds)
-        ? [...new Set(additionalDepartmentIds.map(Number).filter((id: number) => id && id !== Number(departmentId)))].slice(0, 2)
+        ? [...new Set(additionalDepartmentIds.map(Number).filter((id: number) => id && id !== Number(departmentId)))]
         : [];
       await StaffDepartment.bulkCreate(
         [
@@ -308,16 +308,22 @@ router.post(
       );
     }
 
-    sendWelcomeEmail({
-      to: email,
-      firstName,
-      lastName,
-      employeeId: staff.employeeId,
-      temporaryPassword,
-      position: resolvedPosition,
-      businessUnit: businessUnit || undefined,
-      department: (dept as any)?.name || undefined,
-    }).catch(err => console.error('[Staff] Welcome email failed:', err));
+    // Everyone works for every brand (primary = the brand that employed them).
+    const people = require('../erp/people');
+    await people.ensureStaffInAllBrands(Number(staff.id)).catch((e: any) => console.error('[Staff] brand links failed:', e.message));
+    // Pay is set per staff member — optional at onboarding.
+    const basic = Number(req.body.basicSalary ?? req.body.salary);
+    if (basic > 0) {
+      const { ErpModels } = require('../erp/models');
+      await ErpModels.StaffPay?.upsert({
+        staffId: staff.id, currency: String(req.body.salaryCurrency || 'NGN').toUpperCase().slice(0, 3), basicSalary: basic,
+        allowances: Array.isArray(req.body.allowances) ? req.body.allowances : [], deductions: [], updatedById: (req as any).user?.id,
+        effectiveFrom: joiningDate || null,
+      }).catch((e: any) => console.error('[Staff] pay save failed:', e.message));
+    }
+    people.sendStaffWelcome(Number(staff.id), { temporaryPassword })
+      .catch((err: any) => console.error('[Staff] Welcome email failed:', err));
+    void dept; void sendWelcomeEmail;
 
     ResponseFormatter.success(res, { ...staff.toJSON(), temporaryPassword }, 'Staff member created successfully', 201);
   })

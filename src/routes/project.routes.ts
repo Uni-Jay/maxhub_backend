@@ -202,6 +202,7 @@ router.post(
       }, io).catch(() => {});
     }
 
+    await require('../erp/tracking').track(req, 'project', (project as any).id, 'created', 'Project created');
     ResponseFormatter.success(res, project.toJSON(), 'Project created successfully', 201);
   })
 );
@@ -222,6 +223,7 @@ router.patch(
       endDate, expectedEndDate, progress, budget,
     } = req.body;
 
+    const before: any = { ...(project.toJSON() as any) };
     await project.update({
       ...(name !== undefined && { name }),
       ...(description !== undefined && { description }),
@@ -233,6 +235,13 @@ router.patch(
       ...(expectedEndDate !== undefined && { expectedEndDate: new Date(expectedEndDate) }),
     });
 
+    {
+      const { track } = require('../erp/tracking');
+      const after: any = project.toJSON();
+      if (before.status !== after.status) await track(req, 'project', after.id, 'status', `Status changed from ${before.status} to ${after.status}`);
+      if (Number(before.progress || 0) !== Number(after.progress || 0)) await track(req, 'project', after.id, 'progress', `Progress updated to ${Number(after.progress || 0)}%`, { progress: after.progress });
+      if (before.name !== after.name || before.description !== after.description || String(before.endDate) !== String(after.endDate)) await track(req, 'project', after.id, 'edited', 'Project details edited');
+    }
     ResponseFormatter.success(res, project.toJSON(), 'Project updated successfully');
   })
 );

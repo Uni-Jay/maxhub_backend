@@ -117,5 +117,19 @@ router.patch('/:id/reject', AuthMiddleware_1.default.requireRole('superadmin', '
     });
     ResponseFormatter_1.ResponseFormatter.success(res, report, 'Weekly report rejected');
 }));
+router.delete('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const report = await WeeklyReport_model_1.WeeklyReport.findOne({ where: (0, idOrUuid_1.idOrUuidWhere)(req.params.id) });
+    if (!report)
+        return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Report not found');
+    const bucket = (0, RoleBucket_1.getRoleBucket)(req);
+    const mine = String(report.staffId) === String(await getStaffId(req));
+    if (!['superadmin', 'admin'].includes(bucket) && !(mine && report.status !== 'Approved')) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You can only delete your own reports that have not been approved', req.path);
+    }
+    await report.destroy();
+    const { audit } = require('../erp/helpers');
+    await audit(req, 'Reports', 'Delete', 'WeeklyReport', report.id, `Deleted weekly report for week ending ${report.weekEnding}`);
+    ResponseFormatter_1.ResponseFormatter.success(res, { id: report.id }, 'Report deleted');
+}));
 exports.default = router;
 //# sourceMappingURL=weekly-report.routes.js.map

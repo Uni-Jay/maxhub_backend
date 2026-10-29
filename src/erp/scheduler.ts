@@ -89,6 +89,13 @@ export function startErpScheduler(): void {
   if (process.env.ERP_SCHEDULER === 'off') return;
   const opts: any = { timezone: TZ };
 
+  // Every day 06:00 — refresh exchange rates and fill in naira values.
+  cron.schedule('0 6 * * *', () => safe('fx-refresh', async () => {
+    const fx = require('./fx');
+    await fx.refreshMarketRates();
+    await fx.backfillPaymentNgn();
+  }), opts);
+
   // Monday 07:30 — remind everyone who hasn't submitted last week's report.
   cron.schedule('30 7 * * 1', () => safe('weekly-report-reminder', async () => {
     const we = lastFriday();

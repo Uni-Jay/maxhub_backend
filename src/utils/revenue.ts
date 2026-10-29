@@ -7,7 +7,8 @@ import sequelize from '@config/Database';
  * every screen shows the same figure as the receipts:
  *   invoice payments (status Processed)
  * + student fee receipts (amountPaid)
- * + Payments & Receipts (status Completed, NGN)
+ * + Payments & Receipts (status Completed — foreign currency counted at its
+ *   naira value on the day it was received)
  * Optional range is half-open: [start, end).
  */
 export async function cashRevenueNgn(start?: Date, end?: Date): Promise<number> {
@@ -23,7 +24,7 @@ export async function cashRevenueNgn(start?: Date, end?: Date): Promise<number> 
   const [invoicePayments, feeReceipts, receipts] = await Promise.all([
     one(`SELECT COALESCE(SUM(amount),0) s FROM payments WHERE "deletedAt" IS NULL AND status = 'Processed' AND COALESCE(currency,'NGN') = 'NGN' ${range('paymentDate')}`),
     one(`SELECT COALESCE(SUM("amountPaid"),0) s FROM fee_receipts WHERE "deletedAt" IS NULL ${range('paymentDate')}`),
-    one(`SELECT COALESCE(SUM(amount),0) s FROM erp_payments WHERE status = 'Completed' AND currency = 'NGN' ${range('paidAt')}`),
+    one(`SELECT COALESCE(SUM(COALESCE("amountNgn", CASE WHEN currency = 'NGN' THEN amount END)),0) s FROM erp_payments WHERE status = 'Completed' ${range('paidAt')}`),
   ]);
   return invoicePayments + feeReceipts + receipts;
 }

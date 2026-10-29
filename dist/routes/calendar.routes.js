@@ -8,6 +8,12 @@ const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const HolidayCalendar_model_1 = require("../models/HolidayCalendar.model");
 const CalendarEvent_model_1 = require("../models/CalendarEvent.model");
 const router = (0, express_1.Router)();
+function canChangeEvent(req, event) {
+    const { roleOf } = require('../erp/helpers');
+    if (['superadmin', 'admin', 'hr'].includes(roleOf(req)))
+        return true;
+    return !event.createdById || String(event.createdById) === String(req.user?.id);
+}
 const NIGERIA_HOLIDAYS_2025 = [
     { code: 'NG-2025-01', name: "New Year's Day", date: '2025-01-01', type: 'National', desc: 'New Year public holiday' },
     { code: 'NG-2025-02', name: 'New Year Holiday', date: '2025-01-03', type: 'National', desc: 'New Year public holiday' },
@@ -100,13 +106,24 @@ router.delete('/holidays/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(as
     await holiday.destroy();
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Holiday deleted');
 }));
+router.get('/observances', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const { observancesBetween, observancesForYear } = require('../erp/observances');
+    const year = Number(req.query.year) || new Date().getFullYear();
+    const data = req.query.start && req.query.end
+        ? observancesBetween(String(req.query.start).slice(0, 10), String(req.query.end).slice(0, 10))
+        : observancesForYear(year);
+    ResponseFormatter_1.ResponseFormatter.success(res, data, 'Observances retrieved');
+}));
 router.get('/events', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { start, end } = req.query;
     const where = {};
-    if (start)
-        where.date = { [sequelize_1.Op.gte]: new Date(start) };
     if (end)
-        where.date = { ...where.date, [sequelize_1.Op.lte]: new Date(end) };
+        where.date = { [sequelize_1.Op.lte]: new Date(end) };
+    if (start)
+        where[sequelize_1.Op.or] = [
+            { date: { [sequelize_1.Op.gte]: new Date(start) } },
+            { endDate: { [sequelize_1.Op.gte]: new Date(start) } },
+        ];
     const events = await CalendarEvent_model_1.CalendarEvent.findAll({ where, order: [['date', 'ASC']] });
     ResponseFormatter_1.ResponseFormatter.success(res, events, 'Events retrieved');
 }));
@@ -131,11 +148,13 @@ router.put('/events/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (
     const event = await CalendarEvent_model_1.CalendarEvent.findByPk(req.params.id);
     if (!event)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Event not found');
+    if (!canChangeEvent(req, event))
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only the person who added this event can change it', req.path);
     const { title, date, endDate, type, description, attendees } = req.body;
     await event.update({
         title: title ?? event.title,
         date: date ? new Date(date) : event.date,
-        endDate: endDate ? new Date(endDate) : event.endDate,
+        endDate: endDate !== undefined ? (endDate ? new Date(endDate) : null) : event.endDate,
         type: type ?? event.type,
         description: description ?? event.description,
         attendees: attendees ?? event.attendees,
@@ -146,6 +165,8 @@ router.delete('/events/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asyn
     const event = await CalendarEvent_model_1.CalendarEvent.findByPk(req.params.id);
     if (!event)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Event not found');
+    if (!canChangeEvent(req, event))
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only the person who added this event can delete it', req.path);
     await event.destroy();
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Event deleted');
 }));

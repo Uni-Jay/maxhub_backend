@@ -1,6 +1,6 @@
 import { Request } from 'express';
 
-export type RoleBucket = 'superadmin' | 'admin' | 'hr' | 'hod' | 'staff';
+export type RoleBucket = 'superadmin' | 'admin' | 'hr' | 'hod' | 'accountant' | 'staff';
 
 function normaliseRole(r: string): string {
   return r.toLowerCase().replace(/[^a-z]/g, '');
@@ -17,5 +17,6 @@ export function getRoleBucket(req: Request): RoleBucket {
   if (roles.includes('admin') || roles.includes('headofadmin')) return 'admin';
   if (roles.includes('hr')) return 'hr';
   if (roles.includes('hod')) return 'hod';
+  if (roles.includes('accountant')) return 'accountant';
   return 'staff';
 }

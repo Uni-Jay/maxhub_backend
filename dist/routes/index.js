@@ -74,7 +74,7 @@ function setupRoutes(app) {
     apiRouter.use('/calendar', require('./calendar.routes').default);
     apiRouter.use('/files', require('./file.routes').default);
     apiRouter.use('/ai', require('./ai.routes').default);
-    apiRouter.use('/audit-logs', require('./audit-log.routes').default);
+    apiRouter.use('/audit-logs', require('../erp/auditTrail').auditLogRouter());
     apiRouter.use('/reports', require('./reports.routes').default);
     apiRouter.use('/modules', require('./module.routes').default);
     apiRouter.use('/settings', require('./settings.routes').default);

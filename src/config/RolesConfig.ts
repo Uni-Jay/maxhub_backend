@@ -5,6 +5,7 @@ export enum RoleCode {
   ADMIN      = 'admin',
   HR         = 'hr',
   HOD        = 'hod',
+  ACCOUNTANT = 'accountant',
   STAFF      = 'staff',
   // Portal-only — not an ERP staff role
   STUDENT    = 'student',
@@ -15,6 +16,7 @@ export const ROLE_DESCRIPTIONS: Record<RoleCode, string> = {
   [RoleCode.ADMIN]:      'Administrative oversight — staff, operations, HR, payroll, reports',
   [RoleCode.HR]:         'Human resources — recruitment, staff lifecycle, leave, training, appraisals',
   [RoleCode.HOD]:        'Head of Department — department oversight, team tasks, approvals',
+  [RoleCode.ACCOUNTANT]: 'Accountant — payroll, staff pay, payslips, invoices, receipts, fees, expenses and financial reports (plus all staff self-service)',
   [RoleCode.STAFF]:      'Staff member — personal dashboard, tasks, attendance, payslips, chat',
   [RoleCode.STUDENT]:    'Beadmax Vocational School learner — student portal only',
 };
@@ -24,6 +26,7 @@ export const ROLE_HIERARCHY: Record<RoleCode, number> = {
   [RoleCode.ADMIN]:       8,
   [RoleCode.HR]:          6,
   [RoleCode.HOD]:         5,
+  [RoleCode.ACCOUNTANT]:  4,
   [RoleCode.STAFF]:       3,
   [RoleCode.STUDENT]:     1,
 };
@@ -479,6 +482,29 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
   // Position-specific permissions (Accountant, Instructor, etc.)
   // are assigned at the user level via UserPermissions.
   // ─────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // ACCOUNTANT — finance across all brands + everything a staff member has
+  // (the staff self-service codes are appended below, after STAFF is defined)
+  // ─────────────────────────────────────────────────────────────
+  [RoleCode.ACCOUNTANT]: [
+    PermissionCode.PAY_STRUCTURE_CREATE_ALL, PermissionCode.PAY_STRUCTURE_READ_ALL, PermissionCode.PAY_STRUCTURE_UPDATE_ALL,
+    PermissionCode.PAY_PERIOD_CREATE_ALL, PermissionCode.PAY_PERIOD_READ_ALL, PermissionCode.PAY_PERIOD_PROCESS_ALL,
+    PermissionCode.PAY_SALARY_READ_ALL, PermissionCode.PAY_SALARY_READ_OWN,
+    PermissionCode.FIN_PAYROLL_CREATE_ALL, PermissionCode.FIN_PAYROLL_READ_ALL, PermissionCode.FIN_PAYROLL_READ_OWN, PermissionCode.FIN_PAYROLL_PROCESS_ALL,
+    PermissionCode.FIN_PAYSLIP_READ_ALL, PermissionCode.FIN_PAYSLIP_READ_OWN, PermissionCode.FIN_PAYSLIP_DOWNLOAD_OWN, PermissionCode.FIN_PAYSLIP_GENERATE_ALL,
+    PermissionCode.FIN_EXPENSE_CREATE_OWN, PermissionCode.FIN_EXPENSE_READ_ALL, PermissionCode.FIN_EXPENSE_READ_OWN, PermissionCode.FIN_EXPENSE_APPROVE_ALL,
+    PermissionCode.FIN_REVENUE_CREATE_ALL, PermissionCode.FIN_REVENUE_READ_ALL, PermissionCode.FIN_REVENUE_UPDATE_ALL,
+    PermissionCode.FIN_BUDGET_CREATE_ALL, PermissionCode.FIN_BUDGET_READ_ALL, PermissionCode.FIN_BUDGET_UPDATE_ALL,
+    PermissionCode.FIN_INVOICE_CREATE_ALL, PermissionCode.FIN_INVOICE_READ_ALL, PermissionCode.FIN_INVOICE_UPDATE_ALL, PermissionCode.FIN_INVOICE_DELETE_ALL,
+    PermissionCode.ACC_INVOICE_CREATE_ALL, PermissionCode.ACC_INVOICE_READ_ALL, PermissionCode.ACC_INVOICE_UPDATE_ALL,
+    PermissionCode.ACC_PAYMENT_CREATE_ALL, PermissionCode.ACC_PAYMENT_READ_ALL, PermissionCode.ACC_PAYMENT_PROCESS_ALL,
+    PermissionCode.ACC_CHARTOFACCOUNTS_CREATE_ALL, PermissionCode.ACC_CHARTOFACCOUNTS_READ_ALL, PermissionCode.ACC_CHARTOFACCOUNTS_UPDATE_ALL,
+    PermissionCode.ACC_JOURNALENTRY_CREATE_ALL, PermissionCode.ACC_JOURNALENTRY_READ_ALL, PermissionCode.ACC_JOURNALENTRY_POST_ALL,
+    PermissionCode.LMS_FEE_RECEIPT_READ_ALL, PermissionCode.LMS_FEE_RECEIPT_CREATE_ALL,
+    PermissionCode.EMP_EXPENSE_READ_ALL, PermissionCode.EMP_EXPENSE_APPROVE_ALL,
+    PermissionCode.SYS_REPORT_GENERATE_ALL,
+  ],
+
   [RoleCode.STAFF]: [
     PermissionCode.AUTH_USER_READ_OWN,
     PermissionCode.AUTH_USER_UPDATE_OWN,
@@ -587,3 +613,6 @@ export const ROLE_PERMISSIONS: Record<RoleCode, PermissionCode[]> = {
     PermissionCode.COMM_NOTIFICATION_READ_OWN,
   ],
 };
+
+// Accountants are staff too: give them every staff self-service permission.
+ROLE_PERMISSIONS[RoleCode.ACCOUNTANT] = [...new Set([...ROLE_PERMISSIONS[RoleCode.ACCOUNTANT], ...ROLE_PERMISSIONS[RoleCode.STAFF]])];

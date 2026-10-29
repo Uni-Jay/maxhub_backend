@@ -190,6 +190,26 @@ export async function getLeaveBalance(staffId?: number) {
   };
 }
 
+// DELETE /leave/requests/:id — staff can withdraw their own pending request;
+// HR / Admin / Super Admin can delete any request.
+router.delete(
+  '/requests/:id',
+  ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+    const leave: any = await LeaveRequest.findByPk(req.params.id, { include: [{ model: Staff, as: 'staff', attributes: ['id', 'userId', 'firstName', 'lastName'] }] });
+    if (!leave) return ResponseFormatter.notFound(res, 'Leave request not found');
+    const { roleOf, audit } = require('../erp/helpers');
+    const bucket = roleOf(req);
+    const mine = String(leave.staff?.userId) === String((req as any).user?.id);
+    const canManage = ['superadmin', 'admin', 'hr'].includes(bucket);
+    if (!canManage && !(mine && leave.status === 'Pending')) {
+      return ResponseFormatter.forbidden(res, 'You can only withdraw your own pending leave requests', req.path);
+    }
+    await leave.destroy();
+    await audit(req, 'Leave', 'Delete', 'LeaveRequest', leave.id, `${mine ? 'Withdrew' : 'Deleted'} leave request of ${leave.staff?.firstName || ''} ${leave.staff?.lastName || ''} (${leave.status})`.trim());
+    ResponseFormatter.success(res, { id: leave.id }, mine && !canManage ? 'Leave request withdrawn' : 'Leave request deleted');
+  })
+);
+
 router.get(
   '/balance',
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {

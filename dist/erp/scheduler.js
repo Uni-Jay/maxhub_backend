@@ -89,6 +89,11 @@ function startErpScheduler() {
     if (process.env.ERP_SCHEDULER === 'off')
         return;
     const opts = { timezone: TZ };
+    node_cron_1.default.schedule('0 6 * * *', () => safe('fx-refresh', async () => {
+        const fx = require('./fx');
+        await fx.refreshMarketRates();
+        await fx.backfillPaymentNgn();
+    }), opts);
     node_cron_1.default.schedule('30 7 * * 1', () => safe('weekly-report-reminder', async () => {
         const we = lastFriday();
         const missing = await staffWithoutReport(we);

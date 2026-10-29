@@ -9,6 +9,12 @@ import { CalendarEvent } from '@models/CalendarEvent.model';
 
 const router = Router();
 
+function canChangeEvent(req: Request, event: any): boolean {
+  const { roleOf } = require('../erp/helpers');
+  if (['superadmin', 'admin', 'hr'].includes(roleOf(req))) return true;
+  return !event.createdById || String(event.createdById) === String((req as any).user?.id);
+}
+
 // Nigeria public holidays seed data
 const NIGERIA_HOLIDAYS_2025 = [
   { code: 'NG-2025-01', name: "New Year's Day", date: '2025-01-01', type: 'National', desc: 'New Year public holiday' },
@@ -112,12 +118,26 @@ router.delete('/holidays/:id', ErrorMiddleware.asyncHandler(async (req: Request,
   ResponseFormatter.success(res, null, 'Holiday deleted');
 }));
 
+// GET /api/calendar/observances?start=YYYY-MM-DD&end=YYYY-MM-DD (or ?year=)
+// Nigerian public holidays + international celebrations, calculated for any year.
+router.get('/observances', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const { observancesBetween, observancesForYear } = require('../erp/observances');
+  const year = Number(req.query.year) || new Date().getFullYear();
+  const data = req.query.start && req.query.end
+    ? observancesBetween(String(req.query.start).slice(0, 10), String(req.query.end).slice(0, 10))
+    : observancesForYear(year);
+  ResponseFormatter.success(res, data, 'Observances retrieved');
+}));
+
 // GET /api/calendar/events
 router.get('/events', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const { start, end } = req.query;
   const where: any = {};
-  if (start) where.date = { [Op.gte]: new Date(start as string) };
-  if (end) where.date = { ...where.date, [Op.lte]: new Date(end as string) };
+  if (end) where.date = { [Op.lte]: new Date(end as string) };
+  if (start) where[Op.or] = [
+    { date: { [Op.gte]: new Date(start as string) } },
+    { endDate: { [Op.gte]: new Date(start as string) } },
+  ];
 
   const events = await CalendarEvent.findAll({ where, order: [['date', 'ASC']] });
   ResponseFormatter.success(res, events, 'Events retrieved');
@@ -147,12 +167,13 @@ router.post('/events', ErrorMiddleware.asyncHandler(async (req: Request, res: Re
 router.put('/events/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const event = await CalendarEvent.findByPk(req.params.id);
   if (!event) return ResponseFormatter.notFound(res, 'Event not found');
+  if (!canChangeEvent(req, event)) return ResponseFormatter.forbidden(res, 'Only the person who added this event can change it', req.path);
 
   const { title, date, endDate, type, description, attendees } = req.body;
   await event.update({
     title: title ?? event.title,
     date: date ? new Date(date) : event.date,
-    endDate: endDate ? new Date(endDate) : event.endDate,
+    endDate: endDate !== undefined ? (endDate ? new Date(endDate) : null) : event.endDate,
     type: type ?? event.type,
     description: description ?? event.description,
     attendees: attendees ?? event.attendees,
@@ -165,6 +186,7 @@ router.put('/events/:id', ErrorMiddleware.asyncHandler(async (req: Request, res:
 router.delete('/events/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const event = await CalendarEvent.findByPk(req.params.id);
   if (!event) return ResponseFormatter.notFound(res, 'Event not found');
+  if (!canChangeEvent(req, event)) return ResponseFormatter.forbidden(res, 'Only the person who added this event can delete it', req.path);
   await event.destroy();
   ResponseFormatter.success(res, null, 'Event deleted');
 }));

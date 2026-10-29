@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPayrollOverview = getPayrollOverview;
+const models_1 = require("../erp/models");
 const express_1 = require("express");
 const multer_1 = __importDefault(require("multer"));
 const sequelize_1 = require("sequelize");
@@ -298,6 +299,11 @@ router.post('/periods/:id/process', AuthMiddleware_1.AuthMiddleware.verifyToken,
         where: { status: 'Active' },
         order: [['applicableFromDate', 'DESC']],
     });
+    const staffPay = new Map();
+    if (models_1.ErpModels.StaffPay) {
+        for (const p of await models_1.ErpModels.StaffPay.findAll({ raw: true }))
+            staffPay.set(String(p.staffId), p);
+    }
     const results = { created: 0, skipped: 0, errors: [] };
     for (const staff of activeStaff) {
         try {
@@ -308,25 +314,38 @@ router.post('/periods/:id/process', AuthMiddleware_1.AuthMiddleware.verifyToken,
                 results.skipped++;
                 continue;
             }
-            const matchedStructure = activeStructures.find((s) => s.designationId &&
-                Number(s.designationId) === Number(staff.designationId) &&
-                s.departmentId &&
-                Number(s.departmentId) === Number(staff.departmentId)) ||
-                activeStructures.find((s) => s.designationId && Number(s.designationId) === Number(staff.designationId)) ||
-                activeStructures.find((s) => s.departmentId && Number(s.departmentId) === Number(staff.departmentId)) ||
-                activeStructures.find((s) => !s.designationId && !s.departmentId);
-            const baseSalary = matchedStructure ? Number(matchedStructure.baseSalary) : 0;
-            const bonus = 0;
-            const incomeTax = 0;
-            const providentFund = 0;
-            const healthInsurance = 0;
-            const otherDeductions = 0;
+            const pay = staffPay.get(String(staff.id));
+            let baseSalary = 0;
+            let earnings = [];
+            let deductionLines = [];
+            if (pay) {
+                baseSalary = Number(pay.basicSalary) || 0;
+                earnings = (pay.allowances || []).filter((a) => a && a.name && Number(a.amount)).map((a) => ({ name: String(a.name), amount: Number(a.amount) }));
+                deductionLines = (pay.deductions || []).filter((a) => a && a.name && Number(a.amount)).map((a) => ({ name: String(a.name), amount: Number(a.amount) }));
+            }
+            else {
+                const matchedStructure = activeStructures.find((s) => s.designationId && Number(s.designationId) === Number(staff.designationId) && s.departmentId && Number(s.departmentId) === Number(staff.departmentId)) ||
+                    activeStructures.find((s) => s.designationId && Number(s.designationId) === Number(staff.designationId)) ||
+                    activeStructures.find((s) => s.departmentId && Number(s.departmentId) === Number(staff.departmentId)) ||
+                    activeStructures.find((s) => !s.designationId && !s.departmentId);
+                baseSalary = matchedStructure ? Number(matchedStructure.baseSalary) : 0;
+            }
+            const allowanceTotal = earnings.reduce((t, e) => t + e.amount, 0);
+            const lineDeductions = deductionLines.reduce((t, e) => t + e.amount, 0);
+            const taxLine = deductionLines.filter((d) => /tax|paye/i.test(d.name)).reduce((t, e) => t + e.amount, 0);
+            const pensionLine = deductionLines.filter((d) => /pension|provident/i.test(d.name)).reduce((t, e) => t + e.amount, 0);
+            const healthLine = deductionLines.filter((d) => /health|hmo|insurance/i.test(d.name)).reduce((t, e) => t + e.amount, 0);
+            const bonus = allowanceTotal;
+            const incomeTax = taxLine;
+            const providentFund = pensionLine;
+            const healthInsurance = healthLine;
+            const otherDeductions = lineDeductions - taxLine - pensionLine - healthLine;
             const advanceAmount = 0;
             const grossSalary = baseSalary + bonus;
             const totalDeductions = incomeTax + providentFund + healthInsurance + otherDeductions + advanceAmount;
             const netSalary = grossSalary - totalDeductions;
             const totalEarnings = grossSalary;
-            await EmployeeSalary_model_1.EmployeeSalary.create({
+            const created = await EmployeeSalary_model_1.EmployeeSalary.create({
                 staffId: staff.id,
                 payrollPeriodId: period.id,
                 baseSalary,
@@ -340,9 +359,18 @@ router.post('/periods/:id/process', AuthMiddleware_1.AuthMiddleware.verifyToken,
                 otherDeductions,
                 advanceAmount,
                 bonus,
+                bankAccountNumber: staff.accountNumber || undefined,
                 status: 'Draft',
                 processedOn: new Date(),
+                remarks: pay ? undefined : (baseSalary ? 'From salary structure' : 'No pay set for this staff member — set it in Staff Pay'),
             });
+            if (models_1.ErpModels.SalaryBreakdown) {
+                await models_1.ErpModels.SalaryBreakdown.upsert({
+                    salaryId: created.id, currency: pay?.currency || 'NGN',
+                    earnings: [{ name: 'Basic salary', amount: baseSalary }, ...earnings],
+                    deductions: deductionLines,
+                }).catch(() => undefined);
+            }
             results.created++;
         }
         catch (err) {

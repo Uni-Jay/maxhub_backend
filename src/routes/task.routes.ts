@@ -167,6 +167,11 @@ router.post(
       }, io).catch(() => {});
     }
 
+    {
+      const { track } = require('../erp/tracking');
+      const who = assigneeId ? (await Staff.findByPk(String(assigneeId), { attributes: ['firstName', 'lastName'] }) as any) : null;
+      await track(req, 'task', task.id, 'created', `Task created${who ? ` and assigned to ${who.firstName} ${who.lastName}` : ''}`, { status: task.status });
+    }
     ResponseFormatter.success(res, task.toJSON(), 'Task created successfully', 201);
   })
 );
@@ -187,6 +192,7 @@ router.patch(
       dueDate, progress, actualHours, label,
     } = req.body;
 
+    const before = { ...(task.toJSON() as any) };
     await task.update({
       ...(title !== undefined && { title }),
       ...(description !== undefined && { description }),
@@ -198,6 +204,7 @@ router.patch(
       ...(dueDate !== undefined && { dueDate: new Date(dueDate) }),
     });
 
+    await require('../erp/tracking').trackTaskChange(req, before, task.toJSON());
     ResponseFormatter.success(res, task.toJSON(), 'Task updated successfully');
   })
 );
@@ -213,7 +220,9 @@ router.patch(
       if (!canAccessTask(task, staffId)) return ResponseFormatter.notFound(res, 'Task not found');
     }
 
-    await task.update({ status: req.body.status });
+    const before = { ...(task.toJSON() as any) };
+    await task.update({ status: req.body.status, ...(req.body.status === 'Done' ? { progress: 100 } : {}) } as any);
+    await require('../erp/tracking').trackTaskChange(req, before, task.toJSON());
     ResponseFormatter.success(res, task.toJSON(), 'Task status updated');
   })
 );
@@ -226,7 +235,9 @@ router.patch(
     if (!task) return ResponseFormatter.notFound(res, 'Task not found');
     const newAssigneeId = BigInt(req.body.assigneeId);
     const previousAssigneeId = (task as any).assigneeId;
+    const before = { ...(task.toJSON() as any) };
     await task.update({ assigneeId: newAssigneeId });
+    await require('../erp/tracking').trackTaskChange(req, before, task.toJSON());
 
     if (String(newAssigneeId) !== String(previousAssigneeId)) {
       const io = (req as any).app?.get('io');
@@ -257,6 +268,7 @@ router.delete(
     }
 
     await task.destroy();
+    await require('../erp/tracking').track(req, 'task', task.id, 'deleted', 'Task deleted');
     ResponseFormatter.success(res, null, 'Task deleted successfully');
   })
 );
@@ -305,6 +317,7 @@ router.post(
       }
     }
 
+    await require('../erp/tracking').track(req, 'task', task.id, 'report', String(content || '').slice(0, 500));
     ResponseFormatter.success(res, comment.toJSON(), 'Report submitted', 201);
   })
 );

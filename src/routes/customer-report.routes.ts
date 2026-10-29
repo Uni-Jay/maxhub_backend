@@ -164,4 +164,19 @@ router.patch('/:id/archive', AuthMiddleware.verifyToken, ErrorMiddleware.asyncHa
   ResponseFormatter.success(res, report, 'Report archived');
 }));
 
+// DELETE /api/customer-reports/:id — the author can delete a report that is
+// not yet approved; management/HR/HOD can delete any report.
+router.delete('/:id', AuthMiddleware.verifyToken, ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const report: any = await CustomerReport.findByPk(req.params.id);
+  if (!report) return ResponseFormatter.notFound(res, 'Customer report not found');
+  const mine = String(report.createdById) === String((req as any).user?.id);
+  if (!isManagerRole(req) && !(mine && report.approvalStatus !== 'Approved')) {
+    return ResponseFormatter.forbidden(res, 'You can only delete your own reports that have not been approved', req.path);
+  }
+  await report.destroy();
+  const { audit } = require('../erp/helpers');
+  await audit(req, 'CRM', 'Delete', 'CustomerReport', report.id, `Deleted customer report for ${report.clientName || 'client'}`);
+  ResponseFormatter.success(res, { id: report.id }, 'Report deleted');
+}));
+
 export default router;

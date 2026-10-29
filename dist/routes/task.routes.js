@@ -145,6 +145,11 @@ router.post('/', AuthMiddleware_1.AuthMiddleware.requirePermission(PermissionCod
             priority: priority === 'Critical' || priority === 'High' ? 'High' : 'Medium',
         }, io).catch(() => { });
     }
+    {
+        const { track } = require('../erp/tracking');
+        const who = assigneeId ? await Staff_model_1.Staff.findByPk(String(assigneeId), { attributes: ['firstName', 'lastName'] }) : null;
+        await track(req, 'task', task.id, 'created', `Task created${who ? ` and assigned to ${who.firstName} ${who.lastName}` : ''}`, { status: task.status });
+    }
     ResponseFormatter_1.ResponseFormatter.success(res, task.toJSON(), 'Task created successfully', 201);
 }));
 router.patch('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
@@ -157,6 +162,7 @@ router.patch('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, 
             return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Task not found');
     }
     const { title, description, status, priority, dueDate, progress, actualHours, label, } = req.body;
+    const before = { ...task.toJSON() };
     await task.update({
         ...(title !== undefined && { title }),
         ...(description !== undefined && { description }),
@@ -167,6 +173,7 @@ router.patch('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, 
         ...(label !== undefined && { label }),
         ...(dueDate !== undefined && { dueDate: new Date(dueDate) }),
     });
+    await require('../erp/tracking').trackTaskChange(req, before, task.toJSON());
     ResponseFormatter_1.ResponseFormatter.success(res, task.toJSON(), 'Task updated successfully');
 }));
 router.patch('/:id/status', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
@@ -178,7 +185,9 @@ router.patch('/:id/status', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async
         if (!canAccessTask(task, staffId))
             return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Task not found');
     }
-    await task.update({ status: req.body.status });
+    const before = { ...task.toJSON() };
+    await task.update({ status: req.body.status, ...(req.body.status === 'Done' ? { progress: 100 } : {}) });
+    await require('../erp/tracking').trackTaskChange(req, before, task.toJSON());
     ResponseFormatter_1.ResponseFormatter.success(res, task.toJSON(), 'Task status updated');
 }));
 router.patch('/:id/assign', AuthMiddleware_1.AuthMiddleware.requirePermission(PermissionCodes_1.PermissionCode.TASK_UPDATE_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
@@ -187,7 +196,9 @@ router.patch('/:id/assign', AuthMiddleware_1.AuthMiddleware.requirePermission(Pe
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Task not found');
     const newAssigneeId = BigInt(req.body.assigneeId);
     const previousAssigneeId = task.assigneeId;
+    const before = { ...task.toJSON() };
     await task.update({ assigneeId: newAssigneeId });
+    await require('../erp/tracking').trackTaskChange(req, before, task.toJSON());
     if (String(newAssigneeId) !== String(previousAssigneeId)) {
         const io = req.app?.get('io');
         (0, notify_1.notifyStaff)(newAssigneeId, {
@@ -212,6 +223,7 @@ router.delete('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req,
             return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Task not found');
     }
     await task.destroy();
+    await require('../erp/tracking').track(req, 'task', task.id, 'deleted', 'Task deleted');
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Task deleted successfully');
 }));
 router.post('/:id/comments', AuthMiddleware_1.AuthMiddleware.requirePermission(PermissionCodes_1.PermissionCode.PROJECT_COMMENT_CREATE_ALL), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
@@ -252,6 +264,7 @@ router.post('/:id/comments', AuthMiddleware_1.AuthMiddleware.requirePermission(P
             });
         }
     }
+    await require('../erp/tracking').track(req, 'task', task.id, 'report', String(content || '').slice(0, 500));
     ResponseFormatter_1.ResponseFormatter.success(res, comment.toJSON(), 'Report submitted', 201);
 }));
 router.get('/:id/comments', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {

@@ -154,7 +154,8 @@ export function brandModulesRouter(): Router {
   // Maxfood Farm — products & export orders
   r.use('/maxfood/products', buildRecordRouter({
     model: 'FoodProduct', entity: 'food_product', label: 'Product', codeSuffix: 'PRD', defaultBrand: 'MF',
-    searchFields: ['name', 'category', 'nafdacNo'], filterFields: ['category', 'isActive'],
+    searchFields: ['name', 'category', 'nafdacNo', 'batchNo', 'originState'], filterFields: ['category', 'isActive'],
+    beforeSave: (data, existing) => { if (existing) delete data.stockQty; },
   }));
   r.use('/maxfood/orders', buildRecordRouter({
     model: 'ExportOrder', entity: 'export_order', label: 'Export order', codeSuffix: 'EXP', defaultBrand: 'MF',
@@ -171,13 +172,13 @@ export function brandModulesRouter(): Router {
     afterStage: async (row: any, _from, to, req: Request) => {
       const meta = { ...(row.meta || {}) };
       // Deduct stock once when packing starts; put it back if the order is cancelled afterwards.
+      const { moveStock } = require('../inventory');
       if (to === 'Processing & Packaging' && !meta.stockDeducted) {
-        for (const i of row.items || []) if (i.productId) await db.query(`UPDATE erp_food_products SET "stockQty" = "stockQty" - :q, "updatedAt" = NOW() WHERE id = :id`, { replacements: { q: toNum(i.qty), id: i.productId } });
+        for (const i of row.items || []) if (i.productId) await moveStock(req, 'MF', Number(i.productId), -toNum(i.qty), 'Order', row.code);
         meta.stockDeducted = true;
-        emitChange(req, 'food_product', 'updated');
       }
       if (to === 'Cancelled' && meta.stockDeducted) {
-        for (const i of row.items || []) if (i.productId) await db.query(`UPDATE erp_food_products SET "stockQty" = "stockQty" + :q, "updatedAt" = NOW() WHERE id = :id`, { replacements: { q: toNum(i.qty), id: i.productId } });
+        for (const i of row.items || []) if (i.productId) await moveStock(req, 'MF', Number(i.productId), toNum(i.qty), 'Returned', row.code, 'Order cancelled');
         meta.stockDeducted = false;
       }
       const patch: any = { meta };

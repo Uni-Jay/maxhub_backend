@@ -227,23 +227,28 @@ router.post('/', AuthMiddleware_1.default.requirePermission('org.staff.create.al
     const dept = departmentId ? await Department_model_1.Department.findByPk(departmentId, { attributes: ['name'] }) : null;
     if (departmentId) {
         const secondaryIds = Array.isArray(additionalDepartmentIds)
-            ? [...new Set(additionalDepartmentIds.map(Number).filter((id) => id && id !== Number(departmentId)))].slice(0, 2)
+            ? [...new Set(additionalDepartmentIds.map(Number).filter((id) => id && id !== Number(departmentId)))]
             : [];
         await StaffDepartment_model_1.StaffDepartment.bulkCreate([
             { staffId: staff.id, departmentId: BigInt(departmentId), isPrimary: true, assignedAt: new Date() },
             ...secondaryIds.map((id) => ({ staffId: staff.id, departmentId: BigInt(id), isPrimary: false, assignedAt: new Date() })),
         ], { ignoreDuplicates: true });
     }
-    (0, CommunicationService_1.sendWelcomeEmail)({
-        to: email,
-        firstName,
-        lastName,
-        employeeId: staff.employeeId,
-        temporaryPassword,
-        position: resolvedPosition,
-        businessUnit: businessUnit || undefined,
-        department: dept?.name || undefined,
-    }).catch(err => console.error('[Staff] Welcome email failed:', err));
+    const people = require('../erp/people');
+    await people.ensureStaffInAllBrands(Number(staff.id)).catch((e) => console.error('[Staff] brand links failed:', e.message));
+    const basic = Number(req.body.basicSalary ?? req.body.salary);
+    if (basic > 0) {
+        const { ErpModels } = require('../erp/models');
+        await ErpModels.StaffPay?.upsert({
+            staffId: staff.id, currency: String(req.body.salaryCurrency || 'NGN').toUpperCase().slice(0, 3), basicSalary: basic,
+            allowances: Array.isArray(req.body.allowances) ? req.body.allowances : [], deductions: [], updatedById: req.user?.id,
+            effectiveFrom: joiningDate || null,
+        }).catch((e) => console.error('[Staff] pay save failed:', e.message));
+    }
+    people.sendStaffWelcome(Number(staff.id), { temporaryPassword })
+        .catch((err) => console.error('[Staff] Welcome email failed:', err));
+    void dept;
+    void CommunicationService_1.sendWelcomeEmail;
     ResponseFormatter_1.ResponseFormatter.success(res, { ...staff.toJSON(), temporaryPassword }, 'Staff member created successfully', 201);
 }));
 router.patch('/:id', AuthMiddleware_1.default.requirePermission('org.staff.update.all', 'org.staff.update.own', 'org.staff.update.own_department'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {

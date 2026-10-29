@@ -1,6 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { coreRouter } from './routes/core';
 import { brandModulesRouter } from './routes/brandModules';
+import { peopleRouter } from './people';
+import { trackingRouter } from './tracking';
+import { inventoryRouter } from './inventory';
+import { fxRouter } from './fx';
 import { publicRouter } from './routes/public';
 import { approvalGuardRouter } from './approvalGuard';
 import { rateLimit } from './rateLimit';
@@ -11,6 +15,7 @@ export { startErpScheduler } from './scheduler';
 
 /** Routes that must be reachable without a login (mounted before verifyToken). */
 export function mountErpPublic(apiRouter: Router): void {
+  apiRouter.use(require('./auditTrail').authAuditMiddleware());
   apiRouter.use('/public', publicRouter());
   // Brute-force protection on the sign-in / password endpoints.
   apiRouter.use('/auth/login', rateLimit('login', 15, 15 * 60_000));
@@ -22,6 +27,7 @@ export function mountErpPublic(apiRouter: Router): void {
 
 /** Authenticated ERP v2 routes (mounted after verifyToken, before module routers). */
 export function mountErpProtected(apiRouter: Router): void {
+  apiRouter.use(require('./auditTrail').changeAuditMiddleware());
   apiRouter.use(approvalGuardRouter());
   const erp = Router();
   erp.use(rateLimit('erp-api', 600, 60_000));
@@ -34,6 +40,10 @@ export function mountErpProtected(apiRouter: Router): void {
   });
   erp.use(coreRouter());
   erp.use(brandModulesRouter());
+  erp.use(peopleRouter());
+  erp.use(trackingRouter());
+  erp.use(inventoryRouter());
+  erp.use(fxRouter());
   erp.use((err: any, _req: Request, res: Response, _next: any) => {
     console.error('[ERP]', err?.message || err);
     const msg = err?.name === 'SequelizeValidationError' || err?.name === 'SequelizeDatabaseError' ? `Invalid data: ${err?.errors?.[0]?.message || err.message}` : 'Something went wrong. Please try again.';

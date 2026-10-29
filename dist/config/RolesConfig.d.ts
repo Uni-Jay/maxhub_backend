@@ -4,6 +4,7 @@ export declare enum RoleCode {
     ADMIN = "admin",
     HR = "hr",
     HOD = "hod",
+    ACCOUNTANT = "accountant",
     STAFF = "staff",
     STUDENT = "student"
 }

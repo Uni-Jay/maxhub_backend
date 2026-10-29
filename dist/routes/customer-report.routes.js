@@ -134,5 +134,18 @@ router.patch('/:id/archive', AuthMiddleware_1.default.verifyToken, ErrorMiddlewa
     await report.update({ approvalStatus: 'Archived' });
     ResponseFormatter_1.ResponseFormatter.success(res, report, 'Report archived');
 }));
+router.delete('/:id', AuthMiddleware_1.default.verifyToken, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const report = await CustomerReport_model_1.CustomerReport.findByPk(req.params.id);
+    if (!report)
+        return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Customer report not found');
+    const mine = String(report.createdById) === String(req.user?.id);
+    if (!isManagerRole(req) && !(mine && report.approvalStatus !== 'Approved')) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You can only delete your own reports that have not been approved', req.path);
+    }
+    await report.destroy();
+    const { audit } = require('../erp/helpers');
+    await audit(req, 'CRM', 'Delete', 'CustomerReport', report.id, `Deleted customer report for ${report.clientName || 'client'}`);
+    ResponseFormatter_1.ResponseFormatter.success(res, { id: report.id }, 'Report deleted');
+}));
 exports.default = router;
 //# sourceMappingURL=customer-report.routes.js.map

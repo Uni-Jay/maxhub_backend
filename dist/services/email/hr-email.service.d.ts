@@ -1,23 +1,23 @@
-export declare function sendWelcomeEmail(params: {
+export interface WelcomeEmailParams {
     to: string;
     firstName: string;
-    lastName: string;
+    lastName?: string;
     employeeId: string;
-    temporaryPassword: string;
+    temporaryPassword?: string;
     position?: string;
     businessUnit?: string;
     department?: string;
-}): Promise<boolean>;
-export declare function sendStaffCredentials(params: {
-    to: string;
-    firstName: string;
-    lastName: string;
-    employeeId: string;
-    temporaryPassword: string;
-    position?: string;
-    businessUnit?: string;
-    department?: string;
-}): Promise<boolean>;
+    salary?: string;
+    startDate?: string;
+    brandName?: string;
+    brandLogoUrl?: string;
+    brandColor?: string;
+    brandTagline?: string;
+    otherBrands?: string[];
+    reportsTo?: string;
+}
+export declare function sendWelcomeEmail(params: WelcomeEmailParams): Promise<boolean>;
+export declare function sendStaffCredentials(params: WelcomeEmailParams): Promise<boolean>;
 export declare function sendRecruitmentEmail(params: {
     to: string;
     applicantName: string;

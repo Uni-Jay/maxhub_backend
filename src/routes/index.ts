@@ -138,7 +138,7 @@ function setupRoutes(app: any): void {
   apiRouter.use('/ai', require('./ai.routes').default);
 
   // Audit Logs
-  apiRouter.use('/audit-logs', require('./audit-log.routes').default);
+  apiRouter.use('/audit-logs', require('../erp/auditTrail').auditLogRouter());
 
   // Reports
   apiRouter.use('/reports', require('./reports.routes').default);

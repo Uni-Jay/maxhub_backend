@@ -404,6 +404,7 @@ async function main() {
         [RolesConfig_1.RoleCode.ADMIN]: 'Administrator',
         [RolesConfig_1.RoleCode.HR]: 'Human Resources',
         [RolesConfig_1.RoleCode.HOD]: 'Head of Department',
+        [RolesConfig_1.RoleCode.ACCOUNTANT]: 'Accountant',
         [RolesConfig_1.RoleCode.STAFF]: 'Staff',
         [RolesConfig_1.RoleCode.STUDENT]: 'Student',
     };

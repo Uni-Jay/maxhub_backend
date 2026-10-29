@@ -11,7 +11,7 @@ import { syncAllChannels } from '../channels';
 
 const ENTITY_MODEL: Record<string, string> = {
   travel_case: 'TravelCase', travel_booking: 'TravelBooking', tech_project: 'TechProject', service_subscription: 'ServiceSubscription',
-  support_ticket: 'SupportTicket', custom_order: 'CustomOrder', export_order: 'ExportOrder',
+  support_ticket: 'SupportTicket', custom_order: 'CustomOrder', export_order: 'ExportOrder', shop_order: 'ShopOrder',
 };
 
 async function canEditBrandContent(req: any, departmentId: number | null): Promise<boolean> {
@@ -123,6 +123,13 @@ export function coreRouter(): Router {
     });
     if (!data.customerName) return fail(res, 400, 'Customer name is required');
     data.receiptNo = await nextCode(`${await brandPrefix(departmentId)}-RCT`);
+    // Record the naira value on the day the money came in.
+    {
+      const { toNgn } = require('../fx');
+      const custom = toNum(b.fxRate);
+      const conv = data.currency === 'NGN' ? { amountNgn: toNum(data.amount), fxRate: 1 } : custom > 0 ? { amountNgn: Math.round(toNum(data.amount) * custom * 100) / 100, fxRate: custom } : await toNgn(data.amount, data.currency);
+      data.amountNgn = conv.amountNgn; data.fxRate = conv.fxRate;
+    }
     const row: any = await (ErpModels.Payment as any).create(data);
     if (related) await logActivity(req, b.relatedType, related.id, related.departmentId, 'Payment', `Payment ${row.receiptNo}: ${row.currency} ${Number(row.amount).toLocaleString()} (${row.method})`, { paymentId: row.id });
     await audit(req, 'erp', 'create', 'payment', row.id, `Receipt ${row.receiptNo} issued`, data);

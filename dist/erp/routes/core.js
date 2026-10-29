@@ -10,7 +10,7 @@ const outbound_1 = require("../outbound");
 const channels_1 = require("../channels");
 const ENTITY_MODEL = {
     travel_case: 'TravelCase', travel_booking: 'TravelBooking', tech_project: 'TechProject', service_subscription: 'ServiceSubscription',
-    support_ticket: 'SupportTicket', custom_order: 'CustomOrder', export_order: 'ExportOrder',
+    support_ticket: 'SupportTicket', custom_order: 'CustomOrder', export_order: 'ExportOrder', shop_order: 'ShopOrder',
 };
 async function canEditBrandContent(req, departmentId) {
     if ((0, helpers_1.isManagement)(req))
@@ -125,6 +125,13 @@ function coreRouter() {
         if (!data.customerName)
             return (0, recordRouter_1.fail)(res, 400, 'Customer name is required');
         data.receiptNo = await (0, helpers_1.nextCode)(`${await (0, recordRouter_1.brandPrefix)(departmentId)}-RCT`);
+        {
+            const { toNgn } = require('../fx');
+            const custom = (0, helpers_1.toNum)(b.fxRate);
+            const conv = data.currency === 'NGN' ? { amountNgn: (0, helpers_1.toNum)(data.amount), fxRate: 1 } : custom > 0 ? { amountNgn: Math.round((0, helpers_1.toNum)(data.amount) * custom * 100) / 100, fxRate: custom } : await toNgn(data.amount, data.currency);
+            data.amountNgn = conv.amountNgn;
+            data.fxRate = conv.fxRate;
+        }
         const row = await models_1.ErpModels.Payment.create(data);
         if (related)
             await (0, recordRouter_1.logActivity)(req, b.relatedType, related.id, related.departmentId, 'Payment', `Payment ${row.receiptNo}: ${row.currency} ${Number(row.amount).toLocaleString()} (${row.method})`, { paymentId: row.id });

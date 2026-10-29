@@ -150,7 +150,9 @@ function brandModulesRouter() {
     }));
     r.use('/maxfood/products', (0, recordRouter_1.buildRecordRouter)({
         model: 'FoodProduct', entity: 'food_product', label: 'Product', codeSuffix: 'PRD', defaultBrand: 'MF',
-        searchFields: ['name', 'category', 'nafdacNo'], filterFields: ['category', 'isActive'],
+        searchFields: ['name', 'category', 'nafdacNo', 'batchNo', 'originState'], filterFields: ['category', 'isActive'],
+        beforeSave: (data, existing) => { if (existing)
+            delete data.stockQty; },
     }));
     r.use('/maxfood/orders', (0, recordRouter_1.buildRecordRouter)({
         model: 'ExportOrder', entity: 'export_order', label: 'Export order', codeSuffix: 'EXP', defaultBrand: 'MF',
@@ -166,17 +168,17 @@ function brandModulesRouter() {
         },
         afterStage: async (row, _from, to, req) => {
             const meta = { ...(row.meta || {}) };
+            const { moveStock } = require('../inventory');
             if (to === 'Processing & Packaging' && !meta.stockDeducted) {
                 for (const i of row.items || [])
                     if (i.productId)
-                        await helpers_1.db.query(`UPDATE erp_food_products SET "stockQty" = "stockQty" - :q, "updatedAt" = NOW() WHERE id = :id`, { replacements: { q: (0, helpers_1.toNum)(i.qty), id: i.productId } });
+                        await moveStock(req, 'MF', Number(i.productId), -(0, helpers_1.toNum)(i.qty), 'Order', row.code);
                 meta.stockDeducted = true;
-                (0, helpers_1.emitChange)(req, 'food_product', 'updated');
             }
             if (to === 'Cancelled' && meta.stockDeducted) {
                 for (const i of row.items || [])
                     if (i.productId)
-                        await helpers_1.db.query(`UPDATE erp_food_products SET "stockQty" = "stockQty" + :q, "updatedAt" = NOW() WHERE id = :id`, { replacements: { q: (0, helpers_1.toNum)(i.qty), id: i.productId } });
+                        await moveStock(req, 'MF', Number(i.productId), (0, helpers_1.toNum)(i.qty), 'Returned', row.code, 'Order cancelled');
                 meta.stockDeducted = false;
             }
             const patch = { meta };

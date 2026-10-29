@@ -168,6 +168,7 @@ router.post('/', AuthMiddleware_1.AuthMiddleware.requirePermission(PermissionCod
             priority: 'High',
         }, io).catch(() => { });
     }
+    await require('../erp/tracking').track(req, 'project', project.id, 'created', 'Project created');
     ResponseFormatter_1.ResponseFormatter.success(res, project.toJSON(), 'Project created successfully', 201);
 }));
 router.patch('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
@@ -180,6 +181,7 @@ router.patch('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, 
             return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Project not found');
     }
     const { name, description, status, priority, endDate, expectedEndDate, progress, budget, } = req.body;
+    const before = { ...project.toJSON() };
     await project.update({
         ...(name !== undefined && { name }),
         ...(description !== undefined && { description }),
@@ -190,6 +192,16 @@ router.patch('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, 
         ...(endDate !== undefined && { endDate: new Date(endDate) }),
         ...(expectedEndDate !== undefined && { expectedEndDate: new Date(expectedEndDate) }),
     });
+    {
+        const { track } = require('../erp/tracking');
+        const after = project.toJSON();
+        if (before.status !== after.status)
+            await track(req, 'project', after.id, 'status', `Status changed from ${before.status} to ${after.status}`);
+        if (Number(before.progress || 0) !== Number(after.progress || 0))
+            await track(req, 'project', after.id, 'progress', `Progress updated to ${Number(after.progress || 0)}%`, { progress: after.progress });
+        if (before.name !== after.name || before.description !== after.description || String(before.endDate) !== String(after.endDate))
+            await track(req, 'project', after.id, 'edited', 'Project details edited');
+    }
     ResponseFormatter_1.ResponseFormatter.success(res, project.toJSON(), 'Project updated successfully');
 }));
 router.delete('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {

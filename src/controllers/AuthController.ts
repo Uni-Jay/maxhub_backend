@@ -83,6 +83,7 @@ export class AuthController {
     try {
       const { sessionId, refreshToken } = req.body;
       await AuthenticationService.logout(sessionId, refreshToken);
+      require('../erp/auditTrail').auditLogout(req).catch(() => undefined);
       ResponseFormatter.success(res, null, 'Logout successful');
     } catch (error) {
       next(error);

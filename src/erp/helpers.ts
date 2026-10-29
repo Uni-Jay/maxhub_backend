@@ -134,6 +134,7 @@ export function emitChange(req: Request | null, entity: string, action: string, 
 
 /** Writes to the existing audit_logs table — never throws. */
 export async function audit(req: Request, module: string, action: string, entity: string, entityId: any, description: string, changes?: any) {
+  if (req) (req as any).__audited = true;
   try {
     await db.query(
       `INSERT INTO audit_logs (uuid, module, action, entity, "entityId", description, changes, "userId", "ipAddress", "userAgent", status, "createdAt")
@@ -142,7 +143,7 @@ export async function audit(req: Request, module: string, action: string, entity
         replacements: {
           module, action, entity, entityId: Number(entityId) || 0, description,
           changes: changes ? JSON.stringify(changes).slice(0, 20000) : null,
-          userId: userId(req) || 0, ip: (req.ip || '').slice(0, 45), ua: req.get('user-agent') || null,
+          userId: userId(req) || 0, ip: require('./auditTrail').clientIp(req), ua: req.get('user-agent') || null,
         },
       },
     );

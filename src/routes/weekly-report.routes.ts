@@ -139,4 +139,20 @@ router.patch('/:id/reject', AuthMiddleware.requireRole('superadmin', 'admin', 'h
   ResponseFormatter.success(res, report, 'Weekly report rejected');
 }));
 
+// DELETE /api/hr/weekly-reports/:id — the author can delete a report that
+// has not been approved; management can delete any.
+router.delete('/:id', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const report: any = await WeeklyReport.findOne({ where: idOrUuidWhere(req.params.id) as any });
+  if (!report) return ResponseFormatter.notFound(res, 'Report not found');
+  const bucket = getRoleBucket(req);
+  const mine = String(report.staffId) === String(await getStaffId(req));
+  if (!['superadmin', 'admin'].includes(bucket) && !(mine && report.status !== 'Approved')) {
+    return ResponseFormatter.forbidden(res, 'You can only delete your own reports that have not been approved', req.path);
+  }
+  await report.destroy();
+  const { audit } = require('../erp/helpers');
+  await audit(req, 'Reports', 'Delete', 'WeeklyReport', report.id, `Deleted weekly report for week ending ${report.weekEnding}`);
+  ResponseFormatter.success(res, { id: report.id }, 'Report deleted');
+}));
+
 export default router;

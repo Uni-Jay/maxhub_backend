@@ -170,6 +170,74 @@ export async function runErpMigrations(sequelize: Sequelize): Promise<void> {
     console.log(`   [ERP] merged ${n} VisaMax application(s) into Customers & Applications`);
   });
 
+  // 9. Accountant role: adds the role and its permissions; gives it to staff
+  //    whose position is accountant. Never removes any role or permission.
+  await step('008-accountant-role', async () => {
+    const { RoleCode, ROLE_PERMISSIONS, ROLE_DESCRIPTIONS } = require('../config/RolesConfig');
+    await exec(
+      `INSERT INTO roles (uuid, code, name, description, "isSystemRole", "isActive", "createdAt", "updatedAt")
+       VALUES (:uuid, 'accountant', 'Accountant', :desc, true, true, NOW(), NOW()) ON CONFLICT (code) DO NOTHING`,
+      { uuid: uuidv4(), desc: ROLE_DESCRIPTIONS[RoleCode.ACCOUNTANT] },
+    );
+    const role = (await q(`SELECT id FROM roles WHERE code = 'accountant'`))[0];
+    if (!role) return;
+    for (const code of ROLE_PERMISSIONS[RoleCode.ACCOUNTANT] as string[]) {
+      const [module, resource, action, scope] = String(code).split('.');
+      await exec(
+        `INSERT INTO permissions (uuid, code, name, module, resource, action, scope, "isActive", "createdAt", "updatedAt")
+         VALUES (:uuid, :code, :name, :module, :resource, :action, :scope, true, NOW(), NOW()) ON CONFLICT (code) DO NOTHING`,
+        { uuid: uuidv4(), code, name: code, module: module || 'fin', resource: resource || 'general', action: action || 'read', scope: scope || 'all' },
+      );
+      await exec(
+        `INSERT INTO role_permissions (uuid, "roleId", "permissionId", "createdAt", "updatedAt")
+         SELECT :uuid, :r, p.id, NOW(), NOW() FROM permissions p WHERE p.code = :code
+         ON CONFLICT ("roleId", "permissionId") DO NOTHING`,
+        { uuid: uuidv4(), r: role.id, code },
+      );
+    }
+    const accountants = await q(
+      `SELECT DISTINCT s."userId" FROM staff s WHERE s."deletedAt" IS NULL AND s."userId" IS NOT NULL
+         AND (s.position ILIKE '%accountant%' OR s."jobTitle" ILIKE '%accountant%')`,
+    );
+    for (const a of accountants) {
+      await exec(
+        `INSERT INTO user_roles (uuid, "userId", "roleId", "assignedAt", "createdAt", "updatedAt")
+         VALUES (:uuid, :u, :r, NOW(), NOW(), NOW()) ON CONFLICT ("userId", "roleId") DO NOTHING`,
+        { uuid: uuidv4(), u: a.userId, r: role.id },
+      );
+    }
+    console.log(`   [ERP] accountant role ready (${accountants.length} accountant(s) linked)`);
+  });
+
+  // 10. Everyone works for every brand. Adds missing staff ↔ brand links
+  //     (secondary); the brand that employed them stays primary.
+  await step('009-all-staff-all-brands', async () => {
+    const n = await require('./people').ensureAllStaffInAllBrands();
+    console.log(`   [ERP] ${n} staff linked to every brand`);
+  });
+
+  // 11. Real Maxfood Farm logo (only replaces an empty or placeholder logo).
+  await step('010-maxfood-logo', async () => {
+    await exec(
+      `UPDATE erp_brand_profiles SET "logoUrl" = '/brands/maxfood.jpeg', "updatedAt" = NOW()
+       WHERE code = 'MF' AND ("logoUrl" IS NULL OR "logoUrl" = '' OR "logoUrl" = '/brands/maxfood.svg')`,
+    );
+    await exec(
+      `UPDATE erp_brand_profiles SET "primaryColor" = '#1b5e20', "secondaryColor" = '#e09200', "updatedAt" = NOW()
+       WHERE code = 'MF' AND ("primaryColor" IS NULL OR "primaryColor" = '#2f7d32')`,
+    );
+  });
+
+  // 12. Currency: naira value of foreign payments; extra Maxfood product fields.
+  await step('011-fx-and-food-columns', async () => {
+    await exec(`ALTER TABLE erp_payments ADD COLUMN IF NOT EXISTS "fxRate" DECIMAL(14,4)`);
+    await exec(`ALTER TABLE erp_payments ADD COLUMN IF NOT EXISTS "amountNgn" DECIMAL(15,2)`);
+    await exec(`UPDATE erp_payments SET "amountNgn" = amount, "fxRate" = 1 WHERE currency = 'NGN' AND "amountNgn" IS NULL`);
+    for (const [col, type] of [['packSize', 'VARCHAR(60)'], ['originState', 'VARCHAR(80)'], ['batchNo', 'VARCHAR(60)'], ['harvestDate', 'DATE'], ['expiryDate', 'DATE'], ['storageCondition', 'VARCHAR(80)'], ['warehouse', 'VARCHAR(120)']]) {
+      await exec(`ALTER TABLE erp_food_products ADD COLUMN IF NOT EXISTS "${col}" ${type}`);
+    }
+  });
+
   // 8. Indexes that help the new screens.
   await step('006-indexes', async () => {
     await exec(`CREATE INDEX IF NOT EXISTS erp_payments_dept_idx ON erp_payments ("departmentId", "paidAt")`);

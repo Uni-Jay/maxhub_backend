@@ -413,6 +413,7 @@ async function main() {
     [RoleCode.ADMIN]:      'Administrator',
     [RoleCode.HR]:         'Human Resources',
     [RoleCode.HOD]:        'Head of Department',
+    [RoleCode.ACCOUNTANT]: 'Accountant',
     [RoleCode.STAFF]:      'Staff',
     [RoleCode.STUDENT]:    'Student',
   };

@@ -152,6 +152,8 @@ export function defineErpModels(sequelize: Sequelize): Record<string, ModelStati
     status: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'Completed' }, // Completed | Voided | Refunded
     voidReason: { type: DataTypes.TEXT, allowNull: true },
     receivedByName: { type: DataTypes.STRING(200), allowNull: true },
+    fxRate: { type: DataTypes.DECIMAL(14, 4), allowNull: true },     // naira per 1 unit when received
+    amountNgn: { type: DataTypes.DECIMAL(15, 2), allowNull: true },  // naira value when received
     ...SCOPE(),
   }, { ...OPTS, tableName: 'erp_payments' });
 
@@ -310,6 +312,13 @@ export function defineErpModels(sequelize: Sequelize): Record<string, ModelStati
     reorderLevel: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     nafdacNo: { type: DataTypes.STRING(60), allowNull: true },
     shelfLifeDays: { type: DataTypes.INTEGER, allowNull: true },
+    packSize: { type: DataTypes.STRING(60), allowNull: true },         // e.g. 1 kg pouch, 25 kg bag
+    originState: { type: DataTypes.STRING(80), allowNull: true },      // where it was sourced (state / farm)
+    batchNo: { type: DataTypes.STRING(60), allowNull: true },
+    harvestDate: { type: DataTypes.DATEONLY, allowNull: true },
+    expiryDate: { type: DataTypes.DATEONLY, allowNull: true },
+    storageCondition: { type: DataTypes.STRING(80), allowNull: true }, // Dry, Cool & dry, Chilled, Frozen
+    warehouse: { type: DataTypes.STRING(120), allowNull: true },
     imageUrl: { type: DataTypes.TEXT, allowNull: true },
     isActive: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     ...SCOPE(),
@@ -341,6 +350,97 @@ export function defineErpModels(sequelize: Sequelize): Record<string, ModelStati
     notes: { type: DataTypes.TEXT, allowNull: true },
     ...SCOPE(),
   }, { ...OPTS, tableName: 'erp_export_orders' });
+
+  // ── BeadMax — product inventory & online shop ───────────────────────────
+  ErpModels.ShopProduct = sequelize.define('ErpShopProduct', {
+    id: ID(),
+    code: { type: DataTypes.STRING(40), allowNull: false, unique: true },
+    name: { type: DataTypes.STRING(200), allowNull: false },
+    slug: { type: DataTypes.STRING(220), allowNull: true, unique: true },
+    kind: { type: DataTypes.STRING(30), allowNull: false, defaultValue: 'Finished product' }, // Finished product | Raw material
+    category: { type: DataTypes.STRING(60), allowNull: false, defaultValue: 'Necklace' },
+    description: { type: DataTypes.TEXT, allowNull: true },
+    material: { type: DataTypes.STRING(120), allowNull: true },  // crystal, seed beads, coral, pearls…
+    colour: { type: DataTypes.STRING(80), allowNull: true },
+    size: { type: DataTypes.STRING(60), allowNull: true },       // length / bead size
+    unit: { type: DataTypes.STRING(30), allowNull: false, defaultValue: 'piece' }, // piece, set, strand, pack, roll
+    stockQty: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
+    reorderLevel: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
+    costPrice: MONEY(),
+    price: MONEY(),
+    compareAtPrice: { type: DataTypes.DECIMAL(15, 2), allowNull: true }, // old price shown crossed out
+    currency: { type: DataTypes.STRING(3), allowNull: false, defaultValue: 'NGN' },
+    images: { type: DataTypes.JSONB, allowNull: true }, // [url]
+    madeToOrder: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    leadTimeDays: { type: DataTypes.INTEGER, allowNull: true },
+    weightGrams: { type: DataTypes.INTEGER, allowNull: true },
+    isPublished: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false }, // show on beadmax.net
+    isFeatured: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    supplier: { type: DataTypes.STRING(160), allowNull: true },
+    isActive: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+    ...SCOPE(),
+  }, { ...OPTS, tableName: 'erp_shop_products' });
+
+  ErpModels.ShopOrder = sequelize.define('ErpShopOrder', {
+    id: ID(),
+    code: { type: DataTypes.STRING(40), allowNull: false, unique: true },
+    ...CONTACT(),
+    deliveryAddress: { type: DataTypes.TEXT, allowNull: true },
+    city: { type: DataTypes.STRING(100), allowNull: true },
+    state: { type: DataTypes.STRING(100), allowNull: true },
+    deliveryMethod: { type: DataTypes.STRING(40), allowNull: false, defaultValue: 'Delivery' }, // Delivery | Pick-up
+    items: { type: DataTypes.JSONB, allowNull: true }, // [{productId, name, qty, price, image}]
+    subtotal: MONEY(),
+    deliveryFee: MONEY(),
+    discount: MONEY(),
+    total: MONEY(),
+    currency: { type: DataTypes.STRING(3), allowNull: false, defaultValue: 'NGN' },
+    paymentMethod: { type: DataTypes.STRING(40), allowNull: false, defaultValue: 'Bank transfer' },
+    paymentStatus: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'Unpaid' }, // Unpaid | Paid | Refunded
+    stage: { type: DataTypes.STRING(30), allowNull: false, defaultValue: 'New' },
+    source: { type: DataTypes.STRING(30), allowNull: false, defaultValue: 'Website' },
+    trackingNo: { type: DataTypes.STRING(120), allowNull: true },
+    customerNote: { type: DataTypes.TEXT, allowNull: true },
+    notes: { type: DataTypes.TEXT, allowNull: true },
+    ...SCOPE(),
+  }, { ...OPTS, tableName: 'erp_shop_orders' });
+
+  /** Every stock change for BeadMax and Maxfood products. */
+  ErpModels.StockMovement = sequelize.define('ErpStockMovement', {
+    id: ID(),
+    brand: { type: DataTypes.STRING(4), allowNull: false },          // BM | MF
+    productTable: { type: DataTypes.STRING(40), allowNull: false },  // erp_shop_products | erp_food_products
+    productId: { type: DataTypes.BIGINT, allowNull: false },
+    productName: { type: DataTypes.STRING(200), allowNull: true },
+    change: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
+    balanceAfter: { type: DataTypes.DECIMAL(12, 2), allowNull: true },
+    reason: { type: DataTypes.STRING(60), allowNull: false },        // Restock | Sale | Order | Damaged | Count correction | Returned
+    reference: { type: DataTypes.STRING(120), allowNull: true },
+    note: { type: DataTypes.TEXT, allowNull: true },
+    createdById: FK(),
+    createdByName: { type: DataTypes.STRING(200), allowNull: true },
+  }, { ...OPTS, tableName: 'erp_stock_movements', indexes: [{ fields: ['productTable', 'productId'] }] });
+
+  /** Pay is set per staff member (MaxHub does not use salary structures). */
+  ErpModels.StaffPay = sequelize.define('ErpStaffPay', {
+    staffId: { type: DataTypes.BIGINT, primaryKey: true },
+    currency: { type: DataTypes.STRING(3), allowNull: false, defaultValue: 'NGN' },
+    basicSalary: MONEY(),
+    allowances: { type: DataTypes.JSONB, allowNull: true }, // [{name, amount}]
+    deductions: { type: DataTypes.JSONB, allowNull: true }, // [{name, amount}]
+    paymentMethod: { type: DataTypes.STRING(40), allowNull: true },
+    effectiveFrom: { type: DataTypes.DATEONLY, allowNull: true },
+    notes: { type: DataTypes.TEXT, allowNull: true },
+    updatedById: FK(),
+  }, { ...OPTS, tableName: 'erp_staff_pay' });
+
+  /** What a processed salary was made of — so a payslip shows each line. */
+  ErpModels.SalaryBreakdown = sequelize.define('ErpSalaryBreakdown', {
+    salaryId: { type: DataTypes.BIGINT, primaryKey: true },
+    currency: { type: DataTypes.STRING(3), allowNull: false, defaultValue: 'NGN' },
+    earnings: { type: DataTypes.JSONB, allowNull: true },   // [{name, amount}]
+    deductions: { type: DataTypes.JSONB, allowNull: true }, // [{name, amount}]
+  }, { ...OPTS, tableName: 'erp_salary_breakdowns' });
 
   return ErpModels;
 }

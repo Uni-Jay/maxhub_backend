@@ -14,6 +14,8 @@ function getRoleBucket(req) {
         return 'hr';
     if (roles.includes('hod'))
         return 'hod';
+    if (roles.includes('accountant'))
+        return 'accountant';
     return 'staff';
 }
 //# sourceMappingURL=RoleBucket.js.map

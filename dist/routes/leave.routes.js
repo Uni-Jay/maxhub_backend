@@ -142,6 +142,21 @@ async function getLeaveBalance(staffId) {
         leaveTypes: plain,
     };
 }
+router.delete('/requests/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const leave = await LeaveRequest_model_1.LeaveRequest.findByPk(req.params.id, { include: [{ model: Staff_model_1.Staff, as: 'staff', attributes: ['id', 'userId', 'firstName', 'lastName'] }] });
+    if (!leave)
+        return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Leave request not found');
+    const { roleOf, audit } = require('../erp/helpers');
+    const bucket = roleOf(req);
+    const mine = String(leave.staff?.userId) === String(req.user?.id);
+    const canManage = ['superadmin', 'admin', 'hr'].includes(bucket);
+    if (!canManage && !(mine && leave.status === 'Pending')) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You can only withdraw your own pending leave requests', req.path);
+    }
+    await leave.destroy();
+    await audit(req, 'Leave', 'Delete', 'LeaveRequest', leave.id, `${mine ? 'Withdrew' : 'Deleted'} leave request of ${leave.staff?.firstName || ''} ${leave.staff?.lastName || ''} (${leave.status})`.trim());
+    ResponseFormatter_1.ResponseFormatter.success(res, { id: leave.id }, mine && !canManage ? 'Leave request withdrawn' : 'Leave request deleted');
+}));
 router.get('/balance', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
     const data = await getLeaveBalance(user?.staffId);
