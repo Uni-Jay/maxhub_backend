@@ -149,7 +149,7 @@ async function handleGetDashboardInsights(req: Request): Promise<string> {
         Attendance.count({ where: { attendanceDate: { [Op.between]: [startOfDay, endOfDay] } } }),
         Project.count({ where: { status: 'Active' } }),
         Enrollment.count({ where: { status: { [Op.in]: ['Enrolled', 'InProgress'] } } }),
-        Invoice.sum('total', { where: { status: 'Paid' } }),
+        require('@utils/revenue').cashRevenueNgn(),
         LeaveRequest.count({ where: { status: 'Pending' } }),
       ]);
     return JSON.stringify({
@@ -159,7 +159,7 @@ async function handleGetDashboardInsights(req: Request): Promise<string> {
       attendanceRate: todayTotal > 0 ? Math.round((todayPresent / todayTotal) * 1000) / 10 : 0,
       activeProjects,
       totalStudents,
-      totalRevenue: revenueResult ?? 0,
+      totalRevenueNgn: revenueResult ?? 0, // cash received: invoice payments + fee receipts + payments & receipts
       pendingApprovals,
     });
   }

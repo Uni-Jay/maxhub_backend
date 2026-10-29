@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { cashRevenueNgn } from '@utils/revenue';
 import { Request, Response, NextFunction } from 'express';
 import { Op, fn, col, literal } from 'sequelize';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
@@ -97,6 +98,7 @@ function canReadLeave(req: AuthenticatedRequest): boolean {
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
+
 export class DashboardController {
   static getSuperAdminStats = ErrorMiddleware.asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
@@ -141,7 +143,9 @@ export class DashboardController {
         attendanceRate,
         activeProjects,
         totalStudents,
-        totalRevenue: (paymentRevenue ?? 0) + (feeReceiptRevenue ?? 0),
+        // Cash received in naira: invoice payments + student fee receipts +
+        // Payments & Receipts (brand receipts). Must match the receipts pages.
+        totalRevenue: await cashRevenueNgn(),
         pendingApprovals,
         activePayrolls: totalEmployees,
       }, 'Dashboard statistics retrieved');
@@ -198,12 +202,9 @@ export class DashboardController {
         const start = new Date(year, month, 1);
         const end = new Date(year, month + 1, 1);
 
-        const [paymentValue, feeReceiptValue] = await Promise.all([
-          Payment.sum('amount', { where: { status: 'Processed', paymentDate: { [Op.between]: [start, end] } } }),
-          FeeReceipt.sum('amountPaid', { where: { paymentDate: { [Op.between]: [start, end] } } }),
-        ]);
-
-        results.push({ month: MONTH_NAMES[month], revenue: (paymentValue ?? 0) + (feeReceiptValue ?? 0), target: 0 });
+        // Half-open range [start, end): Op.between included the 1st of the next
+        // month, so a receipt dated e.g. 1 July was counted in June AND July.
+        results.push({ month: MONTH_NAMES[month], revenue: await cashRevenueNgn(start, end), target: 0 });
       }
 
       ResponseFormatter.success(res, results, 'Revenue data retrieved');
@@ -658,7 +659,7 @@ export class DashboardController {
       ResponseFormatter.success(res, {
         monthlyPayroll: payrollOverview.currentMonth?.totalNet ?? 0,
         pendingInvoices,
-        revenueMTD: (paymentRevenueMTD ?? 0) + (feeReceiptRevenueMTD ?? 0),
+        revenueMTD: await cashRevenueNgn(startOfMonth, startOfNextMonth),
         departmentBudget,
         pendingExpenseApprovals,
         recentInvoices: recentInvoices.map((inv: any) => ({

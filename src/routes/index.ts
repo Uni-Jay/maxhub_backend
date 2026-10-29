@@ -82,7 +82,6 @@ function setupRoutes(app: any): void {
   // Recruitment routes
   apiRouter.use('/job-postings', require('./job-posting.routes').default);
   apiRouter.use('/job-applications', require('./job-application.routes').default);
-  apiRouter.use('/job-sync', require('./job-sync.routes').default);
 
   // Payroll & Accounting routes
   apiRouter.use('/payroll', require('./payroll.routes').default);
@@ -125,8 +124,6 @@ function setupRoutes(app: any): void {
   // Direct per-user permission overrides (grant a specific PermissionCode without changing role)
   apiRouter.use('/users', require('./user-permission.routes').default);
 
-  // VisaMax
-  apiRouter.use('/visamax', require('./visamax.routes').default);
 
   // BeadMax Sales
   apiRouter.use('/beadmax', require('./beadmax.routes').default);

@@ -2,6 +2,7 @@
 var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DashboardController = void 0;
+const revenue_1 = require("../utils/revenue");
 const sequelize_1 = require("sequelize");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
@@ -106,7 +107,7 @@ DashboardController.getSuperAdminStats = ErrorMiddleware_1.ErrorMiddleware.async
         attendanceRate,
         activeProjects,
         totalStudents,
-        totalRevenue: (paymentRevenue ?? 0) + (feeReceiptRevenue ?? 0),
+        totalRevenue: await (0, revenue_1.cashRevenueNgn)(),
         pendingApprovals,
         activePayrolls: totalEmployees,
     }, 'Dashboard statistics retrieved');
@@ -149,11 +150,7 @@ DashboardController.getSuperAdminRevenue = ErrorMiddleware_1.ErrorMiddleware.asy
         const month = d.getMonth();
         const start = new Date(year, month, 1);
         const end = new Date(year, month + 1, 1);
-        const [paymentValue, feeReceiptValue] = await Promise.all([
-            Payment_model_1.Payment.sum('amount', { where: { status: 'Processed', paymentDate: { [sequelize_1.Op.between]: [start, end] } } }),
-            FeeReceipt_model_1.FeeReceipt.sum('amountPaid', { where: { paymentDate: { [sequelize_1.Op.between]: [start, end] } } }),
-        ]);
-        results.push({ month: MONTH_NAMES[month], revenue: (paymentValue ?? 0) + (feeReceiptValue ?? 0), target: 0 });
+        results.push({ month: MONTH_NAMES[month], revenue: await (0, revenue_1.cashRevenueNgn)(start, end), target: 0 });
     }
     ResponseFormatter_1.ResponseFormatter.success(res, results, 'Revenue data retrieved');
 });
@@ -501,7 +498,7 @@ DashboardController.getAccountantStats = ErrorMiddleware_1.ErrorMiddleware.async
     ResponseFormatter_1.ResponseFormatter.success(res, {
         monthlyPayroll: payrollOverview.currentMonth?.totalNet ?? 0,
         pendingInvoices,
-        revenueMTD: (paymentRevenueMTD ?? 0) + (feeReceiptRevenueMTD ?? 0),
+        revenueMTD: await (0, revenue_1.cashRevenueNgn)(startOfMonth, startOfNextMonth),
         departmentBudget,
         pendingExpenseApprovals,
         recentInvoices: recentInvoices.map((inv) => ({

@@ -12,7 +12,6 @@ const Staff_model_1 = require("../../../models/Staff.model");
 const Department_model_1 = require("../../../models/Department.model");
 const Attendance_model_1 = require("../../../models/Attendance.model");
 const Project_model_1 = require("../../../models/Project.model");
-const Invoice_model_1 = require("../../../models/Invoice.model");
 const Enrollment_model_1 = require("../../../models/Enrollment.model");
 const LeaveRequest_model_1 = require("../../../models/LeaveRequest.model");
 function normaliseRole(r) {
@@ -123,7 +122,7 @@ async function handleGetDashboardInsights(req) {
             Attendance_model_1.Attendance.count({ where: { attendanceDate: { [sequelize_1.Op.between]: [startOfDay, endOfDay] } } }),
             Project_model_1.Project.count({ where: { status: 'Active' } }),
             Enrollment_model_1.Enrollment.count({ where: { status: { [sequelize_1.Op.in]: ['Enrolled', 'InProgress'] } } }),
-            Invoice_model_1.Invoice.sum('total', { where: { status: 'Paid' } }),
+            require('../../../utils/revenue').cashRevenueNgn(),
             LeaveRequest_model_1.LeaveRequest.count({ where: { status: 'Pending' } }),
         ]);
         return JSON.stringify({
@@ -133,7 +132,7 @@ async function handleGetDashboardInsights(req) {
             attendanceRate: todayTotal > 0 ? Math.round((todayPresent / todayTotal) * 1000) / 10 : 0,
             activeProjects,
             totalStudents,
-            totalRevenue: revenueResult ?? 0,
+            totalRevenueNgn: revenueResult ?? 0,
             pendingApprovals,
         });
     }

@@ -52,7 +52,6 @@ function setupRoutes(app) {
     apiRouter.use('/fee-receipts', require('./fee-receipt.routes').default);
     apiRouter.use('/job-postings', require('./job-posting.routes').default);
     apiRouter.use('/job-applications', require('./job-application.routes').default);
-    apiRouter.use('/job-sync', require('./job-sync.routes').default);
     apiRouter.use('/payroll', require('./payroll.routes').default);
     apiRouter.use('/invoices', require('./invoice.routes').default);
     apiRouter.use('/inventory', require('./inventory.routes').default);
@@ -71,7 +70,6 @@ function setupRoutes(app) {
     apiRouter.use('/students', require('./student-management.routes').default);
     apiRouter.use('/meetings', require('./meeting.routes').default);
     apiRouter.use('/users', require('./user-permission.routes').default);
-    apiRouter.use('/visamax', require('./visamax.routes').default);
     apiRouter.use('/beadmax', require('./beadmax.routes').default);
     apiRouter.use('/calendar', require('./calendar.routes').default);
     apiRouter.use('/files', require('./file.routes').default);
