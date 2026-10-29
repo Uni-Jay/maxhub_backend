@@ -124,7 +124,7 @@ function peopleRouter() {
         if (!canSeePay(req))
             return (0, recordRouter_1.fail)(res, 403, 'Only HR, Accounts and management can see staff pay');
         const staff = await q(`SELECT s.id, s."employeeId", s."firstName", s."lastName", s.email, s.position, s."jobTitle", s."departmentId", d.name AS "departmentName",
-              s."bankName", s."accountNumber", s.status
+              s."bankName", s."accountName", s."accountNumber", s."accountType", s.status
        FROM staff s LEFT JOIN departments d ON d.id = s."departmentId"
        WHERE s."deletedAt" IS NULL ORDER BY s."firstName", s."lastName"`);
         const pays = new Map((await models_1.ErpModels.StaffPay.findAll({ raw: true })).map((p) => [String(p.staffId), p]));
@@ -165,6 +165,14 @@ function peopleRouter() {
             notes: b.notes ? String(b.notes).slice(0, 2000) : null,
             updatedById: (0, helpers_1.userId)(req),
         };
+        if (b.bank && typeof b.bank === 'object') {
+            const acct = String(b.bank.accountNumber || '').replace(/\D/g, '');
+            if (acct && acct.length !== 10)
+                return (0, recordRouter_1.fail)(res, 400, 'Account number must be 10 digits (NUBAN)');
+            const type = ['Savings', 'Current'].includes(b.bank.accountType) ? b.bank.accountType : null;
+            await helpers_1.db.query(`UPDATE staff SET "bankName" = :bn, "accountName" = :an, "accountNumber" = :ac, "accountType" = COALESCE(:at, "accountType"), "updatedAt" = NOW() WHERE id = :id`, { replacements: { bn: String(b.bank.bankName || '').trim().slice(0, 200) || null, an: String(b.bank.accountName || '').trim().slice(0, 200) || null, ac: acct || null, at: type, id: staffId } });
+            await (0, helpers_1.audit)(req, 'Payroll', 'Update', 'StaffBank', staffId, `${(0, helpers_1.userName)(req)} updated bank account for ${s.firstName} ${s.lastName}${acct ? ` (…${acct.slice(-4)})` : ''}`);
+        }
         const before = await models_1.ErpModels.StaffPay.findByPk(staffId, { raw: true });
         await models_1.ErpModels.StaffPay.upsert(row);
         await (0, helpers_1.audit)(req, 'Payroll', before ? 'Update' : 'Create', 'StaffPay', staffId, `${(0, helpers_1.userName)(req)} set pay for ${s.firstName} ${s.lastName}: basic ${money(row.basicSalary, row.currency)}`, { before, after: row });
