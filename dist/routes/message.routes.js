@@ -135,7 +135,7 @@ router.get('/conversations', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asyn
         return ResponseFormatter_1.ResponseFormatter.success(res, []);
     const conversations = await Conversation_model_1.Conversation.findAll({
         where: { id: { [sequelize_1.Op.in]: ids } },
-        order: [['lastMessageAt', 'DESC'], ['createdAt', 'DESC']],
+        order: [[(0, sequelize_1.literal)('COALESCE("Conversation"."lastMessageAt", "Conversation"."createdAt")'), 'DESC']],
     });
     const enriched = await Promise.all(conversations.map(async (conv) => {
         const lastMsg = await Message_model_1.Message.findOne({

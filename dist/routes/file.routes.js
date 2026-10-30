@@ -328,6 +328,39 @@ async function zipDownload(req, res) {
         zip.append(`These files could not be fetched and are not in this ZIP:\n\n${failed.join('\n')}\n`, { name: '_MISSING FILES.txt' });
     await zip.finalize();
 }
+router.get('/fetch', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const raw = String(req.query.url || '');
+    let u;
+    try {
+        u = new URL(raw);
+    }
+    catch {
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'Invalid file link', 400);
+    }
+    const own = process.env.BACKEND_PUBLIC_URL ? new URL(process.env.BACKEND_PUBLIC_URL).host : '';
+    const isOwn = !!own && u.host === own && u.pathname.startsWith('/uploads/');
+    if (!(isOwn || (u.protocol === 'https:' && u.hostname === 'res.cloudinary.com'))) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'That link is not a MaxHub file', req.path);
+    }
+    if (isOwn) {
+        const base = path_1.default.join(process.cwd(), 'uploads');
+        const local = path_1.default.join(process.cwd(), decodeURIComponent(u.pathname).replace(/^\//, ''));
+        if (!local.startsWith(base + path_1.default.sep) || !fs_1.default.existsSync(local))
+            return ResponseFormatter_1.ResponseFormatter.notFound(res, 'File not found');
+        return res.download(local, path_1.default.basename(local));
+    }
+    const r = await fetch(u.toString());
+    if (!r.ok || !r.body)
+        return ResponseFormatter_1.ResponseFormatter.error(res, `The file could not be fetched (${r.status})`, 502);
+    const name = decodeURIComponent(u.pathname.split('/').pop() || 'download');
+    res.setHeader('Content-Type', r.headers.get('content-type') || 'application/octet-stream');
+    const len = r.headers.get('content-length');
+    if (len)
+        res.setHeader('Content-Length', len);
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(name)}`);
+    const { Readable } = require('stream');
+    Readable.fromWeb(r.body).pipe(res);
+}));
 router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
     const { folderId, search } = req.query;

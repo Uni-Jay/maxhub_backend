@@ -332,6 +332,34 @@ export async function zipDownload(req: Request, res: Response) {
   await zip.finalize();
 }
 
+// GET /api/files/fetch?url=… — the server fetches a stored file and sends it
+// back as a download, for when the browser can't fetch it directly. Only our
+// own storage (Cloudinary, this server's /uploads) is allowed — never any other site.
+router.get('/fetch', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const raw = String(req.query.url || '');
+  let u: URL;
+  try { u = new URL(raw); } catch { return ResponseFormatter.error(res, 'Invalid file link', 400); }
+  const own = process.env.BACKEND_PUBLIC_URL ? new URL(process.env.BACKEND_PUBLIC_URL).host : '';
+  const isOwn = !!own && u.host === own && u.pathname.startsWith('/uploads/');
+  if (!(isOwn || (u.protocol === 'https:' && u.hostname === 'res.cloudinary.com'))) {
+    return ResponseFormatter.forbidden(res, 'That link is not a MaxHub file', req.path);
+  }
+  if (isOwn) {
+    const base = path.join(process.cwd(), 'uploads');
+    const local = path.join(process.cwd(), decodeURIComponent(u.pathname).replace(/^\//, ''));
+    if (!local.startsWith(base + path.sep) || !fs.existsSync(local)) return ResponseFormatter.notFound(res, 'File not found');
+    return (res as any).download(local, path.basename(local));
+  }
+  const r = await fetch(u.toString());
+  if (!r.ok || !r.body) return ResponseFormatter.error(res, `The file could not be fetched (${r.status})`, 502);
+  const name = decodeURIComponent(u.pathname.split('/').pop() || 'download');
+  res.setHeader('Content-Type', r.headers.get('content-type') || 'application/octet-stream');
+  const len = r.headers.get('content-length'); if (len) res.setHeader('Content-Length', len);
+  res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(name)}`);
+  const { Readable } = require('stream');
+  Readable.fromWeb(r.body as any).pipe(res);
+}));
+
 // GET /api/files
 router.get('/',ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;

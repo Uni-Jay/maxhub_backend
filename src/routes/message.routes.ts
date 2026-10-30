@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { Op } from 'sequelize';
+import { Op, literal } from 'sequelize';
 import { idOrUuidWhere } from '@utils/idOrUuid';
 import { v4 as uuidv4 } from 'uuid';
 import multer from 'multer';
@@ -127,7 +127,9 @@ router.get('/conversations', ErrorMiddleware.asyncHandler(async (req: Request, r
 
   const conversations = await Conversation.findAll({
     where: { id: { [Op.in]: ids } },
-    order: [['lastMessageAt', 'DESC'], ['createdAt', 'DESC']],
+    // Newest activity first; a chat with no messages yet counts from when it was made
+    // (plain lastMessageAt DESC put those empty chats above everything else).
+    order: [[literal('COALESCE("Conversation"."lastMessageAt", "Conversation"."createdAt")'), 'DESC']],
   });
 
   // Attach last message, unread count, participant meta
