@@ -2,7 +2,7 @@ import { Router, Request } from 'express';
 import { QueryTypes } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
 import { ErpModels } from '../models';
-import { buildRecordRouter, wrap, ok, fail, canManageRecord, logActivity } from '../recordRouter';
+import { buildRecordRouter, wrap, ok, fail, canManageRecord, logActivity, nextClientCode } from '../recordRouter';
 import { db, emitChange, toNum, userId } from '../helpers';
 
 // ── Pipelines ────────────────────────────────────────────────────────────────
@@ -97,7 +97,7 @@ export function brandModulesRouter(): Router {
         const ins: any[] = await db.query(
           `INSERT INTO clients (uuid, "clientId", "fullName", email, phone, country, nationality, "dateOfBirth", "departmentId", "registrationDate", status, notes, "createdByUserId", "createdAt", "updatedAt")
            VALUES (:uuid, :code, :name, :email, :phone, :country, :nat, :dob, :dept, CURRENT_DATE, 'Active', :notes, :uid, NOW(), NOW()) RETURNING id`,
-          { replacements: { uuid: uuidv4(), code: `CL-${Date.now().toString(36).toUpperCase()}`.slice(0, 20), name: row.customerName, email: row.customerEmail, phone: row.customerPhone, country: row.customerCountry, nat: row.nationality, dob: row.dateOfBirth, dept: row.departmentId, notes: `Onboarded from ${row.code}`, uid: userId(req) }, type: QueryTypes.SELECT },
+          { replacements: { uuid: uuidv4(), code: await nextClientCode(row.departmentId), name: row.customerName, email: row.customerEmail, phone: row.customerPhone, country: row.customerCountry, nat: row.nationality, dob: row.dateOfBirth, dept: row.departmentId, notes: `Onboarded from ${row.code}`, uid: userId(req) }, type: QueryTypes.SELECT },
         );
         clientId = ins[0].id;
       }

@@ -41,16 +41,19 @@ class Client extends sequelize_1.Model {
                 afterCreate: async (client) => {
                     if (client.clientId)
                         return;
-                    let prefix = 'CLT';
-                    if (client.departmentId) {
-                        const dept = await Department_model_1.Department.findByPk(client.departmentId, { attributes: ['code'] });
-                        if (dept?.code)
-                            prefix = dept.code;
+                    try {
+                        const { nextClientCode } = require('../erp/recordRouter');
+                        client.clientId = await nextClientCode(client.departmentId);
                     }
-                    const countInScope = client.departmentId
-                        ? await Client.count({ where: { departmentId: client.departmentId } })
-                        : await Client.count({ where: { departmentId: null } });
-                    client.clientId = `${prefix}-${String(countInScope).padStart(4, '0')}`;
+                    catch {
+                        let prefix = 'CLT';
+                        if (client.departmentId) {
+                            const dept = await Department_model_1.Department.findByPk(client.departmentId, { attributes: ['code'] });
+                            if (dept?.code)
+                                prefix = dept.code;
+                        }
+                        client.clientId = `${prefix}-${Date.now().toString(36).toUpperCase()}`.slice(0, 20);
+                    }
                     await client.save();
                 },
             },

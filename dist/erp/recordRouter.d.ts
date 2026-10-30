@@ -23,5 +23,6 @@ export declare function canManageRecord(req: Request, row: any): Promise<boolean
 export declare function clean(body: any, model: any, extraBlocked?: string[]): any;
 export declare function logActivity(req: Request, entityType: string, entityId: any, departmentId: any, kind: string, content: string, meta?: any, channel?: string): Promise<any>;
 export declare function brandPrefix(departmentId: any): Promise<string>;
+export declare function nextClientCode(departmentId: any): Promise<string>;
 export declare function buildRecordRouter(cfg: RecordConfig): Router;
 //# sourceMappingURL=recordRouter.d.ts.map

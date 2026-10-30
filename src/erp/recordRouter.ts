@@ -100,6 +100,11 @@ export async function brandPrefix(departmentId: any): Promise<string> {
   return (b as any).receiptPrefix || 'MXH';
 }
 
+/** Client file number in the same style as case numbers, e.g. VMX-CLT-2026-0014. */
+export async function nextClientCode(departmentId: any): Promise<string> {
+  return nextCode(`${await brandPrefix(departmentId)}-CLT`);
+}
+
 export function buildRecordRouter(cfg: RecordConfig): Router {
   const router = Router();
   const M: any = () => ErpModels[cfg.model];

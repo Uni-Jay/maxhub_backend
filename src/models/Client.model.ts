@@ -125,15 +125,20 @@ export class Client
           // this codebase for conversation/job codes).
           afterCreate: async (client) => {
             if (client.clientId) return;
-            let prefix = 'CLT';
-            if (client.departmentId) {
-              const dept = await Department.findByPk(client.departmentId, { attributes: ['code'] });
-              if ((dept as any)?.code) prefix = (dept as any).code;
+            // File number in the same style as case numbers: <brand prefix>-CLT-<year>-<n>,
+            // e.g. VMX-CLT-2026-0014 — from a locked counter, so two at once never clash.
+            try {
+              // eslint-disable-next-line @typescript-eslint/no-var-requires
+              const { nextClientCode } = require('../erp/recordRouter');
+              client.clientId = await nextClientCode(client.departmentId);
+            } catch {
+              let prefix = 'CLT';
+              if (client.departmentId) {
+                const dept = await Department.findByPk(client.departmentId, { attributes: ['code'] });
+                if ((dept as any)?.code) prefix = (dept as any).code;
+              }
+              client.clientId = `${prefix}-${Date.now().toString(36).toUpperCase()}`.slice(0, 20);
             }
-            const countInScope = client.departmentId
-              ? await Client.count({ where: { departmentId: client.departmentId } })
-              : await Client.count({ where: { departmentId: null as any } });
-            client.clientId = `${prefix}-${String(countInScope).padStart(4, '0')}`;
             await client.save();
           },
         },

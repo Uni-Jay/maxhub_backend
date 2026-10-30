@@ -8,6 +8,7 @@ exports.canManageRecord = canManageRecord;
 exports.clean = clean;
 exports.logActivity = logActivity;
 exports.brandPrefix = brandPrefix;
+exports.nextClientCode = nextClientCode;
 exports.buildRecordRouter = buildRecordRouter;
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
@@ -87,6 +88,9 @@ async function logActivity(req, entityType, entityId, departmentId, kind, conten
 async function brandPrefix(departmentId) {
     const b = await (0, outbound_1.brandForDepartment)(departmentId ? Number(departmentId) : null);
     return b.receiptPrefix || 'MXH';
+}
+async function nextClientCode(departmentId) {
+    return (0, helpers_1.nextCode)(`${await brandPrefix(departmentId)}-CLT`);
 }
 function buildRecordRouter(cfg) {
     const router = (0, express_1.Router)();
