@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.zipDownload = zipDownload;
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
 const uuid_1 = require("uuid");
@@ -14,6 +15,7 @@ const FileRecord_model_1 = require("../models/FileRecord.model");
 const multer_1 = require("../config/multer");
 const RoleBucket_1 = require("../utils/RoleBucket");
 const router = (0, express_1.Router)();
+const byId = (id) => (/^\d+$/.test(String(id)) ? { id } : { uuid: id });
 function withUrl(file) {
     const json = typeof file?.toJSON === 'function' ? file.toJSON() : file;
     if (!json.path)
@@ -185,6 +187,147 @@ router.delete('/folders/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(asy
     await folder.destroy();
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'Folder deleted');
 }));
+const cleanSegment = (s) => String(s || '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').trim().slice(0, 120);
+router.post('/folders/tree', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const user = req.user;
+    const { parentId } = req.body;
+    const paths = Array.isArray(req.body.paths) ? req.body.paths.slice(0, 5000) : [];
+    if (!parentId)
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'Open a folder first, then upload the folder into it', 400);
+    const parent = await FileRecord_model_1.FileRecord.findOne({ where: { uuid: parentId, isFolder: true } });
+    if (!parent)
+        return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Folder not found');
+    if (!(await isFolderAccessible(req, parentId, user)))
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You do not have access to this folder', req.path);
+    if (parent.folderType === 'Personal' && String(parent.uploadedById) !== String(user?.id)) {
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You cannot add folders to someone else\'s private folder', req.path);
+    }
+    const by = user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email;
+    const map = { '': parent.uuid };
+    const all = new Set();
+    for (const p of paths) {
+        const segs = String(p || '').split('/').map(cleanSegment).filter(Boolean);
+        for (let i = 1; i <= segs.length; i++)
+            all.add(segs.slice(0, i).join('/'));
+    }
+    const sorted = [...all].sort((a, b) => a.split('/').length - b.split('/').length);
+    for (const p of sorted) {
+        const segs = p.split('/');
+        const name = segs[segs.length - 1];
+        const parentUuid = map[segs.slice(0, -1).join('/')];
+        let folder = await FileRecord_model_1.FileRecord.findOne({ where: { isFolder: true, folderId: parentUuid, name } });
+        if (!folder) {
+            folder = await FileRecord_model_1.FileRecord.create({
+                uuid: (0, uuid_1.v4)(), name, folderId: parentUuid, isFolder: true,
+                folderType: parent.folderType || null, restrictedToRoles: parent.restrictedToRoles || null,
+                icon: parent.folderType === 'Personal' ? '🔒' : '📁', size: 0, uploadedById: user?.id, uploadedByName: by,
+            });
+        }
+        map[p] = folder.uuid;
+    }
+    ResponseFormatter_1.ResponseFormatter.success(res, map, `${sorted.length} folder(s) ready`);
+}));
+const zipLinks = new Map();
+async function collectFolder(req, rootUuid) {
+    const user = req.user;
+    const entries = [];
+    const folders = [];
+    let totalSize = 0;
+    const walk = async (uuid, prefix, depth) => {
+        if (depth > 30)
+            return;
+        const kids = await FileRecord_model_1.FileRecord.findAll({ where: { folderId: uuid }, order: [['isFolder', 'DESC'], ['name', 'ASC']] });
+        const used = new Set();
+        for (const k of kids) {
+            let base = cleanSegment(k.name || k.originalName || 'file') || 'file';
+            if (used.has(base.toLowerCase())) {
+                const ext = path_1.default.extname(base);
+                const stem = base.slice(0, base.length - ext.length);
+                let n = 2;
+                while (used.has(`${stem} (${n})${ext}`.toLowerCase()))
+                    n++;
+                base = `${stem} (${n})${ext}`;
+            }
+            used.add(base.toLowerCase());
+            if (k.isFolder) {
+                if (!(await isFolderAccessible(req, k.uuid, user)))
+                    continue;
+                folders.push(prefix + base + '/');
+                await walk(k.uuid, prefix + base + '/', depth + 1);
+            }
+            else if (k.path) {
+                entries.push({ name: prefix + base, path: k.path });
+                totalSize += Number(k.size) || 0;
+            }
+        }
+    };
+    await walk(rootUuid, '', 0);
+    return { entries, folders, totalSize };
+}
+router.post('/folders/:id/zip-link', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const user = req.user;
+    const folder = await FileRecord_model_1.FileRecord.findOne({ where: { uuid: req.params.id, isFolder: true } });
+    if (!folder)
+        return ResponseFormatter_1.ResponseFormatter.notFound(res, 'Folder not found');
+    if (!(await isFolderAccessible(req, folder.uuid, user)))
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You do not have access to this folder', req.path);
+    const { entries, folders, totalSize } = await collectFolder(req, folder.uuid);
+    if (!entries.length && !folders.length)
+        return ResponseFormatter_1.ResponseFormatter.error(res, 'This folder is empty', 400);
+    const now = Date.now();
+    for (const [k, v] of zipLinks)
+        if (v.expires < now)
+            zipLinks.delete(k);
+    const token = (0, uuid_1.v4)().replace(/-/g, '') + (0, uuid_1.v4)().replace(/-/g, '');
+    zipLinks.set(token, { title: cleanSegment(folder.name) || 'Folder', entries, folders, expires: now + 15 * 60000 });
+    ResponseFormatter_1.ResponseFormatter.success(res, { token, files: entries.length, folders: folders.length, totalSize });
+}));
+async function zipDownload(req, res) {
+    const link = zipLinks.get(String(req.params.token));
+    if (!link || link.expires < Date.now())
+        return res.status(410).send('This download link has expired. Go back to MaxHub and click Download folder again.');
+    zipLinks.delete(String(req.params.token));
+    const archiver = require('archiver');
+    const zip = archiver('zip', { zlib: { level: 3 } });
+    const failed = [];
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(link.title)}.zip"; filename*=UTF-8''${encodeURIComponent(link.title)}.zip`);
+    zip.on('warning', () => undefined);
+    zip.on('error', () => { try {
+        res.end();
+    }
+    catch { } });
+    zip.pipe(res);
+    for (const f of link.folders)
+        zip.append('', { name: f });
+    const { Readable } = require('stream');
+    for (const e of link.entries) {
+        try {
+            if (/^https?:\/\//i.test(e.path)) {
+                const r = await fetch(e.path);
+                if (!r.ok || !r.body)
+                    throw new Error(String(r.status));
+                const done = new Promise((ok) => zip.once('entry', ok));
+                zip.append(Readable.fromWeb(r.body), { name: e.name });
+                await done;
+            }
+            else {
+                const local = path_1.default.join(process.cwd(), e.path.replace(/^\//, ''));
+                if (!fs_1.default.existsSync(local))
+                    throw new Error('missing');
+                const done = new Promise((ok) => zip.once('entry', ok));
+                zip.file(local, { name: e.name });
+                await done;
+            }
+        }
+        catch {
+            failed.push(e.name);
+        }
+    }
+    if (failed.length)
+        zip.append(`These files could not be fetched and are not in this ZIP:\n\n${failed.join('\n')}\n`, { name: '_MISSING FILES.txt' });
+    await zip.finalize();
+}
 router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
     const { folderId, search } = req.query;
@@ -272,7 +415,7 @@ router.post('/upload', multer_1.upload.single('file'), ErrorMiddleware_1.ErrorMi
 }));
 router.get('/:id/download', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
-    const file = await FileRecord_model_1.FileRecord.findOne({ where: { uuid: req.params.id, isFolder: false } });
+    const file = await FileRecord_model_1.FileRecord.findOne({ where: { ...byId(req.params.id), isFolder: false } });
     if (!file)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'File not found');
     if (!(await isFolderAccessible(req, file.folderId, user))) {
@@ -291,7 +434,7 @@ router.get('/:id/download', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async
 }));
 router.delete('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
-    const file = await FileRecord_model_1.FileRecord.findOne({ where: { uuid: req.params.id } });
+    const file = await FileRecord_model_1.FileRecord.findOne({ where: byId(req.params.id) });
     if (!file)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'File not found');
     if (!file.isFolder && !(await isFolderAccessible(req, file.folderId, user))) {
@@ -308,12 +451,12 @@ router.delete('/:id', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req,
     await file.destroy();
     ResponseFormatter_1.ResponseFormatter.success(res, null, 'File deleted');
 }));
-router.patch('/:id/rename', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+const renameHandler = ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
     const { name } = req.body;
     if (!name)
         return ResponseFormatter_1.ResponseFormatter.error(res, 'New name is required', 400);
-    const file = await FileRecord_model_1.FileRecord.findOne({ where: { uuid: req.params.id } });
+    const file = await FileRecord_model_1.FileRecord.findOne({ where: byId(req.params.id) });
     if (!file)
         return ResponseFormatter_1.ResponseFormatter.notFound(res, 'File not found');
     if (!file.isFolder && !(await isFolderAccessible(req, file.folderId, user))) {
@@ -322,9 +465,11 @@ router.patch('/:id/rename', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async
     if (file.isFolder ? (isSystemFolder(file) || !canChangeFolder(req, file)) : !canChangeFolder(req, file)) {
         return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'Only the owner (or an Admin) can rename this', req.path);
     }
-    await file.update({ name });
+    await file.update({ name: String(name).trim().slice(0, 255) });
     ResponseFormatter_1.ResponseFormatter.success(res, withUrl(file), 'File renamed');
-}));
+});
+router.patch('/:id/rename', renameHandler);
+router.patch('/:id', renameHandler);
 router.post('/:id/share', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const { emails } = req.body;
     ResponseFormatter_1.ResponseFormatter.success(res, { sharedWith: emails }, 'File shared');

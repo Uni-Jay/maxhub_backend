@@ -28,6 +28,7 @@ function setupRoutes(app) {
     apiRouter.use(AuthMiddleware_1.default.sorting);
     require('../erp').mountErpPublic(apiRouter);
     apiRouter.use('/auth', require('./auth.routes').default);
+    apiRouter.get('/files/zip/:token', (req, res, next) => require('./file.routes').zipDownload(req, res).catch(next));
     apiRouter.use(AuthMiddleware_1.default.verifyToken);
     require('../erp').mountErpProtected(apiRouter);
     apiRouter.use('/dashboards', require('./dashboard.routes').default);

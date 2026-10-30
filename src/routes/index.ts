@@ -39,6 +39,9 @@ function setupRoutes(app: any): void {
   // Authentication routes (public)
   apiRouter.use('/auth', require('./auth.routes').default);
 
+  // Folder ZIP downloads use a one-time link instead of a sign-in header.
+  apiRouter.get('/files/zip/:token', (req, res, next) => require('./file.routes').zipDownload(req, res).catch(next));
+
   // Protected routes - require authentication
   apiRouter.use(AuthMiddleware.verifyToken);
 
