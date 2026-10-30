@@ -360,6 +360,67 @@ router.get('/fetch', ErrorMiddleware.asyncHandler(async (req: Request, res: Resp
   Readable.fromWeb(r.body as any).pipe(res);
 }));
 
+// ─── Client folders: <Brand folder> / <Client name> ─────────────────────────
+// Documents uploaded on a client's record are filed here automatically.
+const BRAND_FOLDERS: Record<string, string> = { VM: 'VisaMax', VMX: 'VisaMax', KS: 'Kurios SAT', BM: 'BeadMax', MF: 'Maxfood Farm' };
+function brandFolderName(code: any): string | null {
+  const c = String(code || '').toUpperCase().split('-')[0];
+  return BRAND_FOLDERS[c] || null;
+}
+async function clientFolder(req: Request, brand: any, client: any, create: boolean) {
+  const brandName = brandFolderName(brand);
+  const name = cleanSegment(String(client || '')).replace(/\s+/g, ' ');
+  if (!brandName || !name) return { error: !brandName ? 'Unknown brand' : 'The client has no name yet' };
+  await ensureFolders(req);
+  const top: any = await FileRecord.findOne({ where: { isFolder: true, folderId: null, name: brandName } });
+  if (!top) return { error: 'Brand folder not found' };
+  let folder: any = await FileRecord.findOne({ where: { isFolder: true, folderId: top.uuid, name: { [Op.iLike]: name } } });
+  if (!folder && create) {
+    const user = (req as any).user;
+    folder = await FileRecord.create({
+      uuid: uuidv4(), name, folderId: top.uuid, isFolder: true, folderType: null, restrictedToRoles: top.restrictedToRoles || null,
+      icon: '📁', size: 0, uploadedById: user?.id,
+      uploadedByName: user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
+    } as any);
+  }
+  return { brandFolder: top, folder };
+}
+
+// GET /api/files/client-folder?brand=VM&client=Ada%20Obi → the folder (if made yet) and its files
+router.get('/client-folder', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const r: any = await clientFolder(req, req.query.brand, req.query.client, false);
+  if (r.error) return ResponseFormatter.error(res, r.error, 400);
+  const files = r.folder ? await FileRecord.findAll({ where: { folderId: r.folder.uuid, isFolder: false }, order: [['createdAt', 'DESC']] }) : [];
+  ResponseFormatter.success(res, { folder: r.folder ? { uuid: r.folder.uuid, name: r.folder.name, path: `${r.brandFolder.name} › ${r.folder.name}` } : null, path: `${r.brandFolder.name} › ${cleanSegment(String(req.query.client || ''))}`, files: files.map(withUrl) });
+}));
+
+// POST /api/files/client-folder { brand, client } → creates the folder if needed
+router.post('/client-folder', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const r: any = await clientFolder(req, req.body.brand, req.body.client, true);
+  if (r.error) return ResponseFormatter.error(res, r.error, 400);
+  ResponseFormatter.success(res, { uuid: r.folder.uuid, name: r.folder.name, path: `${r.brandFolder.name} › ${r.folder.name}` });
+}));
+
+// POST /api/files/client-folder/attach { brand, client, fileId } → puts a file that is
+// already in MaxHub Files into the client's folder too (same file, no re-upload).
+router.post('/client-folder/attach', ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const src: any = await FileRecord.findOne({ where: { ...byId(req.body.fileId), isFolder: false } });
+  if (!src) return ResponseFormatter.notFound(res, 'File not found');
+  if (!(await isFolderAccessible(req, src.folderId, user))) return ResponseFormatter.forbidden(res, 'You do not have access to this file', req.path);
+  const r: any = await clientFolder(req, req.body.brand, req.body.client, true);
+  if (r.error) return ResponseFormatter.error(res, r.error, 400);
+  let copy: any = src.folderId === r.folder.uuid ? src : await FileRecord.findOne({ where: { folderId: r.folder.uuid, path: src.path, isFolder: false } });
+  if (!copy) {
+    copy = await FileRecord.create({
+      uuid: uuidv4(), name: src.name, originalName: src.originalName, path: src.path, mimeType: src.mimeType, size: src.size,
+      folderId: r.folder.uuid, isFolder: false, uploadedById: user?.id,
+      uploadedByName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
+    } as any);
+  }
+  ResponseFormatter.success(res, withUrl(copy), `Filed in ${r.brandFolder.name} › ${r.folder.name}`);
+}));
+
 // GET /api/files
 router.get('/',ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
@@ -372,6 +433,19 @@ router.get('/',ErrorMiddleware.asyncHandler(async (req: Request, res: Response) 
       return ResponseFormatter.forbidden(res, 'You do not have access to this folder', req.path);
     }
     where.folderId = folderId as string;
+  } else if (search && req.query.everywhere === '1') {
+    // Search every folder this person can open (used by "Add from MaxHub Files").
+    where.name = { [Op.iLike]: `%${search}%` };
+    const hits: any[] = await FileRecord.findAll({ where, order: [['createdAt', 'DESC']], limit: 200 });
+    const ok = new Map<string, boolean>();
+    const visible: any[] = [];
+    for (const h of hits) {
+      const key = String(h.folderId || '');
+      if (!ok.has(key)) ok.set(key, await isFolderAccessible(req, h.folderId, user));
+      if (ok.get(key)) visible.push(h);
+      if (visible.length >= 60) break;
+    }
+    return ResponseFormatter.success(res, visible.map(withUrl));
   } else {
     where.folderId = { [Op.in]: [general.uuid, mine.uuid, ...named.map((f: any) => f.uuid)] };
   }

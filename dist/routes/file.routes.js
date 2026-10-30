@@ -361,6 +361,64 @@ router.get('/fetch', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, 
     const { Readable } = require('stream');
     Readable.fromWeb(r.body).pipe(res);
 }));
+const BRAND_FOLDERS = { VM: 'VisaMax', VMX: 'VisaMax', KS: 'Kurios SAT', BM: 'BeadMax', MF: 'Maxfood Farm' };
+function brandFolderName(code) {
+    const c = String(code || '').toUpperCase().split('-')[0];
+    return BRAND_FOLDERS[c] || null;
+}
+async function clientFolder(req, brand, client, create) {
+    const brandName = brandFolderName(brand);
+    const name = cleanSegment(String(client || '')).replace(/\s+/g, ' ');
+    if (!brandName || !name)
+        return { error: !brandName ? 'Unknown brand' : 'The client has no name yet' };
+    await ensureFolders(req);
+    const top = await FileRecord_model_1.FileRecord.findOne({ where: { isFolder: true, folderId: null, name: brandName } });
+    if (!top)
+        return { error: 'Brand folder not found' };
+    let folder = await FileRecord_model_1.FileRecord.findOne({ where: { isFolder: true, folderId: top.uuid, name: { [sequelize_1.Op.iLike]: name } } });
+    if (!folder && create) {
+        const user = req.user;
+        folder = await FileRecord_model_1.FileRecord.create({
+            uuid: (0, uuid_1.v4)(), name, folderId: top.uuid, isFolder: true, folderType: null, restrictedToRoles: top.restrictedToRoles || null,
+            icon: '📁', size: 0, uploadedById: user?.id,
+            uploadedByName: user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
+        });
+    }
+    return { brandFolder: top, folder };
+}
+router.get('/client-folder', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const r = await clientFolder(req, req.query.brand, req.query.client, false);
+    if (r.error)
+        return ResponseFormatter_1.ResponseFormatter.error(res, r.error, 400);
+    const files = r.folder ? await FileRecord_model_1.FileRecord.findAll({ where: { folderId: r.folder.uuid, isFolder: false }, order: [['createdAt', 'DESC']] }) : [];
+    ResponseFormatter_1.ResponseFormatter.success(res, { folder: r.folder ? { uuid: r.folder.uuid, name: r.folder.name, path: `${r.brandFolder.name} › ${r.folder.name}` } : null, path: `${r.brandFolder.name} › ${cleanSegment(String(req.query.client || ''))}`, files: files.map(withUrl) });
+}));
+router.post('/client-folder', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const r = await clientFolder(req, req.body.brand, req.body.client, true);
+    if (r.error)
+        return ResponseFormatter_1.ResponseFormatter.error(res, r.error, 400);
+    ResponseFormatter_1.ResponseFormatter.success(res, { uuid: r.folder.uuid, name: r.folder.name, path: `${r.brandFolder.name} › ${r.folder.name}` });
+}));
+router.post('/client-folder/attach', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    const user = req.user;
+    const src = await FileRecord_model_1.FileRecord.findOne({ where: { ...byId(req.body.fileId), isFolder: false } });
+    if (!src)
+        return ResponseFormatter_1.ResponseFormatter.notFound(res, 'File not found');
+    if (!(await isFolderAccessible(req, src.folderId, user)))
+        return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You do not have access to this file', req.path);
+    const r = await clientFolder(req, req.body.brand, req.body.client, true);
+    if (r.error)
+        return ResponseFormatter_1.ResponseFormatter.error(res, r.error, 400);
+    let copy = src.folderId === r.folder.uuid ? src : await FileRecord_model_1.FileRecord.findOne({ where: { folderId: r.folder.uuid, path: src.path, isFolder: false } });
+    if (!copy) {
+        copy = await FileRecord_model_1.FileRecord.create({
+            uuid: (0, uuid_1.v4)(), name: src.name, originalName: src.originalName, path: src.path, mimeType: src.mimeType, size: src.size,
+            folderId: r.folder.uuid, isFolder: false, uploadedById: user?.id,
+            uploadedByName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
+        });
+    }
+    ResponseFormatter_1.ResponseFormatter.success(res, withUrl(copy), `Filed in ${r.brandFolder.name} › ${r.folder.name}`);
+}));
 router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
     const user = req.user;
     const { folderId, search } = req.query;
@@ -371,6 +429,22 @@ router.get('/', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) 
             return ResponseFormatter_1.ResponseFormatter.forbidden(res, 'You do not have access to this folder', req.path);
         }
         where.folderId = folderId;
+    }
+    else if (search && req.query.everywhere === '1') {
+        where.name = { [sequelize_1.Op.iLike]: `%${search}%` };
+        const hits = await FileRecord_model_1.FileRecord.findAll({ where, order: [['createdAt', 'DESC']], limit: 200 });
+        const ok = new Map();
+        const visible = [];
+        for (const h of hits) {
+            const key = String(h.folderId || '');
+            if (!ok.has(key))
+                ok.set(key, await isFolderAccessible(req, h.folderId, user));
+            if (ok.get(key))
+                visible.push(h);
+            if (visible.length >= 60)
+                break;
+        }
+        return ResponseFormatter_1.ResponseFormatter.success(res, visible.map(withUrl));
     }
     else {
         where.folderId = { [sequelize_1.Op.in]: [general.uuid, mine.uuid, ...named.map((f) => f.uuid)] };
