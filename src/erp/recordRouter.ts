@@ -75,11 +75,15 @@ async function canDelete(req: Request, row: any): Promise<boolean> {
 const PROTECTED = ['id', 'code', 'createdById', 'createdAt', 'updatedAt'];
 
 export function clean(body: any, model: any, extraBlocked: string[] = []): any {
-  const attrs = Object.keys(model.getAttributes());
+  const defs = model.getAttributes();
+  const attrs = Object.keys(defs);
   const out: any = {};
   for (const [k, v] of Object.entries(body || {})) {
     if (!attrs.includes(k) || PROTECTED.includes(k) || extraBlocked.includes(k)) continue;
-    out[k] = v === '' ? null : v;
+    const blank = v === '' || v === null;
+    // A field left empty that cannot be empty (e.g. a fee) falls back to its default (0) instead of failing.
+    if (blank && defs[k].allowNull === false) { if (defs[k].defaultValue !== undefined) out[k] = defs[k].defaultValue; continue; }
+    out[k] = blank ? null : v;
   }
   return out;
 }

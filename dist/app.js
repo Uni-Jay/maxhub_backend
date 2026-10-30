@@ -42,6 +42,7 @@ const path_1 = __importDefault(require("path"));
 const express_1 = __importDefault(require("express"));
 const helmet_1 = __importDefault(require("helmet"));
 const cors_1 = __importDefault(require("cors"));
+const compression_1 = __importDefault(require("compression"));
 const dotenv = __importStar(require("dotenv"));
 const Database_1 = require("./config/Database");
 const ChatSocket_1 = require("./socket/ChatSocket");
@@ -198,11 +199,13 @@ class AppBootstrapper {
             credentials: true,
             methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
             allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+            maxAge: 7200,
         };
         const corsMw = (0, cors_1.default)(corsOptions);
         const skipPublic = (req, res, next) => req.path.startsWith('/api/public') ? next() : corsMw(req, res, next);
         this.app.options('*', skipPublic);
         this.app.use(skipPublic);
+        this.app.use((0, compression_1.default)());
         this.app.use(express_1.default.json({ limit: '10mb' }));
         this.app.use(express_1.default.urlencoded({ limit: '10mb', extended: true }));
         this.app.use('/uploads', express_1.default.static(path_1.default.join(process.cwd(), 'uploads')));

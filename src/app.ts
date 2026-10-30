@@ -3,6 +3,7 @@ import path from 'path';
 import express, { Express, Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import compression from 'compression';
 import { Sequelize } from 'sequelize';
 import * as dotenv from 'dotenv';
 import { DatabaseConfig } from '@config/Database';
@@ -209,6 +210,8 @@ class AppBootstrapper {
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+      // Browsers remember this check for 2 hours instead of asking before every request.
+      maxAge: 7200,
     };
     // /api/public/* (careers widget, document signing, tracking) sets its own open CORS headers.
     const corsMw = cors(corsOptions);
@@ -216,6 +219,9 @@ class AppBootstrapper {
       req.path.startsWith('/api/public') ? next() : corsMw(req, res, next);
     this.app.options('*', skipPublic);
     this.app.use(skipPublic);
+
+    // Compress replies — much less to send across a slow or distant connection.
+    this.app.use(compression());
 
     // Request body parsing
     this.app.use(express.json({ limit: '10mb' }));

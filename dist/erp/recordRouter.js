@@ -62,12 +62,19 @@ async function canDelete(req, row) {
 }
 const PROTECTED = ['id', 'code', 'createdById', 'createdAt', 'updatedAt'];
 function clean(body, model, extraBlocked = []) {
-    const attrs = Object.keys(model.getAttributes());
+    const defs = model.getAttributes();
+    const attrs = Object.keys(defs);
     const out = {};
     for (const [k, v] of Object.entries(body || {})) {
         if (!attrs.includes(k) || PROTECTED.includes(k) || extraBlocked.includes(k))
             continue;
-        out[k] = v === '' ? null : v;
+        const blank = v === '' || v === null;
+        if (blank && defs[k].allowNull === false) {
+            if (defs[k].defaultValue !== undefined)
+                out[k] = defs[k].defaultValue;
+            continue;
+        }
+        out[k] = blank ? null : v;
     }
     return out;
 }
