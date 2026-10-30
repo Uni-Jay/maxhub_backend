@@ -149,7 +149,9 @@ export class AuthenticationService {
     // accounts (used for development) are exempt unless they explicitly
     // enabled 2FA themselves.
     const mfaLoginEnabled = process.env.ENABLE_2FA_LOGIN !== 'false';
-    const isDemoAccount = user.email.toLowerCase().endsWith('@maxhub.com');
+    // Test sign-ins made under Settings → Test accounts use the reserved
+    // .test domain (can never receive email), so they skip the code too.
+    const isDemoAccount = user.email.toLowerCase().endsWith('@maxhub.com') || user.email.toLowerCase().endsWith('@maxhub.test');
     const requiresMFA = mfaLoginEnabled && (!!twoFactorAuth || !isDemoAccount);
 
     // Generate tokens

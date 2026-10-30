@@ -92,7 +92,7 @@ class AuthenticationService {
             where: { userId: user.id, isEnabled: true },
         });
         const mfaLoginEnabled = process.env.ENABLE_2FA_LOGIN !== 'false';
-        const isDemoAccount = user.email.toLowerCase().endsWith('@maxhub.com');
+        const isDemoAccount = user.email.toLowerCase().endsWith('@maxhub.com') || user.email.toLowerCase().endsWith('@maxhub.test');
         const requiresMFA = mfaLoginEnabled && (!!twoFactorAuth || !isDemoAccount);
         const accessToken = JWTService_1.default.generateAccessToken(authenticatedUser);
         const refreshToken = JWTService_1.default.generateRefreshToken(authenticatedUser);

@@ -59,6 +59,7 @@ export function mountErpProtected(apiRouter: Router): void {
   erp.use(require('./minutes').minutesRouter());
   erp.use(require('./bookings').bookingsRouter());
   erp.use(require('./school').schoolRouter());
+  erp.use(require('./testAccounts').testAccountsRouter());
   erp.use(profitRouter());
   erp.use(agendaRouter());
   erp.use((err: any, _req: Request, res: Response, _next: any) => {

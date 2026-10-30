@@ -60,6 +60,7 @@ function mountErpProtected(apiRouter) {
     erp.use(require('./minutes').minutesRouter());
     erp.use(require('./bookings').bookingsRouter());
     erp.use(require('./school').schoolRouter());
+    erp.use(require('./testAccounts').testAccountsRouter());
     erp.use((0, profit_1.profitRouter)());
     erp.use((0, agenda_1.agendaRouter)());
     erp.use((err, _req, res, _next) => {
