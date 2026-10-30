@@ -1,4 +1,5 @@
 import { Router } from 'express';
+export declare const AWAITING = "Awaiting payment";
 export declare function purchaseSettings(): Promise<{
     hodLimit: number;
 }>;

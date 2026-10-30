@@ -109,7 +109,7 @@ async function buildSummary(uid, ctx = {}) {
     if (ctx.accounts || mgmt) {
         const toBuy = await safe(q(`SELECT COUNT(*)::int n FROM erp_purchase_requests WHERE status = 'Approved'`), [{ n: 0 }]);
         if (toBuy[0]?.n && ctx.accounts)
-            items.push({ kind: 'approval', count: toBuy[0].n, url: '/purchases', text: `${toBuy[0].n} approved purchase${toBuy[0].n === 1 ? '' : 's'} ready to buy` });
+            items.push({ kind: 'approval', count: toBuy[0].n, url: '/purchases', text: `${toBuy[0].n} approved purchase${toBuy[0].n === 1 ? '' : 's'} to pay out` });
     }
     const managerReviews = await safe(q(`SELECT COUNT(*)::int n FROM erp_reviews WHERE "reviewerUserId" = :u AND status = 'Manager review'`, { u: uid }), [{ n: 0 }]);
     if (managerReviews[0]?.n)

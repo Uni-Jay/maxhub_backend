@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.AWAITING = void 0;
 exports.purchaseSettings = purchaseSettings;
 exports.budgetFor = budgetFor;
 exports.spendFor = spendFor;
@@ -19,6 +20,7 @@ const S = {
     CANCELLED: 'Cancelled',
 };
 const PENDING = [S.HOD, S.MGMT];
+exports.AWAITING = 'Awaiting payment';
 const SETTINGS_KEY = 'purchaseSettings';
 const naira = (n) => `₦${Math.round(Number(n || 0)).toLocaleString('en-NG')}`;
 const isAccounts = (req) => (0, helpers_1.roleOf)(req) === 'accountant';
@@ -63,7 +65,7 @@ async function spendFor(brandId, year, month) {
     const spentRows = await q(`SELECT category, COALESCE(SUM(COALESCE("amountNgn", CASE WHEN currency = 'NGN' THEN amount END)), 0)::float v
      FROM erp_expenses WHERE "departmentId" IN (:ids) AND status <> 'Cancelled' AND "paidAt" >= :s AND "paidAt" < :e GROUP BY category`, R).catch(() => []);
     const committedRows = await q(`SELECT category, COALESCE(SUM(COALESCE("amountNgn", total)), 0)::float v FROM erp_purchase_requests
-     WHERE "departmentId" IN (:ids) AND status = :st GROUP BY category`, { ...R, st: S.APPROVED }).catch(() => []);
+     WHERE "departmentId" IN (:ids) AND status = :st AND "expenseId" IS NULL GROUP BY category`, { ...R, st: S.APPROVED }).catch(() => []);
     const pendingRows = await q(`SELECT COALESCE(SUM(COALESCE("amountNgn", total)), 0)::float v, COUNT(*)::int c FROM erp_purchase_requests
      WHERE "departmentId" IN (:ids) AND status IN (:st)`, { ...R, st: PENDING }).catch(() => []);
     const byCategory = {};
@@ -134,6 +136,27 @@ async function permissions(req, row, headed) {
         canDelete: (0, helpers_1.isManagement)(req),
         canSee: mine || canSeeAll(req) || isHodHere,
     };
+}
+async function onApproved(req, row) {
+    if (!row.expenseId) {
+        const { toNgn } = require('./fx');
+        const total = Number(row.total);
+        const conv = row.currency === 'NGN' ? { amountNgn: total, fxRate: 1 } : await toNgn(total, row.currency);
+        const expense = await models_1.ErpModels.Expense.create({
+            code: await (0, helpers_1.nextCode)(`${await (0, recordRouter_1.brandPrefix)(row.departmentId)}-EXP`), title: row.title, category: row.category,
+            vendor: row.vendor || null, amount: total, currency: row.currency, fxRate: conv.fxRate, amountNgn: conv.amountNgn ?? row.amountNgn,
+            paidAt: new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' }), method: 'Transfer', reference: row.code, status: exports.AWAITING,
+            notes: `Purchase request ${row.code} by ${row.requestedByName} — approved, waiting for Accounts to pay`, departmentId: row.departmentId,
+            createdById: req ? (0, helpers_1.userId)(req) : null, meta: { purchaseRequestId: Number(row.id) },
+        });
+        await row.update({ expenseId: expense.id });
+        (0, helpers_1.emitChange)(req, 'business_expense', 'created', expense);
+    }
+    await (0, helpers_1.notifyUsers)(req, await (0, helpers_1.userIdsWithRoles)(['accountant']), {
+        title: 'Approved purchase — please disburse', type: 'Approval', priority: row.urgency === 'Urgent' ? 'High' : 'Medium',
+        message: `${row.code}: “${row.title}” (${naira(row.amountNgn ?? row.total)}) for ${row.requestedByName}. It is already in this month’s expenses as awaiting payment.`,
+        actionUrl: `/purchases?open=${row.id}`,
+    }, { excludeSelf: req ? (0, helpers_1.userId)(req) : undefined });
 }
 function procurementRouter() {
     const r = (0, express_1.Router)();
@@ -233,9 +256,8 @@ function procurementRouter() {
             history: [{ at: new Date().toISOString(), by: (0, helpers_1.userName)(req), byId: me, action: status === S.APPROVED ? 'Requested and approved (management)' : 'Requested', note: null }],
         });
         await (0, helpers_1.audit)(req, 'Purchases', 'Create', 'PurchaseRequest', row.id, `${(0, helpers_1.userName)(req)} requested to buy “${title}” (${row.code})`, { total, currency, category });
-        if (status === S.APPROVED) {
-            await (0, helpers_1.notifyUsers)(req, await (0, helpers_1.userIdsWithRoles)(['accountant']), { title: 'Purchase approved — ready to buy', message: `${row.code}: “${title}” (${naira(conv.amountNgn ?? total)}).`, type: 'Approval', actionUrl: `/purchases?open=${row.id}` }, { excludeSelf: me });
-        }
+        if (status === S.APPROVED)
+            await onApproved(req, row);
         else
             await notifyApprovers(req, row);
         (0, helpers_1.emitChange)(req, 'purchase_request', 'created', row);
@@ -275,8 +297,8 @@ function procurementRouter() {
         if (next === S.MGMT)
             await notifyApprovers(req, row);
         else {
-            await (0, helpers_1.notifyUsers)(req, [Number(row.requestedById)], { title: 'Purchase request approved', message: `${row.code} “${row.title}” is approved. Accounts will buy it.`, type: 'Approval', actionUrl: `/purchases?open=${row.id}` }, { excludeSelf: (0, helpers_1.userId)(req) });
-            await (0, helpers_1.notifyUsers)(req, await (0, helpers_1.userIdsWithRoles)(['accountant']), { title: 'Purchase approved — ready to buy', message: `${row.code}: “${row.title}” (${naira(row.amountNgn ?? row.total)}).`, type: 'Approval', actionUrl: `/purchases?open=${row.id}` }, { excludeSelf: (0, helpers_1.userId)(req) });
+            await (0, helpers_1.notifyUsers)(req, [Number(row.requestedById)], { title: 'Purchase request approved', message: `${row.code} “${row.title}” is approved and has gone to Accounts for payment.`, type: 'Approval', actionUrl: `/purchases?open=${row.id}` }, { excludeSelf: (0, helpers_1.userId)(req) });
+            await onApproved(req, row);
         }
         (0, helpers_1.emitChange)(req, 'purchase_request', 'updated', row);
         return (0, recordRouter_1.ok)(res, row, next === S.APPROVED ? 'Approved' : 'Approved and sent to management');
@@ -295,22 +317,29 @@ function procurementRouter() {
         const paidAt = b.boughtAt || new Date().toISOString().slice(0, 10);
         const { toNgn } = require('./fx');
         const conv = row.currency === 'NGN' ? { amountNgn: amount, fxRate: 1 } : await toNgn(amount, row.currency);
-        const expense = await models_1.ErpModels.Expense.create({
-            code: await (0, helpers_1.nextCode)(`${await (0, recordRouter_1.brandPrefix)(row.departmentId)}-EXP`), title: row.title, category: row.category,
+        const paid = {
             vendor: b.vendor || row.vendor || null, amount, currency: row.currency, fxRate: conv.fxRate, amountNgn: conv.amountNgn,
             paidAt, method: b.method || 'Transfer', reference: row.code, receiptUrl: b.receiptUrl || null, status: 'Paid',
-            notes: `Purchase request ${row.code} by ${row.requestedByName}`, departmentId: row.departmentId, createdById: (0, helpers_1.userId)(req),
-            meta: { purchaseRequestId: Number(row.id) },
-        });
+            notes: `Purchase request ${row.code} by ${row.requestedByName}`,
+        };
+        let expense = row.expenseId ? await models_1.ErpModels.Expense.findByPk(row.expenseId) : null;
+        if (expense)
+            await expense.update(paid);
+        else {
+            expense = await models_1.ErpModels.Expense.create({
+                code: await (0, helpers_1.nextCode)(`${await (0, recordRouter_1.brandPrefix)(row.departmentId)}-EXP`), title: row.title, category: row.category, ...paid,
+                departmentId: row.departmentId, createdById: (0, helpers_1.userId)(req), meta: { purchaseRequestId: Number(row.id) },
+            });
+        }
         await row.update({
             status: S.BOUGHT, actualAmount: amount, boughtAt: paidAt, receiptUrl: b.receiptUrl || null, vendor: b.vendor || row.vendor,
-            expenseId: expense.id, history: push(row, req, 'Bought', `Paid ${row.currency === 'NGN' ? naira(amount) : `${row.currency} ${amount.toLocaleString()}`} — expense ${expense.code}`),
+            expenseId: expense.id, history: push(row, req, 'Paid out', `Paid ${row.currency === 'NGN' ? naira(amount) : `${row.currency} ${amount.toLocaleString()}`} — expense ${expense.code}`),
         });
         await (0, helpers_1.audit)(req, 'Purchases', 'Bought', 'PurchaseRequest', row.id, `${(0, helpers_1.userName)(req)} recorded purchase ${row.code} (expense ${expense.code})`, { amount });
-        await (0, helpers_1.notifyUsers)(req, [Number(row.requestedById)], { title: 'Your purchase has been bought', message: `${row.code} “${row.title}” has been paid for.`, type: 'System', actionUrl: `/purchases?open=${row.id}` }, { excludeSelf: (0, helpers_1.userId)(req) });
+        await (0, helpers_1.notifyUsers)(req, [Number(row.requestedById)], { title: 'Your purchase has been paid', message: `${row.code} “${row.title}” has been paid out by Accounts.`, type: 'System', actionUrl: `/purchases?open=${row.id}` }, { excludeSelf: (0, helpers_1.userId)(req) });
         (0, helpers_1.emitChange)(req, 'purchase_request', 'updated', row);
-        (0, helpers_1.emitChange)(req, 'business_expense', 'created', expense);
-        return (0, recordRouter_1.ok)(res, { request: row, expense }, 'Purchase recorded as an expense');
+        (0, helpers_1.emitChange)(req, 'business_expense', 'updated', expense);
+        return (0, recordRouter_1.ok)(res, { request: row, expense }, 'Payment recorded — the expense is now marked Paid');
     }));
     r.post('/purchases/:id(\\d+)/cancel', (0, recordRouter_1.wrap)(async (req, res) => {
         const row = await models_1.ErpModels.PurchaseRequest.findByPk(req.params.id);
@@ -320,6 +349,8 @@ function procurementRouter() {
         if (!p.canCancel)
             return (0, recordRouter_1.fail)(res, 403, 'This request can no longer be cancelled');
         await row.update({ status: S.CANCELLED, history: push(row, req, 'Cancelled', req.body?.note) });
+        if (row.expenseId)
+            await helpers_1.db.query(`UPDATE erp_expenses SET status = 'Cancelled', "updatedAt" = NOW() WHERE id = :id AND status <> 'Paid'`, { replacements: { id: row.expenseId } });
         await (0, helpers_1.audit)(req, 'Purchases', 'Cancel', 'PurchaseRequest', row.id, `${(0, helpers_1.userName)(req)} cancelled ${row.code}`);
         (0, helpers_1.emitChange)(req, 'purchase_request', 'updated', row);
         return (0, recordRouter_1.ok)(res, row, 'Request cancelled');

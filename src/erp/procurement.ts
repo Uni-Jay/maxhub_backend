@@ -26,6 +26,7 @@ const S = {
   CANCELLED: 'Cancelled',
 };
 const PENDING = [S.HOD, S.MGMT];
+export const AWAITING = 'Awaiting payment';
 const SETTINGS_KEY = 'purchaseSettings';
 const naira = (n: any) => `₦${Math.round(Number(n || 0)).toLocaleString('en-NG')}`;
 const isAccounts = (req: Request) => roleOf(req) === 'accountant';
@@ -82,7 +83,7 @@ export async function spendFor(brandId: number, year: number, month: number) {
   ).catch(() => [] as any[]);
   const committedRows = await q(
     `SELECT category, COALESCE(SUM(COALESCE("amountNgn", total)), 0)::float v FROM erp_purchase_requests
-     WHERE "departmentId" IN (:ids) AND status = :st GROUP BY category`, { ...R, st: S.APPROVED },
+     WHERE "departmentId" IN (:ids) AND status = :st AND "expenseId" IS NULL GROUP BY category`, { ...R, st: S.APPROVED },
   ).catch(() => [] as any[]);
   const pendingRows = await q(
     `SELECT COALESCE(SUM(COALESCE("amountNgn", total)), 0)::float v, COUNT(*)::int c FROM erp_purchase_requests
@@ -156,6 +157,34 @@ async function permissions(req: Request, row: any, headed?: number[]) {
     canDelete: isManagement(req),
     canSee: mine || canSeeAll(req) || isHodHere,
   };
+}
+
+
+/**
+ * Final approval: the request goes straight to Accounts for payment and is added
+ * to the month's business expenses (as "Awaiting payment") so the monthly totals,
+ * Profit & Loss and budgets include it right away.
+ */
+async function onApproved(req: Request | null, row: any) {
+  if (!row.expenseId) {
+    const { toNgn } = require('./fx');
+    const total = Number(row.total);
+    const conv = row.currency === 'NGN' ? { amountNgn: total, fxRate: 1 } : await toNgn(total, row.currency);
+    const expense: any = await ErpModels.Expense.create({
+      code: await nextCode(`${await brandPrefix(row.departmentId)}-EXP`), title: row.title, category: row.category,
+      vendor: row.vendor || null, amount: total, currency: row.currency, fxRate: conv.fxRate, amountNgn: conv.amountNgn ?? row.amountNgn,
+      paidAt: new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' }), method: 'Transfer', reference: row.code, status: AWAITING,
+      notes: `Purchase request ${row.code} by ${row.requestedByName} — approved, waiting for Accounts to pay`, departmentId: row.departmentId,
+      createdById: req ? userId(req) : null, meta: { purchaseRequestId: Number(row.id) },
+    } as any);
+    await row.update({ expenseId: expense.id });
+    emitChange(req, 'business_expense', 'created', expense);
+  }
+  await notifyUsers(req, await userIdsWithRoles(['accountant']), {
+    title: 'Approved purchase — please disburse', type: 'Approval', priority: row.urgency === 'Urgent' ? 'High' : 'Medium',
+    message: `${row.code}: “${row.title}” (${naira(row.amountNgn ?? row.total)}) for ${row.requestedByName}. It is already in this month’s expenses as awaiting payment.`,
+    actionUrl: `/purchases?open=${row.id}`,
+  }, { excludeSelf: req ? userId(req) : undefined });
 }
 
 export function procurementRouter(): Router {
@@ -255,9 +284,8 @@ export function procurementRouter(): Router {
       history: [{ at: new Date().toISOString(), by: userName(req), byId: me, action: status === S.APPROVED ? 'Requested and approved (management)' : 'Requested', note: null }],
     });
     await audit(req, 'Purchases', 'Create', 'PurchaseRequest', row.id, `${userName(req)} requested to buy “${title}” (${row.code})`, { total, currency, category });
-    if (status === S.APPROVED) {
-      await notifyUsers(req, await userIdsWithRoles(['accountant']), { title: 'Purchase approved — ready to buy', message: `${row.code}: “${title}” (${naira(conv.amountNgn ?? total)}).`, type: 'Approval', actionUrl: `/purchases?open=${row.id}` }, { excludeSelf: me });
-    } else await notifyApprovers(req, row);
+    if (status === S.APPROVED) await onApproved(req, row);
+    else await notifyApprovers(req, row);
     emitChange(req, 'purchase_request', 'created', row);
     return ok(res, row, status === S.APPROVED ? 'Request saved and approved' : 'Request sent for approval', 201);
   }));
@@ -292,8 +320,8 @@ export function procurementRouter(): Router {
     await audit(req, 'Purchases', 'Approve', 'PurchaseRequest', row.id, `${userName(req)} approved ${row.code}${next === S.MGMT ? ' (sent to management)' : ''}`);
     if (next === S.MGMT) await notifyApprovers(req, row);
     else {
-      await notifyUsers(req, [Number(row.requestedById)], { title: 'Purchase request approved', message: `${row.code} “${row.title}” is approved. Accounts will buy it.`, type: 'Approval', actionUrl: `/purchases?open=${row.id}` }, { excludeSelf: userId(req) });
-      await notifyUsers(req, await userIdsWithRoles(['accountant']), { title: 'Purchase approved — ready to buy', message: `${row.code}: “${row.title}” (${naira(row.amountNgn ?? row.total)}).`, type: 'Approval', actionUrl: `/purchases?open=${row.id}` }, { excludeSelf: userId(req) });
+      await notifyUsers(req, [Number(row.requestedById)], { title: 'Purchase request approved', message: `${row.code} “${row.title}” is approved and has gone to Accounts for payment.`, type: 'Approval', actionUrl: `/purchases?open=${row.id}` }, { excludeSelf: userId(req) });
+      await onApproved(req, row);
     }
     emitChange(req, 'purchase_request', 'updated', row);
     return ok(res, row, next === S.APPROVED ? 'Approved' : 'Approved and sent to management');
@@ -311,22 +339,28 @@ export function procurementRouter(): Router {
     const paidAt = b.boughtAt || new Date().toISOString().slice(0, 10);
     const { toNgn } = require('./fx');
     const conv = row.currency === 'NGN' ? { amountNgn: amount, fxRate: 1 } : await toNgn(amount, row.currency);
-    const expense: any = await ErpModels.Expense.create({
-      code: await nextCode(`${await brandPrefix(row.departmentId)}-EXP`), title: row.title, category: row.category,
+    const paid = {
       vendor: b.vendor || row.vendor || null, amount, currency: row.currency, fxRate: conv.fxRate, amountNgn: conv.amountNgn,
       paidAt, method: b.method || 'Transfer', reference: row.code, receiptUrl: b.receiptUrl || null, status: 'Paid',
-      notes: `Purchase request ${row.code} by ${row.requestedByName}`, departmentId: row.departmentId, createdById: userId(req),
-      meta: { purchaseRequestId: Number(row.id) },
-    } as any);
+      notes: `Purchase request ${row.code} by ${row.requestedByName}`,
+    };
+    let expense: any = row.expenseId ? await ErpModels.Expense.findByPk(row.expenseId) : null;
+    if (expense) await expense.update(paid);
+    else {
+      expense = await ErpModels.Expense.create({
+        code: await nextCode(`${await brandPrefix(row.departmentId)}-EXP`), title: row.title, category: row.category, ...paid,
+        departmentId: row.departmentId, createdById: userId(req), meta: { purchaseRequestId: Number(row.id) },
+      } as any);
+    }
     await row.update({
       status: S.BOUGHT, actualAmount: amount, boughtAt: paidAt, receiptUrl: b.receiptUrl || null, vendor: b.vendor || row.vendor,
-      expenseId: expense.id, history: push(row, req, 'Bought', `Paid ${row.currency === 'NGN' ? naira(amount) : `${row.currency} ${amount.toLocaleString()}`} — expense ${expense.code}`),
+      expenseId: expense.id, history: push(row, req, 'Paid out', `Paid ${row.currency === 'NGN' ? naira(amount) : `${row.currency} ${amount.toLocaleString()}`} — expense ${expense.code}`),
     });
     await audit(req, 'Purchases', 'Bought', 'PurchaseRequest', row.id, `${userName(req)} recorded purchase ${row.code} (expense ${expense.code})`, { amount });
-    await notifyUsers(req, [Number(row.requestedById)], { title: 'Your purchase has been bought', message: `${row.code} “${row.title}” has been paid for.`, type: 'System', actionUrl: `/purchases?open=${row.id}` }, { excludeSelf: userId(req) });
+    await notifyUsers(req, [Number(row.requestedById)], { title: 'Your purchase has been paid', message: `${row.code} “${row.title}” has been paid out by Accounts.`, type: 'System', actionUrl: `/purchases?open=${row.id}` }, { excludeSelf: userId(req) });
     emitChange(req, 'purchase_request', 'updated', row);
-    emitChange(req, 'business_expense', 'created', expense);
-    return ok(res, { request: row, expense }, 'Purchase recorded as an expense');
+    emitChange(req, 'business_expense', 'updated', expense);
+    return ok(res, { request: row, expense }, 'Payment recorded — the expense is now marked Paid');
   }));
 
   r.post('/purchases/:id(\\d+)/cancel', wrap(async (req, res) => {
@@ -335,6 +369,7 @@ export function procurementRouter(): Router {
     const p = await permissions(req, row.get({ plain: true }));
     if (!p.canCancel) return fail(res, 403, 'This request can no longer be cancelled');
     await row.update({ status: S.CANCELLED, history: push(row, req, 'Cancelled', req.body?.note) });
+    if (row.expenseId) await db.query(`UPDATE erp_expenses SET status = 'Cancelled', "updatedAt" = NOW() WHERE id = :id AND status <> 'Paid'`, { replacements: { id: row.expenseId } });
     await audit(req, 'Purchases', 'Cancel', 'PurchaseRequest', row.id, `${userName(req)} cancelled ${row.code}`);
     emitChange(req, 'purchase_request', 'updated', row);
     return ok(res, row, 'Request cancelled');
