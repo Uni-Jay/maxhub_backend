@@ -87,7 +87,8 @@ export function brandModulesRouter(): Router {
   r.post('/travel/cases/:id(\\d+)/onboard', wrap(async (req, res) => {
     const row: any = await (ErpModels.TravelCase as any).findByPk(req.params.id);
     if (!row) return fail(res, 404, 'Travel case not found');
-    if (!row.customerEmail || !row.customerPhone) return fail(res, 400, 'Email and phone are required to onboard a customer');
+    // Already linked to a registered client → nothing else to collect.
+    if (!row.clientId && (!row.customerEmail || !row.customerPhone)) return fail(res, 400, 'Email and phone are required to onboard a customer');
     let clientId = row.clientId;
     if (!clientId) {
       const found: any[] = await db.query(`SELECT id FROM clients WHERE LOWER(email) = LOWER(:e) AND "deletedAt" IS NULL LIMIT 1`, { replacements: { e: row.customerEmail }, type: QueryTypes.SELECT });

@@ -87,7 +87,7 @@ function brandModulesRouter() {
         const row = await models_1.ErpModels.TravelCase.findByPk(req.params.id);
         if (!row)
             return (0, recordRouter_1.fail)(res, 404, 'Travel case not found');
-        if (!row.customerEmail || !row.customerPhone)
+        if (!row.clientId && (!row.customerEmail || !row.customerPhone))
             return (0, recordRouter_1.fail)(res, 400, 'Email and phone are required to onboard a customer');
         let clientId = row.clientId;
         if (!clientId) {
