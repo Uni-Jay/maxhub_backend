@@ -1,16 +1,53 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.syncContactsFromClients = syncContactsFromClients;
 const express_1 = require("express");
 const sequelize_1 = require("sequelize");
 const ResponseFormatter_1 = require("../utils/ResponseFormatter");
 const ErrorMiddleware_1 = require("../middleware/ErrorMiddleware");
 const AuthMiddleware_1 = require("../middleware/AuthMiddleware");
 const Contact_model_1 = require("../models/Contact.model");
+const sequelize_2 = require("sequelize");
 const router = (0, express_1.Router)();
 async function generateContactCode() {
     const last = await Contact_model_1.Contact.findOne({ order: [['id', 'DESC']], paranoid: false });
     const nextNum = last ? Number(last.id) + 1 : 1;
     return `CTK-${String(nextNum).padStart(6, '0')}`;
+}
+let lastSync = 0;
+async function syncContactsFromClients(force = false) {
+    if (!force && Date.now() - lastSync < 30000)
+        return 0;
+    lastSync = Date.now();
+    const sequelize = Contact_model_1.Contact.sequelize;
+    const hasDeleted = !!Contact_model_1.Contact.getAttributes().deletedAt;
+    const notDeleted = hasDeleted ? 'AND ct."deletedAt" IS NULL' : '';
+    const [, inserted] = await sequelize.query(`
+    INSERT INTO contacts (uuid, "contactCode", "firstName", "lastName", email, phone, company, source, status, address, country, notes, "createdAt", "updatedAt")
+    SELECT gen_random_uuid(),
+           'CTK-' || COALESCE(NULLIF(c."clientId", ''), 'CL' || c.id::text),
+           LEFT(COALESCE(NULLIF(split_part(TRIM(c."fullName"), ' ', 1), ''), 'Client'), 100),
+           LEFT(COALESCE(NULLIF(TRIM(substr(TRIM(c."fullName"), length(split_part(TRIM(c."fullName"), ' ', 1)) + 1)), ''), '-'), 100),
+           LOWER(TRIM(c.email)), LEFT(COALESCE(c.phone, ''), 20), d.name, 'Direct', 'Active', c.address, c.country,
+           'Registered client ' || COALESCE(c."clientId", '#' || c.id::text),
+           NOW(), NOW()
+    FROM clients c
+    LEFT JOIN departments d ON d.id = c."departmentId"
+    WHERE c."deletedAt" IS NULL AND COALESCE(TRIM(c.email), '') <> ''
+      AND NOT EXISTS (SELECT 1 FROM contacts ct WHERE LOWER(ct.email) = LOWER(TRIM(c.email)) ${notDeleted})
+    ON CONFLICT DO NOTHING`, { type: sequelize_2.QueryTypes.INSERT }).catch((e) => { console.error('[CRM] client→contact sync failed:', e?.message); return [null, 0]; });
+    await sequelize.query(`
+    UPDATE contacts ct SET
+      phone = CASE WHEN COALESCE(ct.phone, '') = '' THEN LEFT(COALESCE(c.phone, ''), 20) ELSE ct.phone END,
+      country = COALESCE(NULLIF(ct.country, ''), c.country),
+      address = COALESCE(NULLIF(ct.address, ''), c.address),
+      company = COALESCE(NULLIF(ct.company, ''), d.name),
+      "updatedAt" = NOW()
+    FROM clients c LEFT JOIN departments d ON d.id = c."departmentId"
+    WHERE c."deletedAt" IS NULL AND LOWER(ct.email) = LOWER(TRIM(c.email))
+      AND ((COALESCE(ct.phone, '') = '' AND COALESCE(c.phone, '') <> '') OR (COALESCE(ct.country, '') = '' AND c.country IS NOT NULL)
+        OR (COALESCE(ct.address, '') = '' AND c.address IS NOT NULL) OR (COALESCE(ct.company, '') = '' AND d.name IS NOT NULL))`).catch(() => undefined);
+    return Number(inserted) || 0;
 }
 router.get('/stats/pipeline', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthMiddleware_1.AuthMiddleware.requirePermission('crm.contact.read.all', 'crm.contact.read.own'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (_req, res) => {
     const counts = await Contact_model_1.Contact.findAll({
@@ -36,6 +73,7 @@ router.get('/stats/pipeline', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthM
     return ResponseFormatter_1.ResponseFormatter.success(res, { pipeline, total }, 'Pipeline stats retrieved');
 }));
 router.get('/stats', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthMiddleware_1.AuthMiddleware.requirePermission('crm.contact.read.all', 'crm.contact.read.own'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (_req, res) => {
+    await syncContactsFromClients();
     const counts = await Contact_model_1.Contact.findAll({
         attributes: ['status', [(0, sequelize_1.fn)('COUNT', (0, sequelize_1.col)('id')), 'count']],
         group: ['status'],
@@ -52,7 +90,12 @@ router.get('/stats', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthMiddleware
         converted: byStatus.Converted ?? 0,
     }, 'Contact stats retrieved');
 }));
+router.post('/sync-clients', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthMiddleware_1.AuthMiddleware.requirePermission('crm.contact.read.all', 'crm.contact.read.own'), ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (_req, res) => {
+    const added = await syncContactsFromClients(true);
+    return ResponseFormatter_1.ResponseFormatter.success(res, { added }, added ? `${added} client(s) added to contacts` : 'Contacts are up to date');
+}));
 router.get('/', AuthMiddleware_1.AuthMiddleware.verifyToken, AuthMiddleware_1.AuthMiddleware.requirePermission('crm.contact.read.all', 'crm.contact.read.own'), AuthMiddleware_1.AuthMiddleware.pagination, ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, res) => {
+    await syncContactsFromClients();
     const { page, limit, offset } = req.pagination;
     const { status, source, search, ownerUserId } = req.query;
     const where = {};

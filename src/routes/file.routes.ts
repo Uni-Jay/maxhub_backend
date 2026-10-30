@@ -365,7 +365,8 @@ router.get('/fetch', ErrorMiddleware.asyncHandler(async (req: Request, res: Resp
 const BRAND_FOLDERS: Record<string, string> = { VM: 'VisaMax', VMX: 'VisaMax', KS: 'Kurios SAT', BM: 'BeadMax', MF: 'Maxfood Farm' };
 function brandFolderName(code: any): string | null {
   const c = String(code || '').toUpperCase().split('-')[0];
-  return BRAND_FOLDERS[c] || null;
+  // A client not tied to a brand is filed under the shared "Shared" folder.
+  return BRAND_FOLDERS[c] || 'Shared';
 }
 async function clientFolder(req: Request, brand: any, client: any, create: boolean) {
   const brandName = brandFolderName(brand);

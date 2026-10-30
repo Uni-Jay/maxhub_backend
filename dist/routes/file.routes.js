@@ -364,7 +364,7 @@ router.get('/fetch', ErrorMiddleware_1.ErrorMiddleware.asyncHandler(async (req, 
 const BRAND_FOLDERS = { VM: 'VisaMax', VMX: 'VisaMax', KS: 'Kurios SAT', BM: 'BeadMax', MF: 'Maxfood Farm' };
 function brandFolderName(code) {
     const c = String(code || '').toUpperCase().split('-')[0];
-    return BRAND_FOLDERS[c] || null;
+    return BRAND_FOLDERS[c] || 'Shared';
 }
 async function clientFolder(req, brand, client, create) {
     const brandName = brandFolderName(brand);

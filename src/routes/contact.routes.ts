@@ -4,6 +4,7 @@ import { ResponseFormatter } from '@utils/ResponseFormatter';
 import { ErrorMiddleware } from '@middleware/ErrorMiddleware';
 import { AuthMiddleware } from '@middleware/AuthMiddleware';
 import { Contact } from '@models/Contact.model';
+import { QueryTypes } from 'sequelize';
 
 const router = Router();
 
@@ -14,6 +15,46 @@ async function generateContactCode(): Promise<string> {
   const last = await Contact.findOne({ order: [['id', 'DESC']], paranoid: false });
   const nextNum = last ? Number(last.id) + 1 : 1;
   return `CTK-${String(nextNum).padStart(6, '0')}`;
+}
+
+// ─── Clients → Contacts ──────────────────────────────────────────────────────
+// Every registered client (Clients page, VisaMax onboarding, …) is also a CRM
+// contact. Missing ones are added automatically whenever Contacts is opened;
+// details staff typed into a contact are never overwritten — only blanks are filled.
+let lastSync = 0;
+export async function syncContactsFromClients(force = false): Promise<number> {
+  if (!force && Date.now() - lastSync < 30_000) return 0;
+  lastSync = Date.now();
+  const sequelize: any = (Contact as any).sequelize;
+  const hasDeleted = !!(Contact as any).getAttributes().deletedAt;
+  const notDeleted = hasDeleted ? 'AND ct."deletedAt" IS NULL' : '';
+  const [, inserted]: any = await sequelize.query(`
+    INSERT INTO contacts (uuid, "contactCode", "firstName", "lastName", email, phone, company, source, status, address, country, notes, "createdAt", "updatedAt")
+    SELECT gen_random_uuid(),
+           'CTK-' || COALESCE(NULLIF(c."clientId", ''), 'CL' || c.id::text),
+           LEFT(COALESCE(NULLIF(split_part(TRIM(c."fullName"), ' ', 1), ''), 'Client'), 100),
+           LEFT(COALESCE(NULLIF(TRIM(substr(TRIM(c."fullName"), length(split_part(TRIM(c."fullName"), ' ', 1)) + 1)), ''), '-'), 100),
+           LOWER(TRIM(c.email)), LEFT(COALESCE(c.phone, ''), 20), d.name, 'Direct', 'Active', c.address, c.country,
+           'Registered client ' || COALESCE(c."clientId", '#' || c.id::text),
+           NOW(), NOW()
+    FROM clients c
+    LEFT JOIN departments d ON d.id = c."departmentId"
+    WHERE c."deletedAt" IS NULL AND COALESCE(TRIM(c.email), '') <> ''
+      AND NOT EXISTS (SELECT 1 FROM contacts ct WHERE LOWER(ct.email) = LOWER(TRIM(c.email)) ${notDeleted})
+    ON CONFLICT DO NOTHING`, { type: QueryTypes.INSERT }).catch((e: any) => { console.error('[CRM] client→contact sync failed:', e?.message); return [null, 0]; });
+  // Fill blanks on contacts that already exist for a client (never overwrite).
+  await sequelize.query(`
+    UPDATE contacts ct SET
+      phone = CASE WHEN COALESCE(ct.phone, '') = '' THEN LEFT(COALESCE(c.phone, ''), 20) ELSE ct.phone END,
+      country = COALESCE(NULLIF(ct.country, ''), c.country),
+      address = COALESCE(NULLIF(ct.address, ''), c.address),
+      company = COALESCE(NULLIF(ct.company, ''), d.name),
+      "updatedAt" = NOW()
+    FROM clients c LEFT JOIN departments d ON d.id = c."departmentId"
+    WHERE c."deletedAt" IS NULL AND LOWER(ct.email) = LOWER(TRIM(c.email))
+      AND ((COALESCE(ct.phone, '') = '' AND COALESCE(c.phone, '') <> '') OR (COALESCE(ct.country, '') = '' AND c.country IS NOT NULL)
+        OR (COALESCE(ct.address, '') = '' AND c.address IS NOT NULL) OR (COALESCE(ct.company, '') = '' AND d.name IS NOT NULL))`).catch(() => undefined);
+  return Number(inserted) || 0;
 }
 
 // ─── GET /contacts/stats/pipeline ───────────────────────────────────────────
@@ -58,6 +99,7 @@ router.get(
   AuthMiddleware.verifyToken,
   AuthMiddleware.requirePermission('crm.contact.read.all', 'crm.contact.read.own'),
   ErrorMiddleware.asyncHandler(async (_req: Request, res: Response) => {
+    await syncContactsFromClients();
     const counts = await Contact.findAll({
       attributes: ['status', [fn('COUNT', col('id')), 'count']],
       group: ['status'],
@@ -77,6 +119,17 @@ router.get(
   })
 );
 
+// ─── POST /contacts/sync-clients — add registered clients now ─────────────────
+router.post(
+  '/sync-clients',
+  AuthMiddleware.verifyToken,
+  AuthMiddleware.requirePermission('crm.contact.read.all', 'crm.contact.read.own'),
+  ErrorMiddleware.asyncHandler(async (_req: Request, res: Response) => {
+    const added = await syncContactsFromClients(true);
+    return ResponseFormatter.success(res, { added }, added ? `${added} client(s) added to contacts` : 'Contacts are up to date');
+  })
+);
+
 // ─── GET /contacts ────────────────────────────────────────────────────────────
 router.get(
   '/',
@@ -84,6 +137,7 @@ router.get(
   AuthMiddleware.requirePermission('crm.contact.read.all', 'crm.contact.read.own'),
   AuthMiddleware.pagination,
   ErrorMiddleware.asyncHandler(async (req: Request, res: Response) => {
+    await syncContactsFromClients();
     const { page, limit, offset } = req.pagination!;
     const { status, source, search, ownerUserId } = req.query as Record<string, string>;
 
