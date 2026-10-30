@@ -98,6 +98,8 @@ function authAuditMiddleware() {
 const SKIP = [
     /^\/messages/, /^\/conversations/, /^\/chat/, /^\/notifications/, /^\/erp\/push/, /^\/erp\/calls/, /^\/auth\/refresh/,
     /^\/ai/, /^\/erp\/timeline\/[^/]+\/\d+$/, /^\/attendance\/(heartbeat|ping)/, /^\/presence/, /^\/audit-logs/,
+    /^\/erp\/suggestions/,
+    /^\/erp\/my-lessons/, /^\/erp\/ai\//, /^\/erp\/daily-summary/,
 ];
 const MODULE_NAMES = {
     hr: 'HR', staff: 'Staff', leave: 'Leave', payroll: 'Payroll', 'customer-reports': 'Customer reports', clients: 'Clients',

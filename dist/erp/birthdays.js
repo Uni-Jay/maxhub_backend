@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.postToGeneral = postToGeneral;
 exports.runBirthdays = runBirthdays;
 exports.upcomingBirthdays = upcomingBirthdays;
 exports.birthdaysRouter = birthdaysRouter;

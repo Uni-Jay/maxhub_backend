@@ -23,6 +23,7 @@ Object.defineProperty(exports, "startErpScheduler", { enumerable: true, get: fun
 function mountErpPublic(apiRouter) {
     apiRouter.use(require('./auditTrail').authAuditMiddleware());
     apiRouter.use('/public', (0, public_1.publicRouter)());
+    apiRouter.use('/public', require('./bookings').bookingsPublicRouter());
     apiRouter.use('/auth/login', (0, rateLimit_1.rateLimit)('login', 15, 15 * 60000));
     apiRouter.use('/auth/forgot-password', (0, rateLimit_1.rateLimit)('forgot', 8, 15 * 60000));
     apiRouter.use('/auth/reset-password', (0, rateLimit_1.rateLimit)('reset', 10, 15 * 60000));
@@ -53,6 +54,11 @@ function mountErpProtected(apiRouter) {
     erp.use(require('./procurement').procurementRouter());
     erp.use(require('./recruitment').recruitmentRouter());
     erp.use(require('./compliance').complianceRouter());
+    erp.use(require('./smart').smartRouter());
+    erp.use(require('./lessons').lessonsRouter());
+    erp.use(require('./recognition').recognitionRouter());
+    erp.use(require('./minutes').minutesRouter());
+    erp.use(require('./bookings').bookingsRouter());
     erp.use((0, profit_1.profitRouter)());
     erp.use((0, agenda_1.agendaRouter)());
     erp.use((err, _req, res, _next) => {

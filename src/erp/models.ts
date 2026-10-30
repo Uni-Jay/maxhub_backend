@@ -614,5 +614,114 @@ export function defineErpModels(sequelize: Sequelize): Record<string, ModelStati
     createdById: FK(),
   }, { ...OPTS, tableName: 'erp_training_records', indexes: [{ fields: ['staffId'] }, { fields: ['expiresOn'] }] });
 
+  /** Online lessons for a course (video, notes, files, quiz). */
+  ErpModels.Lesson = sequelize.define('ErpLesson', {
+    id: ID(),
+    courseId: { type: DataTypes.BIGINT, allowNull: false },
+    section: { type: DataTypes.STRING(160), allowNull: true },        // e.g. "Week 1 — Basics"
+    title: { type: DataTypes.STRING(200), allowNull: false },
+    summary: { type: DataTypes.TEXT, allowNull: true },
+    videoUrl: { type: DataTypes.TEXT, allowNull: true },              // YouTube / Vimeo / uploaded file
+    body: { type: DataTypes.TEXT, allowNull: true },                  // lesson notes
+    files: { type: DataTypes.JSONB, allowNull: true },                // [{ name, url }]
+    quiz: { type: DataTypes.JSONB, allowNull: true },                 // [{ q, options: [], answer: idx, explain }]
+    passMark: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 60 },
+    minutes: { type: DataTypes.INTEGER, allowNull: true },
+    sortOrder: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    status: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'Draft' }, // Draft | Published
+    createdById: FK(),
+  }, { ...OPTS, tableName: 'erp_lessons', indexes: [{ fields: ['courseId'] }] });
+
+  ErpModels.LessonProgress = sequelize.define('ErpLessonProgress', {
+    id: ID(),
+    lessonId: { type: DataTypes.BIGINT, allowNull: false },
+    courseId: { type: DataTypes.BIGINT, allowNull: false },
+    studentId: { type: DataTypes.BIGINT, allowNull: false },          // student_profiles.id
+    completedAt: { type: DataTypes.DATE, allowNull: true },
+    bestScore: { type: DataTypes.INTEGER, allowNull: true },          // percent
+    attempts: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    lastAnswers: { type: DataTypes.JSONB, allowNull: true },
+    lastOpenedAt: { type: DataTypes.DATE, allowNull: true },
+  }, { ...OPTS, tableName: 'erp_lesson_progress', indexes: [{ unique: true, fields: ['lessonId', 'studentId'] }, { fields: ['courseId', 'studentId'] }] });
+
+  /** Staff of the month: nominations and winners. */
+  ErpModels.Nomination = sequelize.define('ErpNomination', {
+    id: ID(),
+    month: { type: DataTypes.STRING(7), allowNull: false },           // YYYY-MM
+    nomineeStaffId: { type: DataTypes.BIGINT, allowNull: false },
+    nominatorUserId: { type: DataTypes.BIGINT, allowNull: false },
+    reason: { type: DataTypes.TEXT, allowNull: false },
+  }, { ...OPTS, tableName: 'erp_nominations', indexes: [{ unique: true, fields: ['month', 'nominatorUserId'] }] });
+
+  ErpModels.Award = sequelize.define('ErpAward', {
+    id: ID(),
+    month: { type: DataTypes.STRING(7), allowNull: false, unique: true },
+    staffId: { type: DataTypes.BIGINT, allowNull: false },
+    citation: { type: DataTypes.TEXT, allowNull: true },
+    prize: { type: DataTypes.STRING(200), allowNull: true },
+    announcedById: FK(),
+    announcedByName: { type: DataTypes.STRING(200), allowNull: true },
+  }, { ...OPTS, tableName: 'erp_awards' });
+
+  /** Anonymous suggestion box — the author is never stored. */
+  ErpModels.Suggestion = sequelize.define('ErpSuggestion', {
+    id: ID(),
+    code: { type: DataTypes.STRING(20), allowNull: false, unique: true },
+    category: { type: DataTypes.STRING(60), allowNull: false, defaultValue: 'General' },
+    title: { type: DataTypes.STRING(200), allowNull: false },
+    body: { type: DataTypes.TEXT, allowNull: false },
+    status: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'New' }, // New | Under review | Planned | Done | Not now
+    isPublic: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    reply: { type: DataTypes.TEXT, allowNull: true },
+    repliedByName: { type: DataTypes.STRING(200), allowNull: true },
+    repliedAt: { type: DataTypes.DATE, allowNull: true },
+    voterHashes: { type: DataTypes.JSONB, allowNull: true },          // one-way hashes so each person votes once
+  }, { ...OPTS, tableName: 'erp_suggestions' });
+
+  /** Meeting minutes with decisions and action points (which become tasks). */
+  ErpModels.Minutes = sequelize.define('ErpMinutes', {
+    id: ID(),
+    code: { type: DataTypes.STRING(40), allowNull: false, unique: true },
+    title: { type: DataTypes.STRING(200), allowNull: false },
+    meetingId: FK(),
+    heldAt: { type: DataTypes.DATE, allowNull: false },
+    location: { type: DataTypes.STRING(200), allowNull: true },
+    attendees: { type: DataTypes.JSONB, allowNull: true },            // [{ userId, name }]
+    apologies: { type: DataTypes.JSONB, allowNull: true },            // [{ userId, name }]
+    agenda: { type: DataTypes.TEXT, allowNull: true },
+    notes: { type: DataTypes.TEXT, allowNull: true },
+    decisions: { type: DataTypes.JSONB, allowNull: true },            // [string]
+    actions: { type: DataTypes.JSONB, allowNull: true },              // [{ id, text, ownerUserId, ownerName, due, taskId }]
+    nextMeetingAt: { type: DataTypes.DATE, allowNull: true },
+    status: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'Draft' }, // Draft | Shared
+    sharedAt: { type: DataTypes.DATE, allowNull: true },
+    departmentId: FK(),
+    createdById: FK(),
+    createdByName: { type: DataTypes.STRING(200), allowNull: true },
+  }, { ...OPTS, tableName: 'erp_minutes' });
+
+  /** Consultations booked from the brand websites. */
+  ErpModels.Booking = sequelize.define('ErpBooking', {
+    id: ID(),
+    code: { type: DataTypes.STRING(40), allowNull: false, unique: true },
+    brand: { type: DataTypes.STRING(4), allowNull: false },
+    service: { type: DataTypes.STRING(160), allowNull: false },
+    mode: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'In person' }, // In person | Video call | Phone call
+    startAt: { type: DataTypes.DATE, allowNull: false },
+    endAt: { type: DataTypes.DATE, allowNull: false },
+    name: { type: DataTypes.STRING(160), allowNull: false },
+    email: { type: DataTypes.STRING(160), allowNull: false },
+    phone: { type: DataTypes.STRING(40), allowNull: true },
+    notes: { type: DataTypes.TEXT, allowNull: true },
+    status: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'Confirmed' }, // Confirmed | Completed | No-show | Cancelled
+    manageToken: { type: DataTypes.STRING(80), allowNull: false },
+    staffNotes: { type: DataTypes.TEXT, allowNull: true },
+    remindedAt: { type: DataTypes.DATE, allowNull: true },
+    calendarEventId: FK(),
+    departmentId: FK(),
+    assignedToUserId: FK(),
+    meta: { type: DataTypes.JSONB, allowNull: true },
+  }, { ...OPTS, tableName: 'erp_bookings', indexes: [{ fields: ['brand', 'startAt'] }, { fields: ['manageToken'] }] });
+
   return ErpModels;
 }

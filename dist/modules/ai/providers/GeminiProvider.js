@@ -127,6 +127,13 @@ class GeminiProvider {
             return result.response.text().trim();
         });
     }
+    async generateFromImage(prompt, imageBase64, mimeType, model) {
+        return withFallback(this.resolveModel(model), async (m) => {
+            const genModel = this.getClient().getGenerativeModel({ model: m, generationConfig: { ...genConfig(m, 0.1), responseMimeType: 'application/json' } });
+            const result = await genModel.generateContent([{ text: prompt }, { inlineData: { data: imageBase64, mimeType } }]);
+            return result.response.text().trim();
+        });
+    }
     async listModels() {
         return [...SUPPORTED_MODELS];
     }

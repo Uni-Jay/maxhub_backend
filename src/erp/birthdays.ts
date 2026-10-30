@@ -45,7 +45,7 @@ async function markSent(key: string, date: string) {
   await ErpModels.Setting.upsert({ key: 'birthdaysSent', value } as any);
 }
 
-async function postToGeneral(text: string) {
+export async function postToGeneral(text: string) {
   const conv = (await q(`SELECT id FROM conversations WHERE "conversationCode" = 'CH-GENERAL' LIMIT 1`))[0];
   if (!conv) return;
   const sender = (await q(

@@ -118,6 +118,15 @@ export function startErpScheduler(): void {
   // Every day 08:00 — certificates expiring within 30 days or expired.
   cron.schedule('0 8 * * *', () => safe('training-expiry', async () => { await require('./compliance').trainingExpiryReminders(); }), opts);
 
+  // Monday–Saturday 07:30 — "your day" summary for each person.
+  cron.schedule('30 7 * * 1-6', () => safe('daily-summary', async () => { await require('./smart').runDailySummaries(); }), opts);
+
+  // 25th of the month 10:00 — invite nominations for staff of the month.
+  cron.schedule('0 10 25 * *', () => safe('staff-of-month', async () => { await require('./recognition').nominationReminder(); }), opts);
+
+  // Every hour at :15 — remind clients about tomorrow's consultations.
+  cron.schedule('15 * * * *', () => safe('booking-reminders', async () => { await require('./bookings').bookingReminders(); }), opts);
+
   // Mondays 09:00 — policies people have not accepted yet.
   cron.schedule('0 9 * * 1', () => safe('policy-reminders', async () => { await require('./compliance').policyReminders(); }), opts);
 

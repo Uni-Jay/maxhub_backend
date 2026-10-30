@@ -112,6 +112,10 @@ export function authAuditMiddleware() {
 const SKIP = [
   /^\/messages/, /^\/conversations/, /^\/chat/, /^\/notifications/, /^\/erp\/push/, /^\/erp\/calls/, /^\/auth\/refresh/,
   /^\/ai/, /^\/erp\/timeline\/[^/]+\/\d+$/, /^\/attendance\/(heartbeat|ping)/, /^\/presence/, /^\/audit-logs/,
+  // The suggestion box is anonymous — never record who posted or voted (management replies log themselves).
+  /^\/erp\/suggestions/,
+  // Students opening lessons and answering quizzes would flood the log.
+  /^\/erp\/my-lessons/, /^\/erp\/ai\//, /^\/erp\/daily-summary/,
 ];
 
 const MODULE_NAMES: Record<string, string> = {

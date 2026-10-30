@@ -1,4 +1,5 @@
 import { Router } from 'express';
+export declare function postToGeneral(text: string): Promise<void>;
 export declare function runBirthdays(force?: boolean): Promise<{
     staff: number;
     clients: number;

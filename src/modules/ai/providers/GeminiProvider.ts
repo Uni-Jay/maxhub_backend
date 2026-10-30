@@ -151,6 +151,15 @@ export class GeminiProvider implements AIProvider {
     });
   }
 
+  /** Reads an image (e.g. a receipt photo) and answers in JSON. */
+  async generateFromImage(prompt: string, imageBase64: string, mimeType: string, model?: string): Promise<string> {
+    return withFallback(this.resolveModel(model), async (m) => {
+      const genModel = this.getClient().getGenerativeModel({ model: m, generationConfig: { ...(genConfig(m, 0.1) as any), responseMimeType: 'application/json' } });
+      const result = await genModel.generateContent([{ text: prompt }, { inlineData: { data: imageBase64, mimeType } }] as any);
+      return result.response.text().trim();
+    });
+  }
+
   async listModels(): Promise<string[]> {
     return [...SUPPORTED_MODELS];
   }

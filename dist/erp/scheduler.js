@@ -110,6 +110,9 @@ function startErpScheduler() {
     }), opts);
     node_cron_1.default.schedule('0 7 * * *', () => safe('birthdays', async () => { await require('./birthdays').runBirthdays(); }), opts);
     node_cron_1.default.schedule('0 8 * * *', () => safe('training-expiry', async () => { await require('./compliance').trainingExpiryReminders(); }), opts);
+    node_cron_1.default.schedule('30 7 * * 1-6', () => safe('daily-summary', async () => { await require('./smart').runDailySummaries(); }), opts);
+    node_cron_1.default.schedule('0 10 25 * *', () => safe('staff-of-month', async () => { await require('./recognition').nominationReminder(); }), opts);
+    node_cron_1.default.schedule('15 * * * *', () => safe('booking-reminders', async () => { await require('./bookings').bookingReminders(); }), opts);
     node_cron_1.default.schedule('0 9 * * 1', () => safe('policy-reminders', async () => { await require('./compliance').policyReminders(); }), opts);
     node_cron_1.default.schedule('0 6 * * *', () => safe('fx-refresh', async () => {
         const fx = require('./fx');
