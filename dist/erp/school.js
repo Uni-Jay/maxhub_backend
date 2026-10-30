@@ -206,7 +206,7 @@ function schoolRouter() {
         if (!canManageSchool(req) && Number(c.userId) !== (0, helpers_1.userId)(req))
             return (0, recordRouter_1.fail)(res, 403, 'You can only open your own certificate');
         const brand = await (0, outbound_1.brandForDepartment)(c.departmentId ? Number(c.departmentId) : null);
-        return (0, recordRouter_1.ok)(res, { ...c, studentName: `${c.firstName} ${c.lastName}`, brand: { name: brand.displayName, logoUrl: brand.logoUrl, color: brand.primaryColor, tagline: brand.tagline, address: brand.address, website: brand.website } });
+        return (0, recordRouter_1.ok)(res, { ...c, studentName: `${c.firstName} ${c.lastName}`, brand: { code: String(brand.code || '').toUpperCase(), name: brand.displayName, logoUrl: brand.logoUrl, color: brand.primaryColor, tagline: brand.tagline, address: brand.address, website: brand.website } });
     }));
     r.get('/school/my-certificates', (0, recordRouter_1.wrap)(async (req, res) => {
         const rows = await q(`SELECT ce."certificateCode", ce."certificateName", ce."issuedDate", c.title AS course FROM certificates ce JOIN enrollments e ON e.id = ce."enrollmentId"

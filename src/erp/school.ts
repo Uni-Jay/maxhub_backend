@@ -229,7 +229,7 @@ export function schoolRouter(): Router {
     if (!c) return fail(res, 404, 'Certificate not found');
     if (!canManageSchool(req) && Number(c.userId) !== userId(req)) return fail(res, 403, 'You can only open your own certificate');
     const brand: any = await brandForDepartment(c.departmentId ? Number(c.departmentId) : null);
-    return ok(res, { ...c, studentName: `${c.firstName} ${c.lastName}`, brand: { name: brand.displayName, logoUrl: brand.logoUrl, color: brand.primaryColor, tagline: brand.tagline, address: brand.address, website: brand.website } });
+    return ok(res, { ...c, studentName: `${c.firstName} ${c.lastName}`, brand: { code: String(brand.code || '').toUpperCase(), name: brand.displayName, logoUrl: brand.logoUrl, color: brand.primaryColor, tagline: brand.tagline, address: brand.address, website: brand.website } });
   }));
 
   /** The student's own certificates (for the student portal). */
