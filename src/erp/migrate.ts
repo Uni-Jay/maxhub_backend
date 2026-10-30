@@ -253,6 +253,57 @@ export async function runErpMigrations(sequelize: Sequelize): Promise<void> {
     if (t.length) await exec(`ALTER TYPE "enum_job_applications_status" ADD VALUE IF NOT EXISTS 'Hired'`);
   });
 
+  // 15. Client file numbers in the case-number style (<brand prefix>-CLT-<year>-<n>),
+  // e.g. VMX-CLT-2026-0014. Every client is renumbered oldest first, per brand and
+  // registration year; the old number is kept in the client's notes and the matching
+  // CRM contact code follows. Counters continue from the highest number used.
+  await step('014-client-file-numbers', async () => {
+    const t = await q(`SELECT 1 FROM information_schema.tables WHERE table_name = 'clients'`);
+    if (!t.length) return;
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { brandPrefix } = require('./recordRouter');
+    const rows = await q(`SELECT id, "clientId", "departmentId", notes,
+                                 EXTRACT(YEAR FROM COALESCE("registrationDate"::timestamptz, "createdAt"))::int AS yr
+                          FROM clients ORDER BY COALESCE("registrationDate"::timestamptz, "createdAt"), "createdAt", id`);
+    if (!rows.length) return;
+    const hasContacts = (await q(`SELECT 1 FROM information_schema.tables WHERE table_name = 'contacts'`)).length > 0;
+    const prefixes = new Map<string, string>();
+    const counters = new Map<string, number>();
+    const plan: Array<{ id: any; old: string | null; code: string; notes: string | null }> = [];
+    for (const r of rows) {
+      const dk = String(r.departmentId ?? '');
+      if (!prefixes.has(dk)) prefixes.set(dk, await brandPrefix(r.departmentId).catch(() => 'MXH'));
+      const key = `${prefixes.get(dk)}-CLT:${r.yr}`;
+      const n = (counters.get(key) || 0) + 1;
+      counters.set(key, n);
+      plan.push({ id: r.id, old: r.clientId, code: `${prefixes.get(dk)}-CLT-${r.yr}-${String(n).padStart(4, '0')}`, notes: r.notes });
+    }
+    await sequelize.transaction(async (tx) => {
+      const run = (sql: string, replacements: any) => sequelize.query(sql, { replacements, transaction: tx });
+      // Park every number first (clients and their contact codes) so a new number
+      // can never collide with — or be mistaken for — an old one mid-way.
+      await run(`UPDATE clients SET "clientId" = 'TMP-' || id::text`, {});
+      if (hasContacts) {
+        for (const p of plan) {
+          if (p.old && p.old !== p.code) await run(`UPDATE contacts SET "contactCode" = :tmp WHERE "contactCode" = :oc`, { tmp: `TMPC-${p.id}`, oc: `CTK-${p.old}` });
+        }
+      }
+      for (const p of plan) {
+        const changed = p.old && p.old !== p.code;
+        const notes = changed ? `${p.notes ? `${p.notes}\n` : ''}Previous file no: ${p.old}` : p.notes;
+        await run(`UPDATE clients SET "clientId" = :code, notes = :notes, "updatedAt" = NOW() WHERE id = :id`, { code: p.code, notes, id: p.id });
+        if (changed && hasContacts) await run(`UPDATE contacts SET "contactCode" = :nc WHERE "contactCode" = :tmp`, { nc: `CTK-${p.code}`, tmp: `TMPC-${p.id}` });
+      }
+      for (const [key, n] of counters) {
+        const [prefixClt, yr] = key.split(':');
+        await run(`INSERT INTO erp_settings (key, value, "createdAt", "updatedAt") VALUES (:k, to_jsonb(:n::int), NOW(), NOW())
+                   ON CONFLICT (key) DO UPDATE SET value = to_jsonb(GREATEST((erp_settings.value::text)::int, :n::int)), "updatedAt" = NOW()`,
+          { k: `counter:${prefixClt}:${yr}`, n });
+      }
+    });
+    console.log(`[ERP] renumbered ${plan.length} client(s)`);
+  });
+
   // 8. Indexes that help the new screens.
   await step('006-indexes', async () => {
     await exec(`CREATE INDEX IF NOT EXISTS erp_payments_dept_idx ON erp_payments ("departmentId", "paidAt")`);

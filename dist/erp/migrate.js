@@ -198,6 +198,53 @@ async function runErpMigrations(sequelize) {
         if (t.length)
             await exec(`ALTER TYPE "enum_job_applications_status" ADD VALUE IF NOT EXISTS 'Hired'`);
     });
+    await step('014-client-file-numbers', async () => {
+        const t = await q(`SELECT 1 FROM information_schema.tables WHERE table_name = 'clients'`);
+        if (!t.length)
+            return;
+        const { brandPrefix } = require('./recordRouter');
+        const rows = await q(`SELECT id, "clientId", "departmentId", notes,
+                                 EXTRACT(YEAR FROM COALESCE("registrationDate"::timestamptz, "createdAt"))::int AS yr
+                          FROM clients ORDER BY COALESCE("registrationDate"::timestamptz, "createdAt"), "createdAt", id`);
+        if (!rows.length)
+            return;
+        const hasContacts = (await q(`SELECT 1 FROM information_schema.tables WHERE table_name = 'contacts'`)).length > 0;
+        const prefixes = new Map();
+        const counters = new Map();
+        const plan = [];
+        for (const r of rows) {
+            const dk = String(r.departmentId ?? '');
+            if (!prefixes.has(dk))
+                prefixes.set(dk, await brandPrefix(r.departmentId).catch(() => 'MXH'));
+            const key = `${prefixes.get(dk)}-CLT:${r.yr}`;
+            const n = (counters.get(key) || 0) + 1;
+            counters.set(key, n);
+            plan.push({ id: r.id, old: r.clientId, code: `${prefixes.get(dk)}-CLT-${r.yr}-${String(n).padStart(4, '0')}`, notes: r.notes });
+        }
+        await sequelize.transaction(async (tx) => {
+            const run = (sql, replacements) => sequelize.query(sql, { replacements, transaction: tx });
+            await run(`UPDATE clients SET "clientId" = 'TMP-' || id::text`, {});
+            if (hasContacts) {
+                for (const p of plan) {
+                    if (p.old && p.old !== p.code)
+                        await run(`UPDATE contacts SET "contactCode" = :tmp WHERE "contactCode" = :oc`, { tmp: `TMPC-${p.id}`, oc: `CTK-${p.old}` });
+                }
+            }
+            for (const p of plan) {
+                const changed = p.old && p.old !== p.code;
+                const notes = changed ? `${p.notes ? `${p.notes}\n` : ''}Previous file no: ${p.old}` : p.notes;
+                await run(`UPDATE clients SET "clientId" = :code, notes = :notes, "updatedAt" = NOW() WHERE id = :id`, { code: p.code, notes, id: p.id });
+                if (changed && hasContacts)
+                    await run(`UPDATE contacts SET "contactCode" = :nc WHERE "contactCode" = :tmp`, { nc: `CTK-${p.code}`, tmp: `TMPC-${p.id}` });
+            }
+            for (const [key, n] of counters) {
+                const [prefixClt, yr] = key.split(':');
+                await run(`INSERT INTO erp_settings (key, value, "createdAt", "updatedAt") VALUES (:k, to_jsonb(:n::int), NOW(), NOW())
+                   ON CONFLICT (key) DO UPDATE SET value = to_jsonb(GREATEST((erp_settings.value::text)::int, :n::int)), "updatedAt" = NOW()`, { k: `counter:${prefixClt}:${yr}`, n });
+            }
+        });
+        console.log(`[ERP] renumbered ${plan.length} client(s)`);
+    });
     await step('006-indexes', async () => {
         await exec(`CREATE INDEX IF NOT EXISTS erp_payments_dept_idx ON erp_payments ("departmentId", "paidAt")`);
         await exec(`CREATE INDEX IF NOT EXISTS erp_travel_cases_stage_idx ON erp_travel_cases (stage)`);
